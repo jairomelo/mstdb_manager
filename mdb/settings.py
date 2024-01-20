@@ -33,8 +33,7 @@ SECRET_KEY = 'django-insecure-^5(lt(57sz1#_u*j29dlphi*_cv81l&7ew^u@or08z0li1ov39
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['172.22.139.213', '127.0.0.1']
-
+ALLOWED_HOSTS = ['172.22.139.213', '127.0.0.1', 'msdb.abcng.org']
 
 # Application definition
 
@@ -49,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_bootstrap5',
     'django_bootstrap_input_group',
+    'cataloguers',
     'dbgestor'
 ]
 
@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware'
 ]
 
 ROOT_URLCONF = 'mdb.urls'
@@ -68,7 +68,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR, 'templates'],
+            os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

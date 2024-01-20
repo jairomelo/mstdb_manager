@@ -1,0 +1,78 @@
+{% load static %}
+
+<nav class="navbar navbar-expand-lg navbar-light" style="background-color: #ffffff;">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            Gestor de datos
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav navbar-right ms-auto mb-2 mb-lg-0">
+                {% comment %} <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="{% url 'persona-browse' %}">Personas</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="browseDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Explorar
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="browseDropdown">
+                        <li><a class="dropdown-item" href="{% url 'bautismo-browse' %}">Bautismos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'matrimonio-browse' %}">Matrimonios</a></li>
+                        <li><a class="dropdown-item" href="{% url 'entierro-browse' %}">Entierros</a></li>
+                    </ul>
+                </li> {% endcomment %}
+            </ul>
+
+            <form class="d-flex">
+              <div class="input-group mb-2">
+                <input type="search" class="form-control ms-2" placeholder="Buscar" aria-label="Buscar">
+                <button class="btn btn-outline-dark" type="submit" id="button-addon2" aria-label="Botón de búsqueda"><i class="fas fa-search"></i></button>
+              </div>
+            </form>
+        
+            <ul class="navbar-nav">
+              <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fas fa-user-circle"></i> {{ user.get_username }}
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-lg-end" aria-labelledby="userDropdown">
+                    {% if request.user.is_superuser %}
+                        <li class='nav-item'>
+                            <a class='nav-link' href="{% url 'admin:index' %}">Administración</a>
+                        </li>
+
+                    {% endif %}
+                      {% if user.is_authenticated %}
+                      {% with user_groups=user.groups.all %}
+                          {% if user_groups %}
+                              <li class='nav-item'>
+                                  <span class='dropdown-item-text'>Grupo{{ user_groups|length|pluralize:"s" }}:</span>
+                              </li>
+                              {% for group in user_groups %}
+                                  <li class='nav-item group-name'>
+                                      <span class='dropdown-item-text'>{{ group.name }}</span>
+                                  </li>
+                              {% endfor %}
+                          {% endif %}
+                      {% endwith %}
+                          <li class='nav-item'>
+                              <a class='nav-link' href="{% url 'logout' %}">Logout</a>
+                          </li>
+                      {% else %}
+                          <li class='nav-item'>
+                              <a class='nav-link' href="{% url 'login' %}">Login</a>
+                          </li>
+                          <li class='nav-item'>
+                              <a class='nav-link' href="{% url 'register' %}">Register</a>
+                          </li>
+                      {% endif %}
+                  </ul>
+              </li>
+          </ul>
+          
+      </div>
+  </div>
+</nav>

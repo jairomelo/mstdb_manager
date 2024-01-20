@@ -1,0 +1,24 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+
+{% block content %}
+
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Registrarse</h2>
+    <form action="{% url 'register' %}" method="post" class="form">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+        
+        {{ form.as_p }}
+            
+
+    <button type="submit" class="btn btn-primary">Registrarse</button>
+  </form>
+</div>
+</div>
+</div>
+
+{% endblock content %}

@@ -1,1 +1,19 @@
-<h1>Hello WORLD :D</h1>
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container mt-4">
+    <!-- Hero Section -->
+    <div class="jumbotron text-center">
+        <h1 class="display-4">Gestor de datos</h1>
+        <p class="lead">para el registro del tráfico de personas esclavizadas</p>
+        <hr class="my-4">
+        <p></p>
+        {% comment %} <a class="btn btn-primary btn-lg" href="{% url 'bautismo-browse' %}" role="button">Explorar Bautismos</a>
+        <a class="btn btn-primary btn-lg" href="{% url 'matrimonio-browse' %}" role="button">Explorar Matrimonios</a>
+        <a class="btn btn-primary btn-lg" href="{% url 'entierro-browse' %}" role="button">Explorar Entierros</a> {% endcomment %}
+    </div>
+    
+</div>
+
+{% endblock content %}

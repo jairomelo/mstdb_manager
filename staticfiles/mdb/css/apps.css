@@ -1,0 +1,20 @@
+.select2-autocomplete .select2-container {
+    width: 100% !important; /* Adjust the width as needed */
+}
+
+#userDropdown i {
+    font-size: x-large;
+    color: black;
+}
+
+.group-name {
+    font-size: small;
+}
+
+.auth-forms-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        background-color: rgba(121, 76, 40, 0.02);
+}
