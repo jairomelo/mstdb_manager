@@ -1,0 +1,35 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+
+<div class="container">
+    <form method="post" class="lugar_form" id="newLugarForm">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% bootstrap_field form.nombre_lugar %}
+        
+        <div class="mb-3">
+            <label for="{{ form.es_parte_de.id_for_label }}" class="form-label">{{ form.es_parte_de.label }}</label>
+            {{ form.es_parte_de }}
+            <button type="button" id="add_es_parte_de" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar"><i class="fas fa-map-marked"></i></button>
+        </div>
+
+        {% bootstrap_field form.lat %}
+        {% bootstrap_field form.lon %}
+
+        
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+</form>
+</div>
+
+
+{% endblock content %}

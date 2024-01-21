@@ -3,6 +3,10 @@ from django.contrib.auth  import authenticate, login, logout
 from django.contrib import messages
 from .forms import RegisterUserForm
 
+import logging
+
+logger = logging.getLogger("dbgestor")
+
 def login_user(request):
     if request.method == "POST":
         username = request.POST["username"]
