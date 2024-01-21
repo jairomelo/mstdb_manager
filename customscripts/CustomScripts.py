@@ -9,10 +9,11 @@ class FileManager:
         os.makedirs(logdir, exist_ok=True)
         newLogFile = os.path.join(logdir, filename)
 
-        open(newLogFile, 'w')
+        if not os.path.isfile(newLogFile):
+            open(newLogFile, 'w')
 
-        uid = getpwnam('www-data').pw_uid
-        gid = getgrnam('www-data').gr_gid
+            uid = getpwnam('www-data').pw_uid
+            gid = getgrnam('www-data').gr_gid
 
-        os.chown(newLogFile, uid, gid)
-        os.chmod(newLogFile, 755)
+            os.chown(newLogFile, uid, gid)
+            os.chmod(newLogFile, 755)
