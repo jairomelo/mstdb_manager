@@ -39,17 +39,17 @@ class LugarForm(forms.ModelForm):
         lugar = super().save(commit=False)
         logger.debug("LugarForm save method called.")
         
+        if commit:
+            lugar.save()
+            
         if 'nombre_lugar' in self.changed_data or 'tipo' in self.changed_data:
             # Assume lugar instance already exists and we are updating it
-            PlaceHistorical.objects.create(
+            PlaceHistorical.objects.update_or_create(
                 lugar=lugar,
                 nombre_original=lugar.nombre_lugar,
                 fecha_inicial=datetime(1500,1,1),
                 tipo_original=lugar.tipo
             )
-
-        if commit:
-            lugar.save()
 
         return lugar
         
