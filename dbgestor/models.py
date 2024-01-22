@@ -151,34 +151,16 @@ class Calidades(models.Model):
     def __str__(self) -> str:
         return f'{self.calidad}'
     
-class HistorialActividadesPersona(models.Model):
+
+class Actividades(models.Model):
     
-    historial_actividades_persona = models.AutoField(primary_key=True)
-    tipo_actividad = models.CharField(max_length=200)
-    descripcion_actividad = models.JSONField(null=True, blank=True)
-    fecha_inicial_actividad = models.DateField(null=True, blank=True)
-    fecha_final_actividad = models.DateField(null=True, blank=True)
-    lugares_actividad = models.ManyToManyField(Lugar)
-    
-    history = HistoricalRecords()
+    actividad_id = models.AutoField(primary_key=True)
+    actividad = models.CharField(max_length=150)
+    descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
-        return f'({self.fecha_inicial_actividad} - {self.fecha_final_actividad}) {self.tipo_actividad}, {self.persona}'
-    
+        return f'{self.actividad}'
 
-class LugaresPersona(models.Model):
-    
-    persona_lugar_id = models.AutoField(primary_key=True)
-
-    lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='historial_lugares_personas')
-    fecha_inicial = models.DateField(null=True, blank=True)
-    fecha_final = models.DateField(null=True, blank=True)
-    situacion_lugar = models.CharField(max_length=150, null=True, blank=True, choices=SITUACION_LUGAR)
-    
-    def __str__(self) -> str:
-        return f'{self.lugar}'
-
-    
 class Hispanizaciones(models.Model):
     """
     This table has the only purpose to serve as basic vocabulary for Hispanizaciones for Persona Esclavizada
@@ -204,14 +186,49 @@ class Etonimos(models.Model):
     def __str__(self) -> str:
         return f'{self.etonimo}'
 
-class PersonaEsclavizadaExp(models.Model):
+
+class PersonaCommonInfo(models.Model):
+    
+    
+    nombres = models.CharField(max_length=150, help_text="Nombres sin honoríficos", default="Anónimo")
+    apellidos = models.CharField(max_length=150, blank=True, null=True)
+    nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
+    
+    calidades = models.ManyToManyField(Calidades)
+    
+    # Dates of existence
+    
+    fecha_nacimiento = models.DateField(null=True, blank=True)
+    lugar_nacimiento = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_nac')
+    
+    fecha_defuncion = models.DateField(null=True, blank=True)
+    lugar_defuncion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_def')
+    
+    sexo = models.CharField(max_length=50, choices=SEXOS)
+
+    ocupacion = models.ForeignKey(Actividades, null=True, blank=True, on_delete=models.CASCADE, related_name='%(class)s_ocupacion_per')
+    
+    def save(self, *args, **kwargs):
+        if not self.nombre_normalizado:
+            self.nombre_normalizado = f"{self.nombres} {self.apellidos}"
+
+        super(PersonaCommonInfo, self).save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        dates = " - ".join(filter(None, [str(self.fecha_nacimiento) if self.fecha_nacimiento else None, 
+                                            str(self.fecha_defuncion) if self.fecha_defuncion else None]))
+        return f'{self.nombre_normalizado} ({dates})' if dates else f'{self.nombre_normalizado}'
+
+    class Meta:
+        abstract = True
+
+class PersonaEsclavizada(PersonaCommonInfo):
     """
     This table expands Persona to specifics features regarding a Persona Esclavizada
     """
     
-    persona_esclavizada_exp_id = models.AutoField(primary_key=True)
-    sexo = models.CharField(max_length=50, choices=SEXOS)
-    fecha_nacimiento = models.DateField(null=True, blank=True)
+    persona_esclavizada_id = models.AutoField(primary_key=True)
+    
     altura = models.CharField(max_length=150, null=True, blank=True)
     cabello = models.CharField(max_length=150, null=True, blank=True)
     ojos = models.CharField(max_length=150, null=True, blank=True)
@@ -221,58 +238,58 @@ class PersonaEsclavizadaExp(models.Model):
     marcas_corporales = models.TextField(null=True, blank=True)
     conducta = models.TextField(null=True, blank=True)
     
-    ocupacion = models.ForeignKey(HistorialActividadesPersona, null=True, blank=True, on_delete=models.CASCADE, related_name='ocupacion_pere')
-    transito_origen = models.ForeignKey(LugaresPersona, null=True, blank=True, on_delete=models.CASCADE, related_name='tran_ori_pere')
-    transito_destino = models.ForeignKey(LugaresPersona, null=True, blank=True, on_delete=models.CASCADE, related_name='tran_des_pere')
-    
-
-class PersonaInvolucradaExp(models.Model):
-    persona_involucrada_caracteristicas = models.AutoField(primary_key=True)
-    sexo = models.CharField(max_length=50, choices=SEXOS)
-    
-    honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
-    
-    ocupacion = models.ForeignKey(HistorialActividadesPersona, null=True, blank=True, on_delete=models.CASCADE, related_name='ocupacion_pero')
-    rol_evento = models.CharField(max_length=100, null=True, blank=True, default="nan")
-    lugar_situacion = models.ForeignKey(LugaresPersona, null=True, blank=True, on_delete=models.CASCADE, related_name='lugar_situa_peri')
-
-class Persona(models.Model):
-    
-    autoridad_id = models.AutoField(primary_key=True)
-    
-    tipo_persona = models.CharField(max_length=50, choices=PERSONAS_TIPOS, default='pere')
-    nombres = models.CharField(max_length=150, help_text="Nombres sin honoríficos", default="Anónimo")
-    apellidos = models.CharField(max_length=150, blank=True, null=True)
-    nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
-    
-    caracteristicas_persona_esclavizada = models.ForeignKey(PersonaEsclavizadaExp, on_delete=models.SET_NULL, null=True, blank=True, related_name='pere_caracteristicas')
-    caracteristicas_persona_involucrada = models.ForeignKey(PersonaInvolucradaExp, on_delete=models.SET_NULL, null=True, blank=True, related_name='peri_caracteristicas')
-    
-    calidades = models.ManyToManyField(Calidades)
-    
-    # Dates of existence
-    
-    fecha_nacimiento = models.DateField(null=True, blank=True)
-    lugar_nacimiento = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='lugar_nac')
-    
-    fecha_defuncion = models.DateField(null=True, blank=True)
-    lugar_defuncion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='lugar_def')
+    transito_origen = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='tran_ori_pere')
+    transito_destino = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='tran_des_pere')
     
     history = HistoricalRecords()
     
     def save(self, *args, **kwargs):
         
-        if not self.nombre_normalizado and self.nombres or self.apellidos:
-            self.nombre_normalizado = f'{self.nombres} {self.apellidos}'.strip()
-            
-        super().save(*args, **kwargs)
+        Persona.objects.update_or_create(
+            tipo_autoridad='pere',
+            nombre_normalizado=self.nombre_normalizado,
+            dates_of_existence = f'{self.fecha_nacimiento}-{self.fecha_defuncion}'
+        )
+        super(PersonaEsclavizada, self).save(*args, **kwargs)
     
-    def __str__(self) -> str:
-        dates = " - ".join(filter(None, [str(self.fecha_nacimiento) if self.fecha_nacimiento else None, 
-                                            str(self.fecha_defuncion) if self.fecha_defuncion else None]))
-        return f'{self.nombre_normalizado} ({dates})' if dates else f'{self.nombre_normalizado}'
+
+class PersonaInvolucrada(PersonaCommonInfo):
+    
+    persona_involucrada_id = models.AutoField(primary_key=True)
+    
+    honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
+    
+    rol_evento = models.CharField(max_length=100, null=True, blank=True, default="nan")
+    lugar_situacion = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='lugar_situa_peri')
+
+    history = HistoricalRecords()
+    
+    def save(self, *args, **kwargs):
+        
+        Persona.objects.update_or_create(
+            tipo_autoridad='peri',
+            nombre_normalizado=self.nombre_normalizado,
+            dates_of_existence = f'{self.fecha_nacimiento}-{self.fecha_defuncion}'
+        )
+        super(PersonaInvolucrada, self).save(*args, **kwargs)
         
 
+class Persona(models.Model):
+    
+    autoridad_id = models.AutoField(primary_key=True)
+    
+    tipo_autoridad = models.CharField(max_length=50, choices=PERSONAS_TIPOS, default='pere')
+    nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
+    otros_nombres = models.JSONField(blank=True, null=True)
+    dates_of_existence = models.CharField(max_length=50, null=True, blank=True)
+    history = models.TextField(blank=True, null=True)
+    places = models.ManyToManyField(Lugar)
+    activities = models.ManyToManyField(Actividades)
+    
+    history = HistoricalRecords()
+    
+    def __str__(self) -> str:
+        return f'{self.tipo_autoridad}: {self.nombre_normalizado}'
 
 class PersonaRelaciones(models.Model):
     
@@ -296,6 +313,7 @@ class PersonaRelaciones(models.Model):
 #############
 
 class Evento(models.Model):
+    
     evento_id = models.AutoField(primary_key=True)
     tipo_evento = models.CharField(max_length=150)
     fecha_evento = models.DateField()
@@ -308,8 +326,10 @@ class Evento(models.Model):
     valor_total = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     moneda = models.CharField(max_length=100, null=True, blank=True)
     
-    personas_esclavizadas = models.ManyToManyField(Persona, related_name='eventos_pere')
-    personas_involucradas = models.ManyToManyField(Persona, related_name='eventos_peri')
+    personas_esclavizadas = models.ManyToManyField(PersonaEsclavizada, related_name='eventos_pere')
+    personas_involucradas = models.ManyToManyField(PersonaInvolucrada, related_name='eventos_peri')
+    
+    history = HistoricalRecords()
     
     def __str__(self) -> str:
         return f'{self.tipo_evento} ({self.fecha_evento})'
