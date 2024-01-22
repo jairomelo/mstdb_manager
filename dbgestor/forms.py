@@ -4,7 +4,7 @@ from datetime import datetime
 from dal import autocomplete
 import re
 
-from .models import Lugar, LugarTipo
+from .models import Lugar, HistoricalName
 
 
 import logging
@@ -19,7 +19,8 @@ class LugarForm(forms.ModelForm):
     
     es_parte_de = forms.ModelChoiceField(required=False,
             queryset=Lugar.objects.all(),
-            widget=autocomplete.ModelSelect2(url='lugar-autocomplete')
+            widget=autocomplete.ModelSelect2(url='lugar-autocomplete'),
+            help_text="Seleccione o añada un lugar."
         )
     lat = forms.DecimalField(max_digits=9, decimal_places=6, required=False)
     lon = forms.DecimalField(max_digits=9, decimal_places=6, required=False)
@@ -34,17 +35,29 @@ class LugarForm(forms.ModelForm):
 
         return cleaned_data
     
-    def save(self, *args, **kwargs):
+    def save(self, commit=True):
+        lugar = super().save(commit=False)
         logger.debug("LugarForm save method called.")
         
-        lugar = super().save(commit=False)
-        lugar.save()
+        if 'nombre_lugar' in self.changed_data or 'tipo' in self.changed_data:
+            # Assume lugar instance already exists and we are updating it
+            HistoricalName.objects.create(
+                lugar=lugar,
+                nombre=lugar.nombre_lugar,
+                fecha_inicial=datetime(1500,1,1),
+                tipo=lugar.tipo
+            )
+
+        if commit:
+            lugar.save()
+
+        return lugar
         
     
 class LugarHistoria(forms.ModelForm):
     
     class Meta:
-        model = LugarTipo
+        model = HistoricalName
         fields = '__all__'
     
     lugar = forms.ModelChoiceField(

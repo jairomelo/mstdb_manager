@@ -6,7 +6,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 
 from dal import autocomplete
 
-from .models import Lugar, LugarTipo 
+from .models import Lugar, HistoricalName
 
 from .forms import LugarForm, LugarHistoria
 

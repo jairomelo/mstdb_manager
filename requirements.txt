@@ -1,7 +1,6 @@
 anyascii==0.3.2
 asgiref==3.7.2
 async-timeout==4.0.3
-beautifulsoup4==4.11.2
 certifi==2023.11.17
 charset-normalizer==3.3.2
 defusedxml==0.7.1
@@ -15,6 +14,7 @@ django-modelcluster==6.1
 django-permissionedforms==0.1
 django-redis==5.4.0
 django-select2==8.1.2
+django-simple-history==3.4.0
 django-taggit==4.0.0
 django-treebeard==4.7
 djangorestframework==3.14.0
