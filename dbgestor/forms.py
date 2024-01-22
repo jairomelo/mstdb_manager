@@ -4,7 +4,7 @@ from datetime import datetime
 from dal import autocomplete
 import re
 
-from .models import Lugar, HistoricalName
+from .models import Lugar, PlaceHistorical
 
 
 import logging
@@ -41,7 +41,7 @@ class LugarForm(forms.ModelForm):
         
         if 'nombre_lugar' in self.changed_data or 'tipo' in self.changed_data:
             # Assume lugar instance already exists and we are updating it
-            HistoricalName.objects.create(
+            PlaceHistorical.objects.create(
                 lugar=lugar,
                 nombre=lugar.nombre_lugar,
                 fecha_inicial=datetime(1500,1,1),
@@ -57,7 +57,7 @@ class LugarForm(forms.ModelForm):
 class LugarHistoria(forms.ModelForm):
     
     class Meta:
-        model = HistoricalName
+        model = PlaceHistorical
         fields = '__all__'
     
     lugar = forms.ModelChoiceField(

@@ -62,6 +62,7 @@ RELACIONES = (
 ###############
 
 class Lugar(models.Model):
+    
     lugar_id = models.AutoField(primary_key=True)
     nombre_lugar = models.CharField(max_length=255)
     es_parte_de = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
@@ -76,19 +77,21 @@ class Lugar(models.Model):
         return f"{self.nombre_lugar} ({self.tipo})"
 
 
-class HistoricalName(models.Model):
+class PlaceHistorical(models.Model):
+    
+    registro_id = models.AutoField(primary_key=True)
     
     lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='historical_names')
-    nombre = models.CharField(max_length=255)
+    otro_nombre = models.CharField(max_length=255, help_text="¿Es un nombre diferente?", null=True, blank=True)
     fecha_inicial = models.DateField()
     fecha_final = models.DateField(null=True, blank=True)
-    tipo = models.CharField(max_length=50, choices=PLACE_TYPE_CHOICES)
+    otro_tipo = models.CharField(max_length=50, choices=PLACE_TYPE_CHOICES, help_text="¿Es un tipo diferente?", null=True, blank=True)
     narrativa = models.TextField(null=True, blank=True)
     
     history = HistoricalRecords()
     
     def __str__(self):
-        return f"{self.nombre} ({self.fecha_inicial} - {self.fecha_final or 'Present'})"
+        return f"{self.otro_nombre} | {self.lugar.nombre_lugar} ({self.fecha_inicial} - {self.fecha_final or 'Present'})"
     
 ####################
 # Documento
@@ -120,7 +123,7 @@ class Documento(models.Model):
     unidad_documental_compuesta = models.CharField(max_length=200)
     
     tipo_documento = models.CharField(max_length=100) # este campo necesita una lista de tipos documentales
-    sigla_documento = models.CharField(max_length=100)
+    sigla_documento = models.CharField(max_length=100, null=True, blank=True)
     
     titulo = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
@@ -131,7 +134,7 @@ class Documento(models.Model):
     history = HistoricalRecords()
 
     def __str__(self) -> str:
-        return f'{self.archivo}, {self.sigla_documento}: {self.titulo}'
+        return f'{self.archivo.nombre_abreviado}, {self.sigla_documento}: {self.titulo}'
 
 
 #####################
@@ -246,7 +249,6 @@ class PersonaEsclavizada(PersonaCommonInfo):
     def save(self, *args, **kwargs):
         
         Persona.objects.update_or_create(
-            tipo_autoridad='pere',
             nombre_normalizado=self.nombre_normalizado,
             dates_of_existence = f'{self.fecha_nacimiento}-{self.fecha_defuncion}'
         )
@@ -267,7 +269,6 @@ class PersonaInvolucrada(PersonaCommonInfo):
     def save(self, *args, **kwargs):
         
         Persona.objects.update_or_create(
-            tipo_autoridad='peri',
             nombre_normalizado=self.nombre_normalizado,
             dates_of_existence = f'{self.fecha_nacimiento}-{self.fecha_defuncion}'
         )
@@ -278,7 +279,6 @@ class Persona(models.Model):
     
     autoridad_id = models.AutoField(primary_key=True)
     
-    tipo_autoridad = models.CharField(max_length=50, choices=PERSONAS_TIPOS, default='pere')
     nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
     otros_nombres = models.JSONField(blank=True, null=True)
     dates_of_existence = models.CharField(max_length=50, null=True, blank=True)
@@ -289,7 +289,7 @@ class Persona(models.Model):
     history = HistoricalRecords()
     
     def __str__(self) -> str:
-        return f'{self.tipo_autoridad}: {self.nombre_normalizado}'
+        return f'{self.autoridad_id}: {self.nombre_normalizado}'
 
 class PersonaRelaciones(models.Model):
     

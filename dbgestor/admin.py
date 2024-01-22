@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import Lugar, HistoricalName
+from .models import Lugar, PlaceHistorical
 from .models import Archivo, Documento
 from .models import Calidades, Actividades, Hispanizaciones, Etonimos
 from .models import PersonaEsclavizada, PersonaInvolucrada
@@ -17,7 +17,7 @@ admin.site.register(Actividades)
 admin.site.register(Etonimos)
 admin.site.register(Evento)
 admin.site.register(Hispanizaciones)
-admin.site.register(HistoricalName)
+admin.site.register(PlaceHistorical)
 admin.site.register(Lugar)
 admin.site.register(PersonaEsclavizada)
 admin.site.register(PersonaInvolucrada)
