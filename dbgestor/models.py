@@ -248,14 +248,6 @@ class PersonaEsclavizada(PersonaCommonInfo):
     
     history = HistoricalRecords()
     
-    def save(self, *args, **kwargs):
-        
-        Persona.objects.update_or_create(
-            nombre_normalizado=self.nombre_normalizado,
-            dates_of_existence = f'{self.fecha_nacimiento}-{self.fecha_defuncion}'
-        )
-        super(PersonaEsclavizada, self).save(*args, **kwargs)
-    
 
 class PersonaInvolucrada(PersonaCommonInfo):
     
@@ -267,14 +259,6 @@ class PersonaInvolucrada(PersonaCommonInfo):
     lugar_situacion = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='lugar_situa_peri')
 
     history = HistoricalRecords()
-    
-    def save(self, *args, **kwargs):
-        
-        Persona.objects.update_or_create(
-            nombre_normalizado=self.nombre_normalizado,
-            dates_of_existence = f'{self.fecha_nacimiento}-{self.fecha_defuncion}'
-        )
-        super(PersonaInvolucrada, self).save(*args, **kwargs)
         
 
 class Persona(models.Model):
