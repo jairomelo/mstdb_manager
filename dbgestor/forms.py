@@ -43,9 +43,9 @@ class LugarForm(forms.ModelForm):
             # Assume lugar instance already exists and we are updating it
             PlaceHistorical.objects.create(
                 lugar=lugar,
-                nombre=lugar.nombre_lugar,
+                nombre_original=lugar.nombre_lugar,
                 fecha_inicial=datetime(1500,1,1),
-                tipo=lugar.tipo
+                tipo_original=lugar.tipo
             )
 
         if commit:

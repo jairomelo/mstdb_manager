@@ -82,7 +82,8 @@ class PlaceHistorical(models.Model):
     registro_id = models.AutoField(primary_key=True)
     
     lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='historical_names')
-    nombre = models.CharField(max_length=255, default="Legacy")
+    nombre_original = models.CharField(max_length=255, default="Legacy")
+    tipo_original = models.CharField(max_length=255, default="Legacy")
     otro_nombre = models.CharField(max_length=255, help_text="¿Es un nombre diferente?", null=True, blank=True)
     fecha_inicial = models.DateField()
     fecha_final = models.DateField(null=True, blank=True)
