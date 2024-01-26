@@ -1,6 +1,6 @@
 from django.db import models
 from simple_history.models import HistoricalRecords
-
+from datetime import datetime
 import logging
 
 logger = logging.getLogger("dbgestor")
@@ -24,6 +24,7 @@ UDC = (
         ('exp', 'Expediente'),
         ('caj', 'Caja'),
         ('vol', 'Volumen'),
+        ('lib', 'Libro'),
         ('leg', 'Legajo')
     )
 
@@ -48,7 +49,7 @@ HONORIFICOS = (
 
 PERSONAS_TIPOS = (
         ('pere', 'Persona Esclavizada'),
-        ('peri', 'Persona involucrada')
+        ('peri', 'Persona no esclavizada')
     )
 
 RELACIONES = (
@@ -56,6 +57,26 @@ RELACIONES = (
         ('aso', 'Asociativa'), 
         ('tmp', 'Temporal')
     )
+
+TIPOS_DOCUMENTALES = (
+    ('ccv', 'Carta de compra/venta'),
+    ('lib', 'Carta de libertad'),
+    ('tes', 'Testamento'),
+    ('tru', 'Trueque, cambio y traspaso'),
+    ('pod', 'Poder especial'),
+    ('obl', 'Obligación por pesos'),
+    ('inv', 'Inventario de bienes'),
+    ('dot', 'Carta de dote'),
+    ('sus', 'Sustitución de poder'),
+    ('hip', 'Hipoteca/empeño'),
+    ('pag', 'Carta de pago'),
+    ('don', 'Donación de esclavos'),
+    ('lic', 'Licencia'),
+    ('rem', 'Remate'),
+    ('tra', 'Traspaso'),
+    ('her', 'Herencia'),
+    ('sub', 'Subasta')
+)
  
 ###############
 # Lugares
@@ -75,7 +96,6 @@ class Lugar(models.Model):
     
     def __str__(self) -> str:
         return f"{self.nombre_lugar} ({self.tipo})"
-
 
 class PlaceHistorical(models.Model):
     
@@ -107,6 +127,9 @@ class Archivo(models.Model):
     nombre_abreviado = models.CharField(max_length=50)
     ubicacion_archivo = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='archivos_lugares')
     
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     history = HistoricalRecords()
     
     def __str__(self) -> str:
@@ -116,27 +139,52 @@ class Documento(models.Model):
     
     documento_id = models.AutoField(primary_key=True)
     
+    documento_idno = models.CharField(max_length=50, null=True, blank=True)
+    
     archivo = models.ForeignKey(Archivo, on_delete=models.CASCADE)
     fondo = models.CharField(max_length=200)
     subfondo = models.CharField(max_length=200, null=True, blank=True)
     serie = models.CharField(max_length=200, null=True, blank=True)
     subserie = models.CharField(max_length=200, null=True, blank=True)
-    tipo_udc = models.CharField(max_length=50, choices=UDC, default='exp')
+    tipo_udc = models.CharField(max_length=50, choices=UDC, default='lib')
     unidad_documental_compuesta = models.CharField(max_length=200)
     
-    tipo_documento = models.CharField(max_length=100) # este campo necesita una lista de tipos documentales
+    tipo_documento = models.CharField(max_length=100, choices=TIPOS_DOCUMENTALES, default='ccv')
     sigla_documento = models.CharField(max_length=100, null=True, blank=True)
     
     titulo = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     
-    folio_inicial = models.CharField(max_length=50)
+    fecha_inicial = models.DateField(null=True, blank=True)
+    fecha_final = models.DateField(null=True, blank=True)
+    
+    lugar_de_produccion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_doc')
+    
+    folio_inicial = models.CharField(max_length=50, default="None")
     folio_final = models.CharField(max_length=50, null=True, blank=True)
+    
+    evento_valor_sp = models.CharField(max_length=50, null=True, blank=True)
+    evento_forma_de_pago = models.CharField(max_length=100, null=True, blank=True)
+    evento_total = models.CharField(max_length=100, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     history = HistoricalRecords()
 
+    class Meta:
+        ordering = ['-updated_at']
+        
+    def save(self, *args, **kwargs):
+        self.documento_idno = f"mx-sv-doc-{str(self.documento_id).zfill(6)}"
+
+        super(Documento, self).save(*args, **kwargs)
+
     def __str__(self) -> str:
-        return f'{self.archivo.nombre_abreviado}, {self.sigla_documento}: {self.titulo}'
+        if self.sigla_documento:
+            return f'{self.archivo.nombre_abreviado}, {self.sigla_documento}: {self.titulo[:50]}'
+        else:
+            return f'{self.archivo.nombre_abreviado}: {self.titulo[:50]}'
 
 
 #####################
@@ -194,6 +242,11 @@ class Etonimos(models.Model):
 
 class PersonaCommonInfo(models.Model):
     
+    persona_id = models.AutoField(primary_key=True)
+    
+    persona_idno = models.CharField(max_length=50, null=True, blank=True)
+    
+    documentos = models.ManyToManyField(Documento)
     
     nombres = models.CharField(max_length=150, help_text="Nombres sin honoríficos", default="Anónimo")
     apellidos = models.CharField(max_length=150, blank=True, null=True)
@@ -212,10 +265,21 @@ class PersonaCommonInfo(models.Model):
     sexo = models.CharField(max_length=50, choices=SEXOS)
 
     ocupacion = models.ForeignKey(Actividades, null=True, blank=True, on_delete=models.CASCADE, related_name='%(class)s_ocupacion_per')
+    ocupacion_categoria = models.CharField(max_length=150, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    history = HistoricalRecords(inherit=True)
     
     def save(self, *args, **kwargs):
         if not self.nombre_normalizado:
             self.nombre_normalizado = f"{self.nombres} {self.apellidos}"
+        
+        if not self.pk:
+            super(PersonaCommonInfo, self).save(*args, **kwargs)
+            
+        self.persona_idno = f"mx-sv-per-{str(self.persona_id).zfill(6)}"
 
         super(PersonaCommonInfo, self).save(*args, **kwargs)
 
@@ -231,34 +295,24 @@ class PersonaEsclavizada(PersonaCommonInfo):
     """
     This table expands Persona to specifics features regarding a Persona Esclavizada
     """
-    
-    persona_esclavizada_id = models.AutoField(primary_key=True)
-    
+    edad = models.IntegerField(null=True, blank=True)
     altura = models.CharField(max_length=150, null=True, blank=True)
     cabello = models.CharField(max_length=150, null=True, blank=True)
     ojos = models.CharField(max_length=150, null=True, blank=True)
     hispanizacion = models.ManyToManyField(Hispanizaciones)
-    etonimos = models.ManyToManyField(Etonimos)
+    etnonimos = models.ManyToManyField(Etonimos)
     
     marcas_corporales = models.TextField(null=True, blank=True)
     conducta = models.TextField(null=True, blank=True)
     
-    transito_origen = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='tran_ori_pere')
-    transito_destino = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='tran_des_pere')
-    
-    history = HistoricalRecords()
-    
 
-class PersonaInvolucrada(PersonaCommonInfo):
-    
-    persona_involucrada_id = models.AutoField(primary_key=True)
+class PersonaNoEsclavizada(PersonaCommonInfo):
     
     honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
     
     rol_evento = models.CharField(max_length=100, null=True, blank=True, default="nan")
     lugar_situacion = models.ForeignKey(Lugar, null=True, blank=True, on_delete=models.CASCADE, related_name='lugar_situa_peri')
 
-    history = HistoricalRecords()
         
 
 class Persona(models.Model):
@@ -277,6 +331,25 @@ class Persona(models.Model):
     def __str__(self) -> str:
         return f'{self.autoridad_id}: {self.nombre_normalizado}'
 
+class PersonaEsclavizadaLugarRel(models.Model):
+    
+    personaesc_x_lugares = models.AutoField(primary_key=True)
+    
+    documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='tran_documento', default=3)
+    
+    ordinal = models.SmallIntegerField(default=1) # the 
+    anterior_posterior = models.CharField(max_length=50, choices=(('1', 'Anterior al evento'), ('2', 'Posterior al evento')))
+    lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='tran_lugar')
+    fecha_inicial_lugar = models.DateField(null=True, blank=True)
+    fecha_final_lugar = models.DateField(null=True, blank=True)
+    
+    personaesclavizada = models.ForeignKey(PersonaEsclavizada, on_delete=models.CASCADE, related_name='tran_pere')
+    
+    ccreated_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    history = HistoricalRecords()
+
 class PersonaRelaciones(models.Model):
     
     persona_relacion_id = models.AutoField(primary_key=True)
@@ -292,32 +365,4 @@ class PersonaRelaciones(models.Model):
     
     def __str__(self) -> str:
         return f'{self.persona1} > {self.descripcion_relacion} > {self.persona2}'
-
-
-#############
-# Eventos
-#############
-
-class Evento(models.Model):
-    
-    evento_id = models.AutoField(primary_key=True)
-    tipo_evento = models.CharField(max_length=150)
-    fecha_evento = models.DateField()
-    lugar_evento = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True)
-    documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='documentos_eventos')
-    descripcion = models.TextField(null=True, blank=True, help_text="Descripción del evento")
-    
-    valor_evento_sp = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    forma_de_pago = models.CharField(max_length=100, null=True, blank=True)
-    valor_total = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    moneda = models.CharField(max_length=100, null=True, blank=True)
-    
-    personas_esclavizadas = models.ManyToManyField(PersonaEsclavizada, related_name='eventos_pere')
-    personas_involucradas = models.ManyToManyField(PersonaInvolucrada, related_name='eventos_peri')
-    
-    history = HistoricalRecords()
-    
-    def __str__(self) -> str:
-        return f'{self.tipo_evento} ({self.fecha_evento})'
-
 

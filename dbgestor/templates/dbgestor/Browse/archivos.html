@@ -1,0 +1,50 @@
+
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container mt-4">
+    {% if perms.dbgestor.add_documento %}
+    <h2>Crea o selecciona un archivo para agregar documentos</h2>
+    <form action="" method="get">
+        <input type="text" name="q" placeholder="Buscar en el título...">
+        <button type="submit">Buscar</button>
+    </form>
+    <!-- Create New Object Button -->
+    <div class="mb-3">
+        <a href="{% url 'archivo-new' %}" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Crear un archivo</a>
+    </div>
+    {% endif %}
+
+    <div>
+        <a href="?sort=created_at">Ordernar por fecha de creación</a>
+        <a href="?sort=title">Ordernar por título</a>
+        <!-- Add other sorting links as needed -->
+    </div>
+
+    <!-- Grid Layout for Objects -->
+    <div class="row row-cols-1 row-cols-md-4 g-4">
+        {% for object in object_list %}
+        <div class="col">
+            <div class="card h-100" style="width: 16rem;">
+                <div class="card-body">
+                    <h5 class="card-title">ID Archivo: {{ object.pk }}</h5>
+                    <p class="card-text">{{ object.nombre }}</p>
+                    <p class="card-text">Nombre abreviado: {{ object.nombre_abreviado }}</p>
+                    <p class="card-text">Ubicación: {{ object.ubicacion_archivo }}</p>
+                    <a href="{% url 'archivo-detail' object.pk %}" class="btn btn-outline-secondary">Seleccionar archivo</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col">
+            <div class="text-center">
+                <p>No objects yet.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+{% endblock content %}

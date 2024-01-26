@@ -1,0 +1,30 @@
+<!-- archivo_form_only.html -->
+<div class="modal-header">
+    <h5 class="modal-title" id="exampleModalLabel">Agregar archivo</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <form method="post" class="archivo_form" id="newArchivoForm">
+        {% csrf_token %}
+        {% if create_archivo.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in create_archivo.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mb-3">
+            <label for="{{ create_archivo.nombre.id_for_label }}" class="form-label">{{ create_archivo.nombre.label }}</label>
+            {{ create_archivo.nombre }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ create_archivo.nombre_abreviado.id_for_label }}" class="form-label">{{ create_archivo.nombre_abreviado.label }}</label>
+            {{ create_archivo.nombre_abreviado }}
+        </div>
+            
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+    </form>
+</div>

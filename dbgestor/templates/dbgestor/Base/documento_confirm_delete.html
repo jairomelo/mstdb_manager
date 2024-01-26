@@ -1,0 +1,28 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+      <div class="col-md-6 shadow auth-forms-container">
+        {% if perms.dbgestor.delete_documento %}
+           {% include '_delete_warning.html' %}
+           
+           <form method="post" class="text-center">
+               {% csrf_token %}
+               <input type="submit" value="Confirmar" class="btn btn-danger me-2">
+               <a href="{% url 'documento-browse' %}" class="btn btn-secondary">Cancelar</a>
+           </form>
+
+        {% else %}
+            {% if user.is_authenticated %}
+                {% include '_no_permission.html' %}
+            {% else %}
+                {% include '_no_registered.html' %}
+            {% endif %}
+        {% endif %}
+      </div>
+  </div>
+</div>
+
+{% endblock %}

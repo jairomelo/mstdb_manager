@@ -1,0 +1,95 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Etnónimo</h2>
+
+    {% if perms.dbgestor.add_etnonimo %}
+
+    <form method="post" class="form" id="newEtnonimoForm">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+
+        {% bootstrap_field form.etonimo %}
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+        </div>
+    </form>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="addDocumentoModal" tabindex="-1" aria-labelledby="addDocumentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="addPersonaModal" tabindex="-1" aria-labelledby="addPersonaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addEtnonimoModal" tabindex="-1" aria-labelledby="addEtnonimoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+
+{% include '_cancel_warning.html' %}
+
+
+{{ form.media }}
+
+
+{% comment %} <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        bindEventToButton('add_acta_bautismo', '#addDocumentoModal .modal-content', "{% url 'documento-new' %}", "#newDocumentoForm", '/toolbox/Form/new/documento/', 'id_acta_bautismo', '#addDocumentoModal');
+        bindEventToButton('add_bautizado', '#addPersonaModal .modal-content', "{% url 'persona-new' %}", "#newPersonaForm", '/toolbox/Form/new/persona/', 'id_bautizado', '#addPersonaModal');
+        bindEventToButton('add_padre', '#addPersonaModal .modal-content', "{% url 'persona-new' %}", "#newPersonaForm", '/toolbox/Form/new/persona/', 'id_padre', '#addPersonaModal');
+        bindEventToButton('add_madre', '#addPersonaModal .modal-content', "{% url 'persona-new' %}", "#newPersonaForm", '/toolbox/Form/new/persona/', 'id_madre', '#addPersonaModal');
+        bindEventToButton('add_padrino', '#addPersonaModal .modal-content', "{% url 'persona-new' %}", "#newPersonaForm", '/toolbox/Form/new/persona/', 'id_padrino', '#addPersonaModal');
+        bindEventToButton('add_madrina', '#addPersonaModal .modal-content', "{% url 'persona-new' %}", "#newPersonaForm", '/toolbox/Form/new/persona/', 'id_madrina', '#addPersonaModal');
+        bindEventToButton('add_etnonimo_bautismo', '#addEtnonimoModal .modal-content', "{% url 'etnonimo-new' %}", "#newEtnonimoForm", '/toolbox/Form/new/etnonimo/', 'id_etnonimo_bautismo', '#addEtnonimoModal');
+        bindEventToButton('add_etnonimo_bautizado', '#addEtnonimoModal .modal-content', "{% url 'etnonimo-new' %}", "#newEtnonimoForm", '/toolbox/Form/new/etnonimo/', 'id_etnonimo_bautizado', '#addEtnonimoModal');
+    });
+    
+</script>
+ {% endcomment %}
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+
+    
+
+{% else %}
+    
+        {% if user.is_authenticated %}
+            {% include '_no_permission.html' %}
+        {% else %}
+        {% include '_no_registered.html' %}
+        {% endif %}
+        {% endif %}
+
+{% endblock content %}

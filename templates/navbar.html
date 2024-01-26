@@ -3,7 +3,7 @@
 <nav class="navbar navbar-expand-lg navbar-light" style="background-color: #ffffff;">
     <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'home' %}">
-            Gestor de datos
+            <img src="{% static 'mdb/media/logo-circular.png' %}" alt="" width="auto" height="50">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -11,19 +11,27 @@
         
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav navbar-right ms-auto mb-2 mb-lg-0">
-                {% comment %} <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="{% url 'persona-browse' %}">Personas</a>
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="#">Añadir registro</a>
                 </li>
+                
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="browseDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Explorar
+                    <a class="nav-link dropdown-toggle" href="{% url 'documento-browse' %}" id="browseDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Ver / Explorar
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="browseDropdown">
-                        <li><a class="dropdown-item" href="{% url 'bautismo-browse' %}">Bautismos</a></li>
-                        <li><a class="dropdown-item" href="{% url 'matrimonio-browse' %}">Matrimonios</a></li>
-                        <li><a class="dropdown-item" href="{% url 'entierro-browse' %}">Entierros</a></li>
+                        <li><a class="dropdown-item" href="{% url 'archivo-browse' %}">Archivos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'documento-browse' %}">Documentos</a></li>
+                        <li><a class="dropdown-item" href="#">Personas Esclavizadas</a></li>
+                        <li><a class="dropdown-item" href="#">Personas no Esclavizadas</a></li>
                     </ul>
-                </li> {% endcomment %}
+                </li> 
+
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="#">Lugares</a>
+                </li>
+                {% endif %}
             </ul>
 
             <form class="d-flex">
@@ -59,15 +67,15 @@
                           {% endif %}
                       {% endwith %}
                           <li class='nav-item'>
-                              <a class='nav-link' href="{% url 'logout' %}">Logout</a>
+                              <a class='nav-link' href="{% url 'logout' %}">Salir</a>
                           </li>
                       {% else %}
                           <li class='nav-item'>
-                              <a class='nav-link' href="{% url 'login' %}">Login</a>
+                              <a class='nav-link' href="{% url 'login' %}">Entrar</a>
                           </li>
-                          <li class='nav-item'>
+                          {% comment %} <li class='nav-item'>
                               <a class='nav-link' href="{% url 'register' %}">Register</a>
-                          </li>
+                          </li> {% endcomment %}
                       {% endif %}
                   </ul>
               </li>

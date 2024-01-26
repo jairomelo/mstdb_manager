@@ -1,0 +1,41 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h1>Detalle del archivo</h1>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="card-title">Archivo: {{ archivo.nombre }}</h2>
+            <p class="card-text"> {{ archivo.nombre_abreviado }}</p>
+            <!-- ForeignKey Links -->
+            
+        
+            {% if perms.dbgestor.add_documento %} <a href='{% url 'documento-new' %}' class="btn btn-primary me-2"><i class="far fa-plus-square"></i> Agregar un nuevo documento a {{ archivo.nombre }}</a>{% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-group">
+        <a href="{% url 'archivo-browse' %}" class="btn btn-outline-secondary">Regresar</a>
+        {% if perms.dbgestor.add_archivo %}
+        <a href="{% url 'archivo-update' archivo.pk %}" class="btn btn-outline-primary">Editar</a>
+        {% endif %}
+        {% if perms.dbgraphic.delete_archivo %}
+        <a href="{% url 'archivo-delete' archivo.pk %}" class="btn btn-outline-danger">Borrar</a>
+        {% endif %}
+    </div>
+
+</div>
+
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+{% endblock content %}

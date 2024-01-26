@@ -1,0 +1,138 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Crear documento</h2>
+
+    {% if perms.dbgestor.add_documento %}
+
+    <form method="post" class="form" id="newDocumentoForm">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+
+        <div class="mb-3">
+            <label for="{{ form.archivo.id_for_label }}" class="form-label">{{ form.archivo.label }}</label>
+            {{ form.archivo }}
+            <button type="button" id="add_archivo" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir archivo"><i class="fas fa-university"></i></button>
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.fondo.id_for_label }}" class="form-label">{{ form.fondo.label }}</label>
+            {{ form.fondo }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.subfondo.id_for_label }}" class="form-label">{{ form.subfondo.label }}</label>
+            {{ form.subfondo }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.sigla_documento.id_for_label }}" class="form-label">Sigla completa</label>
+            {{ form.sigla_documento }}
+        </div>
+
+        {% bootstrap_input_group form.tipo_udc form.unidad_documental_compuesta label="Unidad documental" %}
+
+        <div class="mb-3">
+            <label for="{{ form.tipo_documento.id_for_label }}" class="form-label">{{ form.tipo_documento.label }}</label>
+            {{ form.tipo_documento }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.titulo.id_for_label }}" class="form-label">{{ form.titulo.label }}</label>
+            {{ form.titulo }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.folio_inicial.id_for_label }}" class="form-label">Folio</label>
+            {{ form.folio_inicial }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.fecha_inicial.id_for_label }}" class="form-label">Fecha evento</label>
+            {{ form.fecha_inicial }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.evento_valor_sp.id_for_label }}" class="form-label">Valor en pesos de la transacción</label>
+            {{ form.evento_valor_sp }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.evento_forma_de_pago.id_for_label }}" class="form-label">Forma de pago</label>
+            {{ form.evento_forma_de_pago }}
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+        </div>
+    </form>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="addArchivoModal" tabindex="-1" aria-labelledby="addArchivoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="addPersonaModal" tabindex="-1" aria-labelledby="addPersonaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addLugarModal" tabindex="-1" aria-labelledby="addLugarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+
+{% include '_cancel_warning.html' %}
+
+
+{{ form.media }}
+
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        bindEventToButton('add_archivo', '#addArchivoModal .modal-content', "{% url 'archivo-new' %}", "#newArchivoForm", "{% url 'archivo-new' %}", 'id_archivo', '#addArchivoModal');
+    });
+    
+</script>
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+    
+
+{% else %}
+    
+        {% if user.is_authenticated %}
+            {% include '_no_permission.html' %}
+        {% else %}
+        {% include '_no_registered.html' %}
+        {% endif %}
+        {% endif %}
+
+{% endblock content %}

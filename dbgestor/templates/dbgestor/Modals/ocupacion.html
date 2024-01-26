@@ -1,0 +1,21 @@
+<div class="modal-header">
+    <h5 class="modal-title" id="exampleModalLabel">Agregar ocupacion</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <form method="post" class="ocupacion_form" id="newOcupacionForm">
+        {% csrf_token %}
+        {% if create_ocupacion.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in create_ocupacion.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {{ form.actividad }}
+            
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+    </form>
+</div>

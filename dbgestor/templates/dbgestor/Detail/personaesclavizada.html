@@ -1,0 +1,39 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h1>Detalle de la persona esclavizada</h1>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="card-title">Nombre: {{ personaesclavizada.nombres }} {{ personaesclavizada.apellidos }}</h2>
+            <p class="card-text"> {{ personaesclavizada.nombre_normalizado }}</p>
+            <!-- ForeignKey Links -->
+            
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-group">
+        <a href="{% url 'personasesclavizadas-browse' %}" class="btn btn-outline-secondary">Regresar</a>
+        {% if perms.dbgestor.add_personaesclavizada %}
+        <a href="{% url 'personaesclavizada-update' personaesclavizada.pk %}" class="btn btn-outline-primary">Editar</a>
+        {% endif %}
+        {% if perms.dbgraphic.delete_personaesclavizada %}
+        <a href="{% url 'personaesclavizada-delete' personaesclavizada.pk %}" class="btn btn-outline-danger">Borrar</a>
+        {% endif %}
+    </div>
+
+</div>
+
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+{% endblock content %}

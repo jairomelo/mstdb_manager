@@ -5,12 +5,14 @@
 <div class="container mt-4">
     <!-- Hero Section -->
     <div class="jumbotron text-center">
-        <h1 class="display-4">Gestor de datos</h1>
-        <p class="lead">para el registro del tráfico de personas esclavizadas</p>
+        <h1 class="display-4">Base de datos</h1>
+        <p class="lead">“La circulación de afrodescendientes esclavizados y libres en la Nueva España”</p>
         <hr class="my-4">
         <p></p>
-        {% comment %} <a class="btn btn-primary btn-lg" href="{% url 'bautismo-browse' %}" role="button">Explorar Bautismos</a>
-        <a class="btn btn-primary btn-lg" href="{% url 'matrimonio-browse' %}" role="button">Explorar Matrimonios</a>
+        {% if user.is_authenticated %}
+        <a class="btn btn-primary btn-lg" href="{% url 'documento-browse' %}" role="button">Iniciar</a>
+        {% endif %}
+        {% comment %} <a class="btn btn-primary btn-lg" href="{% url 'matrimonio-browse' %}" role="button">Explorar Matrimonios</a>
         <a class="btn btn-primary btn-lg" href="{% url 'entierro-browse' %}" role="button">Explorar Entierros</a> {% endcomment %}
     </div>
 
