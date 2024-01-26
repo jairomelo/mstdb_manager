@@ -1,6 +1,6 @@
 from typing import Any
 from django.shortcuts import render, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db import transaction, models
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -220,6 +220,13 @@ class PersonaEsclavizadaCreateView(CreateView):
     template_name = 'dbgestor/Add/peresclavizada.html'
     success_url = reverse_lazy('personasesclavizadas-browse')
     
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
+    
     def get_initial(self) -> dict[str, Any]:
         initial = super().get_initial()
         
@@ -237,6 +244,13 @@ class PersonaEsclavizadaLugarRelCreateView(CreateView):
     form_class = PersonaEsclavizadaLugarRelForm
     template_name = 'dbgestor/Relaciones/personaesclavizada_x_lugar.html'
     success_url = reverse_lazy('documento-browse')
+
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
 
     def get_initial(self) -> dict[str, Any]:
         initial = super().get_initial()
