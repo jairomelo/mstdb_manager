@@ -398,7 +398,7 @@ class ArchivoBrowse(ListView):
         queryset = super().get_queryset()
         sort = self.request.GET.get('sort', 'updated_at')
         if sort not in ['archivo', 'created_at', 'titulo', 'tipo_documento', 'tipo_udc']:
-            sort = 'updated_at'
+            sort = '-updated_at'
         
         search_query = self.request.GET.get('q', None)
         if search_query:
@@ -417,7 +417,7 @@ class DocumentoBrowse(ListView):
         queryset = super().get_queryset()
         sort = self.request.GET.get('sort', 'updated_at')
         if sort not in ['archivo', 'created_at', 'titulo', 'tipo_documento', 'tipo_udc']:
-            sort = 'updated_at'
+            sort = '-updated_at'
         
         search_query = self.request.GET.get('q', None)
         if search_query:
@@ -436,7 +436,7 @@ class PersonaEsclavizadaBrowse(ListView):
         queryset = super().get_queryset()
         sort = self.request.GET.get('sort', 'updated_at')
         if sort not in ['nombres', 'created_at', 'apellidos', 'nombre_normalizado']:
-            sort = 'updated_at'
+            sort = '-updated_at'
         
         search_query = self.request.GET.get('q', None)
         if search_query:
