@@ -194,7 +194,7 @@ class LugarCreateView(CreateView):
     def get_template_names(self):
         
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return ['dbgestor/Modals/lugar_form_only.html']
+            return ['dbgestor/Modals/lugar.html']
         return ['dbgestor/Add/lugar.html']
     
     def form_valid(self, form):
@@ -202,7 +202,7 @@ class LugarCreateView(CreateView):
 
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             data = {
-                'lugar_id': self.object.id,
+                'lugar_id': self.object.lugar_id,
                 'lugar_name': str(self.object)  
             }
             return JsonResponse(data)

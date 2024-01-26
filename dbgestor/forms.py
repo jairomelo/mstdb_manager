@@ -122,7 +122,11 @@ class LugarForm(forms.ModelForm):
             )
 
         return lugar
-        
+    
+    def __init__(self, *args, **kwargs):
+        super(LugarForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
     
 class LugarHistoria(forms.ModelForm):
     

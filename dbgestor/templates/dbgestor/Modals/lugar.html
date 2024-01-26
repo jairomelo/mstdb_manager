@@ -1,0 +1,42 @@
+<div class="modal-header">
+    <h5 class="modal-title" id="exampleModalLabel">Agregar lugar</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <form method="post" class="lugar_create_lugar" id="newLugarForm">
+        {% csrf_token %}
+        {% if create_lugar.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in create_lugar.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mb-3">
+            <label for="{{ create_lugar.nombre_lugar.id_for_label }}" class="form-label">{{ create_lugar.nombre_lugar.label }}</label>
+            {{ create_lugar.nombre_lugar }}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ create_lugar.tipo.id_for_label }}" class="form-label">{{ create_lugar.tipo.label }}</label>
+            {{ create_lugar.tipo }}
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ create_lugar.lat.id_for_label }}" class="form-label">{{ create_lugar.lat.label }}</label>
+                {{ create_lugar.lat }}
+            </div>
+        
+            <div class="col-md-6 mb-3">
+                <label for="{{ create_lugar.lon.id_for_label }}" class="form-label">{{ create_lugar.lon.label }}</label>
+                {{ create_lugar.lon }}
+            </div>
+        </div>
+        
+            
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+</div>

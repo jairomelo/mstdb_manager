@@ -1,49 +1,50 @@
-
 {% extends 'main.html' %}
 {% load django_bootstrap5 django_bootstrap_input_group static %}
 {% block content %}
 
 <div class="container mt-4">
     {% if perms.dbgestor.add_documento %}
-    <h2>Crea o selecciona una persona para agregar lugares o relaciones</h2>
-    <form action="" method="get">
-        <input type="text" name="q" placeholder="Buscar en el título...">
-        <button type="submit">Buscar</button>
-    </form>
-    <!-- Create New Object Button -->
-    <div class="mb-3">
-        <a href="{% url 'personaesclavizada-new' %}" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Crear un registro de persona esclavizada</a>
-    </div>
+        <h2>Crea o selecciona una persona para agregar lugares o relaciones</h2>
+
+        <!-- Search Form -->
+        <form action="" method="get" class="input-group mb-3">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nombre...">
+            <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+        </form>
+
+        <!-- Create New Object Button -->
+        <div class="mb-3">
+            <a href="{% url 'personaesclavizada-new' %}" class="btn btn-info"><i class="fas fa-plus-circle"></i> Crear un registro de persona esclavizada</a>
+        </div>
     {% endif %}
 
-    <div>
-        <a href="?sort=created_at">Ordernar por fecha de creación</a>
-        <a href="?sort=nombre_normalizado">Ordernar por nombres</a>
+    <!-- Sorting Links -->
+    <div class="d-flex mb-4">
+        <a href="?sort=created_at" class="me-2 btn btn-outline-info">Ordenar por fecha de creación</a>
+        <a href="?sort=nombre_normalizado" class="btn btn-outline-info">Ordenar por nombres</a>
         <!-- Add other sorting links as needed -->
     </div>
 
     <!-- Grid Layout for Objects -->
     <div class="row row-cols-1 row-cols-md-4 g-4">
         {% for object in object_list %}
-        <div class="col">
-            <div class="card h-100" style="width: 16rem;">
-                <div class="card-body">
-                    <h5 class="card-title">ID Persona esclavizada: {{ object.persona_idno }}</h5>
-                    <p class="card-text">{{ object.nombres }} {{ object.apellidos }}</p>
-                    
-                    <a href="{% url 'personaesclavizada-detail' object.pk %}" class="btn btn-outline-secondary">Seleccionar persona esclavizada</a>
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">ID Persona esclavizada: {{ object.persona_idno }}</h5>
+                        <p class="card-text">{{ object.nombres }} {{ object.apellidos }}</p>
+                        <a href="{% url 'personaesclavizada-detail' object.pk %}" class="btn btn-outline-secondary">Seleccionar persona esclavizada</a>
+                    </div>
                 </div>
             </div>
-        </div>
         {% empty %}
-        <div class="col">
-            <div class="text-center">
-                <p>No objects yet.</p>
+            <div class="col">
+                <div class="text-center">
+                    <p>No hay personas esclavizadas registradas aún.</p>
+                </div>
             </div>
-        </div>
         {% endfor %}
     </div>
 </div>
-
 
 {% endblock content %}

@@ -23,12 +23,17 @@
             <p class="card-text">Valor del evento en pesos: {{ documento.evento_valor_sp }} {{ documento.evento_forma_de_pago }}
 
                 <h3>Personas esclavizadas asociadas al documento</h3>
-                <div class="row">
+                <!-- ForeignKey Links -->
+                {% if perms.dbgestor.add_personaesclavizada %}
+                    <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Añadir persona esclavizada al documento</a>
+                {% endif %}
+                <div class="row" style="padding:15px;">
                     {% for peresclavizada in peresclavizadas %}
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card">
                                 <div class="card-header">
-                                    {{ peresclavizada.nombre_normalizado }} (ID: {{ peresclavizada.persona_idno }})
+                                    {{ peresclavizada.nombre_normalizado }} (ID: {{ peresclavizada.persona_idno }}) 
+                                    {% if perms.dbgestor.add_personaesclavizada %} <a href='{% url 'personaesclavizada-detail' peresclavizada.pk %}' class="btn btn-outline-dark me-2"><i class="far fa-eye"></i></a>{% endif %}
                                 </div>
                                 <div class="card-body">
                                     <h5 class="card-title">Lugares Asociados</h5>
@@ -59,10 +64,7 @@
                     {% endfor %}
                 </div>
                 
-                <!-- ForeignKey Links -->
-                {% if perms.dbgestor.add_personaesclavizada %}
-                    <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Añadir persona esclavizada al documento</a>
-                {% endif %}
+                
                 
         </div>
     </div>

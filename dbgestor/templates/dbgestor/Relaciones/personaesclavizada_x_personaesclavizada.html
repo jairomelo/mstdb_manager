@@ -26,12 +26,6 @@
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.lugar.id_for_label }}" class="form-label">{{ form.lugar.label }}</label>
-            {{ form.lugar }}
-            <button type="button" id="add_lugar" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar"><i class="fas fa-map-marked"></i></button>
-        </div>
-
-        <div class="mb-3">
             <div class="row g-2">
                 <div class="col">
                     <label for="{{ form.ordinal.id_for_label }}" class="form-label">{{ form.ordinal.label }}</label>
@@ -39,10 +33,17 @@
                     <small class="form-text text-muted">Orden del lugar.</small>
                 </div>
                 <div class="col">
-                    <label for="{{ form.anterior_posterior.id_for_label }}" class="form-label">Anterior/Posterior al evento</label>
+                    <label for="{{ form.anterior_posterior.id_for_label }}" class="form-label">¿Es un lugar anterior o posterior al evento?</label>
                     {{ form.anterior_posterior }}
                 </div>
             </div>
+        </div>
+        
+
+        <div class="mb-3">
+            <label for="{{ form.lugar.id_for_label }}" class="form-label">{{ form.lugar.label }}</label>
+            {{ form.lugar }}
+            <button type="button" id="add_lugar" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar"><i class="fas fa-map-marked"></i></button>
         </div>
 
 
@@ -102,7 +103,7 @@
 
 <script type="text/javascript">
     bindEventToButton('add_documento', '#addDocumentoModal .modal-content', "{% url 'documento-new' %}", "#newDocumentoForm", "{% url 'documento-new' %}", 'id_documento', '#addDocumentoModal');
-    bindEventToButton('add_lugar', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", "{% url 'lugar-new' %}", 'id_lugar', '#addLugarModal');
+        bindEventToButton('add_ubicacion_archivo', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", 'dbgestor/Add/lugar.html', 'id_ubicacion_archivo', '#addLugarModal');
     
 </script>
 
