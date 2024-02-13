@@ -45,7 +45,7 @@
                 
                 {% if perms.dbgestor.add_personaesclavizada %}
                     <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Incluir persona esclavizada</a>
-                    <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Incluir persona no esclavizada</a>
+                    <a href="{% url 'personanoesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Incluir persona no esclavizada</a>
                     <button id="createRelationLugar" class="btn btn-success mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar anterior o posterior a una o más personas"><i class="fas fa-shoe-prints"></i> Añadir lugares a personas</button>
                     <button id="createRelation" class="btn btn-success mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir relación entre dos o más personas"><i class="fas fa-people-arrows"></i> Añadir relaciones entre personas</button>
                 {% endif %}
