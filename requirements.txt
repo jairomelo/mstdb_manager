@@ -39,4 +39,3 @@ telepath==0.3.1
 typing_extensions==4.9.0
 urllib3==2.1.0
 webencodings==0.5.1
-Willow==1.6.3

@@ -6,79 +6,153 @@
     <!-- Document Details -->
     <div class="card mb-4">
         <div class="card-body">
-            <h1 class="card-title">Detalle del Documento</h1>
+            <h1 class="card-title">{{ documento.titulo }}</h1>
             <p><strong>Id:</strong> {{ documento.documento_idno }}</p>
             <p><i class="fas fa-university"></i> {{ documento.archivo }}</p>
             <p><i class="far fa-folder-open"></i> {{ documento.fondo }}, {{ documento.subfondo }},
             {% if documento.sigla_documento %} {{ documento.sigla_documento }}, {% endif %} {{ documento.get_tipo_udc_display }} {{ documento.unidad_documental_compuesta }}, f. {{ documento.folio_inicial }}</p>
+
+            <p class="card-text">{{ documento.get_tipo_documento_display }}</p>
+            <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial }}</p>
+            <p class="card-text">Valor del evento en pesos: {{ documento.evento_valor_sp }} {{ documento.evento_forma_de_pago }}
+        </div>
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                {% if perms.dbgestor.add_documento %}
+                    <a href="{% url 'documento-update' documento.pk %}" class="btn btn-outline-primary">Editar</a>
+                {% endif %}
+                {% if perms.dbgraphic.delete_documento %}
+                    <a href="{% url 'documento-delete' documento.pk %}" class="btn btn-outline-danger">Borrar</a>
+                {% endif %}
+            </div>
         </div>
     </div>
 
     <!-- Main Document Card -->
     <div class="card mb-3">
         <div class="card-body">
-            <h2 class="card-title">{{ documento.titulo }}</h2>
-            <p class="card-text">{{ documento.get_tipo_documento_display }}</p>
-            <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial }}</p>
-            <p class="card-text">Valor del evento en pesos: {{ documento.evento_valor_sp }} {{ documento.evento_forma_de_pago }}
 
-                <h3>Personas esclavizadas asociadas al documento</h3>
-                <!-- ForeignKey Links -->
+
+                <div id="warningAlert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+                    Seleccione al menos dos personas para crear una relación.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                  <div id="warningAlertLugares" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+                    Seleccione al una personas para asignar un lugar.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                
                 {% if perms.dbgestor.add_personaesclavizada %}
-                    <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Añadir persona esclavizada al documento</a>
+                    <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Incluir persona esclavizada</a>
+                    <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info mt-3"><i class="fas fa-user-alt"></i> Incluir persona no esclavizada</a>
+                    <button id="createRelationLugar" class="btn btn-success mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar anterior o posterior a una o más personas"><i class="fas fa-shoe-prints"></i> Añadir lugares a personas</button>
+                    <button id="createRelation" class="btn btn-success mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir relación entre dos o más personas"><i class="fas fa-people-arrows"></i> Añadir relaciones entre personas</button>
                 {% endif %}
                 <div class="row" style="padding:15px;">
+                    <div class="selectall">
+                        <button id="selectAllBtn" class="btn btn-light toggle-button"><i class="far fa-check-square"></i> Seleccionar todas</button>
+                        <button id="deselectAllBtn" class="btn btn-light toggle-button hidden"><i class="far fa-square"></i> Deseleccionar todas</button>
+                    </div>
+                    <h3>Personas esclavizadas asociadas al documento</h3>
                     {% for peresclavizada in peresclavizadas %}
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card">
                                 <div class="card-header">
+                                    <input type="checkbox" class="form-check-input" name="selected_personas" value="{{ peresclavizada.pk }}">
                                     {{ peresclavizada.nombre_normalizado }} (ID: {{ peresclavizada.persona_idno }}) 
                                     {% if perms.dbgestor.add_personaesclavizada %} <a href='{% url 'personaesclavizada-detail' peresclavizada.pk %}' class="btn btn-outline-dark me-2"><i class="far fa-eye"></i></a>{% endif %}
                                 </div>
                                 <div class="card-body">
-                                    <h5 class="card-title">Lugares Asociados</h5>
+                                    <h5 class="card-title">Lugares</h5>
                                     <p class="card-text">
-                                        <strong>Lugares anteriores al evento:</strong>
-                                        <br>
-                                        {% for perexlug in personaesclavizadalugarrel %}
-                                            {% if perexlug.anterior_posterior == '1' and perexlug.documento == documento and perexlug.personaesclavizada == peresclavizada %}
-                                                - {{ perexlug.lugar }}<br>
-                                            {% endif %}
+                                        {% for category, places in place_data.items %}
+                                            <strong>{{ category }}</strong>
+                                            <ul class="fa-ul">
+                                                {% for place, details in places.items %}
+                                                    {% if peresclavizada.nombre_normalizado in details.personas %}
+                                                    <li><span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}</li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </ul>
+                                            
                                         {% endfor %}
                                     </p>
+                                    <h5 class="card-title">Relaciones</h5>
                                     <p class="card-text">
-                                        <strong>Lugares posteriores al evento:</strong>
-                                        <br>
-                                        {% for perexlug in personaesclavizadalugarrel %}
-                                            {% if perexlug.anterior_posterior == '2' and perexlug.documento == documento and perexlug.personaesclavizada == peresclavizada %}
-                                                - {{ perexlug.lugar }}<br>
-                                            {% endif %}
+                                        {% for relation_type, personas in relationshipdata.items %}
+                                        
+                                        {% if peresclavizada.nombre_normalizado in personas %}
+                                        <strong>{{ relation_type }}</strong>
+                                        <ul class="fa-ul">
+                                                {% for persona in personas %}
+
+                                                    {% if persona != peresclavizada.nombre_normalizado %}
+                                                    <li><span class="fa-li"><i class="fas fa-user-friends"></i></span> {{ persona }}</li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    {% endfor %}
+                                    </p>
+                                        
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <h3>Personas no esclavizadas asociadas al documento</h3>
+                    {% for pernoesclavizada in pernoesclavizadas %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <input type="checkbox" class="form-check-input" name="selected_personas" value="{{ pernoesclavizada.pk }}">
+                                    {{ pernoesclavizada.nombre_normalizado }} (ID: {{ pernoesclavizada.persona_idno }}) 
+                                    {% if perms.dbgestor.add_personanoesclavizada %} <a href='{% url 'personanoesclavizada-detail' pernoesclavizada.pk %}' class="btn btn-outline-dark me-2"><i class="far fa-eye"></i></a>{% endif %}
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">Lugares</h5>
+                                    <p class="card-text">
+                                        {% for category, places in place_data.items %}
+                                            <strong>{{ category }}</strong>
+                                            <ul class="fa-ul">
+                                                {% for place, details in places.items %}
+                                                    {% if pernoesclavizada.nombre_normalizado in details.personas %}
+                                                    <li><span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}</li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </ul>
+                                            
                                         {% endfor %}
                                     </p>
-                                    {% if perms.dbgestor.add_personaesclavizadalugarrel %}
-                                        <a href="{% url 'personaesclavizada_x_lugar-new' %}?documento_initial={{ documento.pk }}&personaesclavizada_initial={{ peresclavizada.pk }}" class="btn btn-success mt-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar previo o posterior al evento"><i class="fas fa-shoe-prints"></i> Añadir lugar</a>
-                                    {% endif %}
+
+                                    <h5 class="card-title">Relaciones</h5>
+                                    <p class="card-text">
+                                        {% for relation_type, personas in relationshipdata.items %}
+                                        
+                                        {% if pernoesclavizada.nombre_normalizado in personas %}
+                                        <strong>{{ relation_type }}</strong>
+                                        <ul class="fa-ul">
+                                                {% for persona in personas %}
+
+                                                    {% if persona != pernoesclavizada.nombre_normalizado %}
+                                                    <li><span class="fa-li"><i class="fas fa-user-friends"></i></span> {{ persona }}</li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    {% endfor %}
+                                    </p>
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
-                
-                
-                
         </div>
     </div>
 
-    <!-- Action Buttons -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <a href="{% url 'documento-browse' %}" class="btn btn-outline-secondary">Regresar</a>
-            {% if perms.dbgestor.add_documento %}
-                <a href="{% url 'documento-update' documento.pk %}" class="btn btn-outline-primary">Editar</a>
-            {% endif %}
-            {% if perms.dbgraphic.delete_documento %}
-                <a href="{% url 'documento-delete' documento.pk %}" class="btn btn-outline-danger">Borrar</a>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -90,6 +164,87 @@
             new bootstrap.Tooltip(tooltipTriggerEl);
         });
     });
+
+    function showWarningAlert() {
+        var warningAlert = document.getElementById('warningAlert');
+        warningAlert.style.display = 'block';
+    }
+
+    function hideWarningAlert() {
+        var warningAlert = document.getElementById('warningAlert');
+        warningAlert.style.display = 'none';
+    }
+
+    function showWarningAlertLugar() {
+        var warningAlert = document.getElementById('warningAlertLugares');
+        warningAlert.style.display = 'block';
+    }
+
+    function hideWarningAlertLugar() {
+        var warningAlert = document.getElementById('warningAlertLugares');
+        warningAlert.style.display = 'block';
+    }
+
+    document.getElementById('createRelation').addEventListener('click', function() {
+        const selectedPersonas = document.querySelectorAll('input[name="selected_personas"]:checked');
+        let ids = [];
+        selectedPersonas.forEach((persona) => {
+            ids.push(persona.value);
+        });
+        if(ids.length >= 2) { 
+            window.location.href = `{% url 'persona_x_persona-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
+        } else {
+            showWarningAlert();
+        }
+    });
+    
+
+    document.getElementById('createRelationLugar').addEventListener('click', function() {
+        const selectedPersonas = document.querySelectorAll('input[name="selected_personas"]:checked');
+        let ids = [];
+        selectedPersonas.forEach((persona) => {
+            ids.push(persona.value);
+        });
+        if(ids.length >= 1) { 
+            window.location.href = `{% url 'persona_x_lugar-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
+        } else {
+            showWarningAlertLugar();
+        }
+    });
+
+    function toggleButtons() {
+        var selectAllBtn = document.getElementById('selectAllBtn');
+        var deselectAllBtn = document.getElementById('deselectAllBtn');
+
+        selectAllBtn.classList.toggle('hidden');
+        deselectAllBtn.classList.toggle('hidden');
+
+    }
+
+    function selectAll() {
+        var checkboxes = document.getElementsByName('selected_personas');
+        checkboxes.forEach(function(checkbox){
+            checkbox.checked = true;
+        });
+        toggleButtons();
+    }
+
+    function deselectAll() {
+        var checkboxes = document.getElementsByName('selected_personas');
+        checkboxes.forEach(function(checkbox){
+            checkbox.checked = false;
+        });
+        toggleButtons();
+    }
+
+    document.getElementById('selectAllBtn').addEventListener('click', function() {
+        selectAll();
+    });
+
+    document.getElementById('deselectAllBtn').addEventListener('click', function() {
+        deselectAll();
+    });
+
 </script>
 
 {% endblock content %}

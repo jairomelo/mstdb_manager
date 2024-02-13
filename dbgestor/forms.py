@@ -5,9 +5,9 @@ from dal import autocomplete
 import re
 
 from .models import (Lugar, PlaceHistorical, PersonaEsclavizada, 
-                     PersonaNoEsclavizada, PersonaCommonInfo, Documento, Archivo,
+                     PersonaNoEsclavizada, Persona, Documento, Archivo,
                      Calidades, Hispanizaciones, Etonimos, Actividades,
-                     PersonaEsclavizadaLugarRel)
+                     PersonaLugarRel, PersonaRelaciones)
 
 from .widgets import (PersonaEsclavizadaAutocomplete, PersonaNoEsclavizadaAutocomplete, 
                       LugarEventoAutocomplete, DocumentoAutocomplete, ArchivoAutocomplete, CalidadesAutocomplete)
@@ -18,24 +18,35 @@ logger = logging.getLogger("dbgestor")
 
 
 class CustomValidators:
-    def validate_date(self, date_text):
+    def validate_date(self, date_text: str) -> tuple:
+        """_summary_
+
+        Args:
+            date_text (str): Cadena de caracteres con una fecha completa o parcial.
+
+        Raises:
+            forms.ValidationError: Formatos de fecha incorrectos por no ajustarse al formato dd/mm/aaaa
+
+        Returns:
+            tuple: Fecha formateada.
+        """
         if not isinstance(date_text, str):
             return date_text
         date_text = date_text.strip()
         if len(date_text) > 10:
-            raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use AAAA-MM-DD, AAAA-MM, o AAAA.")
+            raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
         
         try:
-            parsed_date = datetime.strptime(date_text, '%Y-%m-%d')
+            parsed_date = datetime.strptime(date_text, '%d-%m-%Y')
             return parsed_date.date()
         except ValueError:
             parts = date_text.split('-')
             if len(parts) == 1 and len(parts[0]) == 4:
                 return datetime.strptime(date_text, '%Y').date()
             elif len(parts) == 2:
-                return datetime.strptime(date_text, '%Y-%m').date()
+                return datetime.strptime(date_text, '%m-%Y').date()
             else:
-                raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use AAAA-MM-DD, AAAA-MM, o AAAA.")
+                raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
 
     def validate_folios(self, folio_inicial, folio_final):
         
@@ -189,7 +200,16 @@ class DocumentoForm(forms.ModelForm):
         widget=forms.DateInput(format='%d/%m/%Y', attrs={'class': 'date-input', 'placeholder': 'DD/MM/YYYY'}),
         input_formats=['%d/%m/%Y', '%Y-%m-%d']
     )
+    
+    def clean_fecha_inicial(self):
+        fecha_inicial = self.cleaned_data.get('fecha_inicial')
         
+        logger.debug(f"Cleaning Documento/fecha_inicial {fecha_inicial}")
+        fecha_inicial_valid = CustomValidators().validate_date(fecha_inicial)
+        logger.debug(f"Fecha inicial cleaned {fecha_inicial_valid}")
+        return fecha_inicial_valid
+        
+    
     def __init__(self, *args, **kwargs):
         super(DocumentoForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -201,6 +221,9 @@ class PersonaEsclavizadaForm(forms.ModelForm):
     class Meta:
         model = PersonaEsclavizada
         fields = '__all__'
+        widgets = {
+            'fecha_nacimiento_factual': forms.CheckboxInput(),
+        }
     
     documentos = forms.ModelMultipleChoiceField(
         queryset=Documento.objects.all(),
@@ -241,22 +264,77 @@ class PersonaEsclavizadaForm(forms.ModelForm):
     
     conducta = forms.CharField(required=False, label="Registros de conducta")
     
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        if commit:
+            instance.save()
+            self.save_m2m()
+            
+            documentos = instance.documentos.all()
+            if instance.edad is not None and not instance.fecha_nacimiento and documentos.count() == 1:
+                documento = documentos.first()
+                if documento and documento.fecha_inicial:
+                    calculated_date = CustomBuilders().nacimiento_x_edad(instance.edad, documento.fecha_inicial)
+                    instance.fecha_nacimiento = calculated_date
+                    instance.fecha_nacimiento_factual = False
+                    instance.save()
+        
+        return instance
+    
     def __init__(self, *args, **kwargs):
         super(PersonaEsclavizadaForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
             
 
+class PersonaNoEsclavizadaForm(forms.ModelForm):
+    
+    class Meta:
+        model = PersonaNoEsclavizada
+        fields = '__all__'
+        widgets = {
+            'fecha_nacimiento_factual': forms.CheckboxInput(),
+        }
+    
+    documentos = forms.ModelMultipleChoiceField(
+        queryset=Documento.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='documento-autocomplete'),
+        label='Documentos'
+    )
+    
+    calidades = forms.ModelMultipleChoiceField(
+        queryset=Calidades.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='calidades-autocomplete'),
+        label='Calidades'
+    )
+    
+    actividad = forms.ModelChoiceField(
+        queryset=Actividades.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
+        label='Ocupaciones'
+    )
+    
+    ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
+    
+    def __init__(self, *args, **kwargs):
+        super(PersonaNoEsclavizadaForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+
 # Relaciones Forms
 
-class PersonaEsclavizadaLugarRelForm(forms.ModelForm):
+class PersonaLugarRelForm(forms.ModelForm):
     class Meta:
-        model = PersonaEsclavizadaLugarRel
+        model = PersonaLugarRel
         fields = '__all__'
 
     documento = forms.ModelChoiceField(
         queryset=Documento.objects.all(),
-        required=False,
+        required=True,
         widget=autocomplete.ModelSelect2(url='documento-autocomplete'),
         label='Documento'
     )
@@ -266,15 +344,42 @@ class PersonaEsclavizadaLugarRelForm(forms.ModelForm):
         widget=autocomplete.ModelSelect2(url='lugar-autocomplete')
     )
     
-    personaesclavizada = forms.ModelChoiceField(
-        queryset=PersonaEsclavizada.objects.all(),
-        widget=autocomplete.ModelSelect2(url='personaesclavizada-autocomplete')
+    personas = forms.ModelMultipleChoiceField(
+        queryset=Persona.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
+        label='Personas relacionadas'
     )
 
     def __init__(self, *args, **kwargs):
-        super(PersonaEsclavizadaLugarRelForm, self).__init__(*args, **kwargs)
+        super(PersonaLugarRelForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
+
+
+class PersonaRelacionesForm(forms.ModelForm):
+    class Meta:
+        model = PersonaRelaciones
+        fields = '__all__'
+        widgets = {
+            'naturaleza_relacion': forms.Select(),
+            'descripcion_relacion': forms.Textarea(attrs={'rows': 2}),
+        }
+    
+    documento = forms.ModelChoiceField(
+        queryset=Documento.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2(url='documento-autocomplete'),
+        label='Documento'
+    )
+    
+    personas = forms.ModelMultipleChoiceField(
+        queryset=Persona.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
+        label='Personas relacionadas'
+    )
+    
 
 # Vocabs Forms
 

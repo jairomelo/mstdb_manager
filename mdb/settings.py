@@ -19,8 +19,6 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-print(BASE_DIR)
-
 # local credentials
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
@@ -33,13 +31,14 @@ SECRET_KEY = 'django-insecure-^5(lt(57sz1#_u*j29dlphi*_cv81l&7ew^u@or08z0li1ov39
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['172.22.139.213', '127.0.0.1', 'msdb.abcng.org']
+ALLOWED_HOSTS = ['172.22.139.213', '127.0.0.1', 'msdb.abcng.org', 'localhost']
 
 # Application definition
 
 INSTALLED_APPS = [
     'dal',
     'dal_select2',
+    'polymorphic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

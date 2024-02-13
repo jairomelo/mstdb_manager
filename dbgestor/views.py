@@ -1,25 +1,28 @@
-from typing import Any
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_list_or_404
 from django.urls import reverse_lazy, reverse
 from django.db import transaction, models
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
+from collections import defaultdict
+
 from dal import autocomplete
 
 from .models import (Lugar, PlaceHistorical, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
                      Archivo, Calidades, Hispanizaciones, Etonimos, Actividades,
-                     PersonaEsclavizadaLugarRel)
+                     PersonaLugarRel, Persona, PersonaRelaciones)
 
 from .forms import (LugarForm, LugarHistoria, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
+                    PersonaNoEsclavizadaForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
-                    PersonaEsclavizadaLugarRelForm)
+                    PersonaLugarRelForm, PersonaRelacionesForm)
 
 # Create your views here.
 
 def home(request):
     return render(request, 'dbgestor/home.html')
+
 
 class LugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -39,6 +42,13 @@ class PersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
 class PersonaNoEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         qs = PersonaNoEsclavizada.objects.all()
+        if self.q:
+            qs = qs.filter(nombre_normalizado__icontains=self.q)
+        return qs
+    
+class PersonaAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = Persona.objects.all()
         if self.q:
             qs = qs.filter(nombre_normalizado__icontains=self.q)
         return qs
@@ -174,8 +184,22 @@ class DocumentoCreateView(CreateView):
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse_lazy('documento-detail', kwargs={'pk': self.object.pk})
+        archivo_initial = self.request.GET.get('archivo_initial')
+        if archivo_initial:
+            return reverse('archivo-detail', kwargs={
+                'pk': archivo_initial
+            })
+        else:
+            return reverse_lazy('documento-detail', kwargs={'pk': self.object.pk})
 
+    def get_initial(self):
+        initial = super().get_initial()
+        
+        archivo_initial = self.request.GET.get('archivo_initial')
+        if archivo_initial:
+            initial['archivo'] = archivo_initial
+            
+        return initial
 
 
 class LugarCreateView(CreateView):
@@ -217,7 +241,7 @@ class LugarCreateView(CreateView):
 class PersonaEsclavizadaCreateView(CreateView):
     model = PersonaEsclavizada
     form_class = PersonaEsclavizadaForm
-    template_name = 'dbgestor/Add/peresclavizada.html'
+    template_name = 'dbgestor/Add/personaesclavizada.html'
     success_url = reverse_lazy('personasesclavizadas-browse')
     
     def get_success_url(self):
@@ -227,7 +251,29 @@ class PersonaEsclavizadaCreateView(CreateView):
         else:
             return reverse('documento-browse')
     
-    def get_initial(self) -> dict[str, Any]:
+    def get_initial(self):
+        initial = super().get_initial()
+        
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            initial['documentos'] = documento_initial
+        
+        return initial
+
+class PersonaNoEsclavizadaCreateView(CreateView):
+    model = PersonaNoEsclavizada
+    form_class = PersonaNoEsclavizadaForm
+    template_name = 'dbgestor/Add/personanoesclavizada.html'
+    success_url = reverse_lazy('personasnoesclavizadas-browse')
+    
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
+    
+    def get_initial(self):
         initial = super().get_initial()
         
         documento_initial = self.request.GET.get('documento_initial')
@@ -237,31 +283,76 @@ class PersonaEsclavizadaCreateView(CreateView):
         return initial
 
 
+
 # create views for RElations
 
-class PersonaEsclavizadaLugarRelCreateView(CreateView):
-    model = PersonaEsclavizadaLugarRel
-    form_class = PersonaEsclavizadaLugarRelForm
-    template_name = 'dbgestor/Relaciones/personaesclavizada_x_lugar.html'
+class PersonaLugarRelCreateView(CreateView):
+    model = PersonaLugarRel
+    form_class = PersonaLugarRelForm
+    template_name = 'dbgestor/Relaciones/persona_x_lugar.html'
     success_url = reverse_lazy('documento-browse')
 
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        personas_initial = self.request.GET.get('ids')
+        if personas_initial:
+            personas_ids = personas_initial.split(',')
+            selected_personas = Persona.objects.filter(persona_id__in=personas_ids)
+            form.fields['personas'].initial = selected_personas
+        return form
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            initial['documento'] = documento_initial
+        return initial
+
+    def form_valid(self, form):
+        response = super().form_valid(form) 
+        return response
+
+class PersonaPersonaRelCreateView(CreateView):
+    model = PersonaRelaciones
+    form_class = PersonaRelacionesForm
+    template_name = 'dbgestor/Relaciones/persona_x_persona.html'
+    success_url = reverse_lazy('documento-browse')
+    
     def get_success_url(self):
         documento_initial = self.request.GET.get('documento_initial')
         if documento_initial:
             return reverse('documento-detail', kwargs={'pk': documento_initial})
         else:
             return reverse('documento-browse')
-
-    def get_initial(self) -> dict[str, Any]:
-        initial = super().get_initial()
         
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        personas_initial = self.request.GET.get('ids')
+        if personas_initial:
+            personas_ids = personas_initial.split(',')
+            selected_personas = Persona.objects.filter(persona_id__in=personas_ids)
+            form.fields['personas'].initial = selected_personas
+        return form
+        
+    def get_initial(self):
+        initial = super().get_initial()
         documento_initial = self.request.GET.get('documento_initial')
-        personaesclavizada_initial = self.request.GET.get('personaesclavizada_initial')
         if documento_initial:
             initial['documento'] = documento_initial
-        if personaesclavizada_initial:
-            initial['personaesclavizada'] = personaesclavizada_initial
         return initial
+
+    def form_valid(self, form):
+        response = super().form_valid(form) 
+        return response
+
 
 # Create views for  Vocabs
 class CalidadesCreateView(CreateView):
@@ -448,11 +539,48 @@ class PersonaEsclavizadaBrowse(ListView):
         
         return queryset.order_by(sort)
 
+
+class PersonaNoEsclavizadaBrowse(ListView):
+    model = PersonaNoEsclavizada
+    template_name = 'dbgestor/Browse/personasnoesclavizadas.html'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        sort = self.request.GET.get('sort', 'updated_at')
+        if sort not in ['nombres', 'created_at', 'apellidos', 'nombre_normalizado']:
+            sort = '-updated_at'
+        
+        search_query = self.request.GET.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(nombres__icontains=search_query) | 
+                Q(apellidos__icontains=search_query) |
+                Q(nombre_normalizado__icontains=search_query)
+            )
+        
+        return queryset.order_by(sort)
+
 # Detail views
 
 class ArchivoDetailView(DetailView):
     model = Archivo
     template_name = 'dbgestor/Detail/archivo.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        archivo = self.get_object()
+        
+        documentos = Documento.objects.filter(
+            models.Q(
+                archivo = archivo
+            )
+        )
+        
+        context['documentos'] = documentos
+        
+        return context
+    
 
 class DocumentoDetailView(DetailView):
     model = Documento
@@ -472,14 +600,53 @@ class DocumentoDetailView(DetailView):
             )
         )
         
-        personaesclavizadalugarrel = PersonaEsclavizadaLugarRel.objects.filter(
+        personalugarrel = PersonaLugarRel.objects.filter(
             models.Q(
                 documento=documento
             )
         )
         
+        pernoesclavizadas = PersonaNoEsclavizada.objects.filter(
+            models.Q(
+                documentos=documento
+            )
+        )
+        
+        personapersonarel = PersonaRelaciones.objects.filter(
+            models.Q(
+                documento=documento
+            )
+        )
+        
+        relationship_data = defaultdict(set)
+        
+        for relacion in personapersonarel:
+            if relacion.documento == documento:
+                for persona in relacion.personas.all():
+                    relationship_data[relacion.get_naturaleza_relacion_display()].add(persona.nombre_normalizado)
+        
+        for key in relationship_data:
+            relationship_data[key] = list(relationship_data[key])
+        
+        
+        place_data = defaultdict(lambda: defaultdict(dict))
+
+        for rel in personalugarrel:
+            category = "Anteriores" if rel.anterior_posterior == '1' else "Posteriores"
+            place_name = rel.lugar.nombre_lugar
+            if place_name not in place_data[category]:
+                place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal}
+            for persona in rel.personas.all():
+                place_data[category][place_name]['personas'].append(persona.nombre_normalizado)
+            
+        place_data_standard = {category: dict(places) for category, places in place_data.items()}
+        
         context['peresclavizadas'] = peresclavizadas
-        context['personaesclavizadalugarrel'] = personaesclavizadalugarrel
+        context['personalugarrel'] = personalugarrel
+        context['pernoesclavizadas'] = pernoesclavizadas
+        context['personapersonarel'] = personapersonarel
+        context['relationshipdata'] = dict(relationship_data)
+        context['place_data'] = place_data_standard
         
         last_updated_user = None
         if last_history:
@@ -492,6 +659,61 @@ class DocumentoDetailView(DetailView):
 class PersonaEsclavizadaDetailView(DetailView):
     model = PersonaEsclavizada
     template_name = 'dbgestor/Detail/personaesclavizada.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        last_history = self.object.history.first()
+        history_records = self.object.history.all()
+        context['history_records'] = history_records
+        
+        personaesclavizada = self.get_object()
+        
+        personalugarrel = PersonaLugarRel.objects.filter(
+            models.Q(
+                personas=personaesclavizada
+            )
+        )
+        
+        personapersonarel = PersonaRelaciones.objects.filter(
+            models.Q(
+                personas=personaesclavizada
+            )
+        )
+        
+        context['personalugarrel'] = personalugarrel
+        context['personapersonarel'] = personapersonarel
+        
+        return context
+        
+
+class PersonaNoEsclavizadaDetailView(DetailView):
+    model = PersonaNoEsclavizada
+    template_name = 'dbgestor/Detail/personanoesclavizada.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        last_history = self.object.history.first()
+        history_records = self.object.history.all()
+        context['history_records'] = history_records
+        
+        personanoesclavizada = self.get_object()
+        
+        personalugarrel = PersonaLugarRel.objects.filter(
+            models.Q(
+                personas=personanoesclavizada
+            )
+        )
+        
+        personapersonarel = PersonaRelaciones.objects.filter(
+            models.Q(
+                personas=personanoesclavizada
+            )
+        )
+        
+        context['personalugarrel'] = personalugarrel
+        context['personapersonarel'] = personapersonarel
+        
+        return context
 
 # Update views
 
@@ -547,6 +769,24 @@ class PersonaEsclavizadaUpdateView(UpdateView):
         
         return kwargs
 
+class PersonaNoEsclavizadaUpdateView(UpdateView):
+    model = PersonaNoEsclavizada
+    form_class = PersonaNoEsclavizadaForm
+    template_name = 'dbgestor/Add/personanoesclavizada.html' 
+    success_url = reverse_lazy('personasnoesclavizadas-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'editar'
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super(PersonaNoEsclavizadaUpdateView, self).get_form_kwargs()
+        
+        return kwargs
+
+
 # Delete views    
 
 class ArchivoDeleteView(DeleteView):
@@ -573,7 +813,7 @@ class DocumentoDeleteView(DeleteView):
     
 
 class PersonaEsclavizadaDeleteView(DeleteView):
-    model = Documento
+    model = PersonaEsclavizada
     template_name = 'dbgestor/Base/personaesclavizada_confirm_delete.html'
     success_url = reverse_lazy('personasesclavizadas-browse')
     
@@ -582,3 +822,14 @@ class PersonaEsclavizadaDeleteView(DeleteView):
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'borrar'
         return context
+    
+class PersonaNoEsclavizadaDeleteView(DeleteView):
+    model = PersonaNoEsclavizada
+    template_name = 'dbgestor/Base/personanoesclavizada_confirm_delete.html'
+    success_url = reverse_lazy('personasnoesclavizadas-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'borrar'
+        return context  

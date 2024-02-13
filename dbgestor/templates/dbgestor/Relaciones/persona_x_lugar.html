@@ -5,9 +5,9 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6 shadow auth-forms-container">
-    <h2 class="mb-4">Agregar relación Persona Esclavizada y Lugar</h2>
+    <h2 class="mb-4">Agregar relación Persona y Lugar</h2>
 
-    {% if perms.dbgestor.add_personaesclavizadalugarrel %}
+    {% if perms.dbgestor.add_personalugarrel %}
 
     <form method="post" class="form" id="newArchivoForm">
         {% csrf_token %}
@@ -16,13 +16,11 @@
         <div class="mb-3">
             <label for="{{ form.documento.id_for_label }}" class="form-label">Documento</label>
             {{ form.documento }}
-            <a href="{% url 'documento-new' %}" id="adddocumentoBtn" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir documento" aria-label="Añadir documento"><i class="fas fa-file-medical" aria-hidden="true"></i></a>
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.personaesclavizada.id_for_label }}" class="form-label">Persona Esclavizada</label>
-            {{ form.personaesclavizada }}
-            <a href="{% url 'personaesclavizada-new' %}" id="addpersonaesclavizadaBtn" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir personaesclavizada" aria-label="Añadir personaesclavizada"><i class="fas fa-file-medical" aria-hidden="true"></i></a>
+            <label for="{{ form.personas.id_for_label }}" class="form-label">Personas</label>
+            {{ form.personas }}
         </div>
 
         <div class="mb-3">
@@ -45,11 +43,16 @@
             </div>
         </div>
 
+        <div class="mb-3">
+            <label for="{{ form.relacion_lugar.id_for_label }}" class="form-label">{{ form.relacion_lugar.label }}</label>
+            {{ form.relacion_lugar }}
+        </div>
+
 
 
         <div class="text-center">
             <button type="submit" class="btn btn-primary me-2">Guardar</button>
-            <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+            <a href="{% url 'documento-browse' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
         </div>
     </form>
 </div>

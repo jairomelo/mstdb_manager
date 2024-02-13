@@ -78,7 +78,7 @@
 
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
-        bindEventToButton('add_ubicacion_archivo', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", 'dbgestor/Add/lugar.html', 'id_ubicacion_archivo', '#addLugarModal');
+        bindEventToButton('add_ubicacion_archivo', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", "{% url 'lugar-new' %}", 'id_ubicacion_archivo', '#addLugarModal');
     });
     
 </script>

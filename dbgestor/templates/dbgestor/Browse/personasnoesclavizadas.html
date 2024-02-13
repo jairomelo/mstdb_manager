@@ -4,24 +4,24 @@
 
 <div class="container mt-4">
     {% if perms.dbgestor.add_documento %}
-        <h2>Crea o selecciona un archivo para agregar documentos</h2>
+        <h2>Crea o selecciona una persona no esclavizada</h2>
 
         <!-- Search Form -->
         <form action="" method="get" class="input-group mb-3">
-            <input type="text" name="q" class="form-control" placeholder="Buscar en el título...">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nombre...">
             <button type="submit" class="btn btn-outline-secondary">Buscar</button>
         </form>
 
         <!-- Create New Object Button -->
         <div class="mb-3">
-            <a href="{% url 'archivo-new' %}" class="btn btn-info"><i class="fas fa-plus-circle"></i> Crear un archivo</a>
+            <a href="{% url 'personanoesclavizada-new' %}" class="btn btn-info"><i class="fas fa-plus-circle"></i> Crear un registro de persona no esclavizada</a>
         </div>
     {% endif %}
 
     <!-- Sorting Links -->
     <div class="d-flex mb-4">
-        <a href="?sort=created_at" class="me-2 btn btn-outline-info">Ordenar por Fecha de creación</a>
-        <a href="?sort=title" class="btn btn-outline-info">Ordenar por Título</a>
+        <a href="?sort=created_at" class="me-2 btn btn-outline-info">Ordenar por fecha de creación</a>
+        <a href="?sort=nombre_normalizado" class="btn btn-outline-info">Ordenar por nombres</a>
         <!-- Add other sorting links as needed -->
     </div>
 
@@ -31,18 +31,16 @@
             <div class="col">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h5 class="card-title">{{ object.nombre }}</h5>
-                        <p class="card-text">{{ object.idno }}</p>
-                        <p class="card-text">Nombre abreviado: {{ object.nombre_abreviado }}</p>
-                        <p class="card-text">Ubicación: {{ object.ubicacion_archivo }}</p>
-                        <a href="{% url 'archivo-detail' object.pk %}" class="btn btn-outline-secondary">Seleccionar archivo</a>
+                        <h5 class="card-title">ID Persona no esclavizada: {{ object.persona_idno }}</h5>
+                        <p class="card-text">{{ object.nombres }} {{ object.apellidos }}</p>
+                        <a href="{% url 'personanoesclavizada-detail' object.pk %}" class="btn btn-outline-secondary">Seleccionar persona no esclavizada</a>
                     </div>
                 </div>
             </div>
         {% empty %}
             <div class="col">
                 <div class="text-center">
-                    <p>No hay archivos aún.</p>
+                    <p>No hay personas no esclavizadas registradas aún.</p>
                 </div>
             </div>
         {% endfor %}

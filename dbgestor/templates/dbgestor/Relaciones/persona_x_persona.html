@@ -5,47 +5,35 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6 shadow auth-forms-container">
-    <h2 class="mb-4">Agregar relación Persona Esclavizada y Lugar</h2>
+    <h2 class="mb-4">Agregar relación Persona a Persona</h2>
 
-    {% if perms.dbgestor.add_personaesclavizadalugarrel %}
+    {% if perms.dbgestor.add_personalugarrel %}
 
     <form method="post" class="form" id="newArchivoForm">
         {% csrf_token %}
         {% include '_form_errors.html' %}
 
-        <div class="mb-3">
-            <label for="{{ form.documento.id_for_label }}" class="form-label">Documento</label>
+        <div class"mb-3">
+            {{ form.documento.label_tag }}
             {{ form.documento }}
-            <a href="{% url 'documento-new' %}" id="adddocumentoBtn" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir documento" aria-label="Añadir documento"><i class="fas fa-file-medical" aria-hidden="true"></i></a>
+            {{ form.documento.errors }}
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.personaesclavizada.id_for_label }}" class="form-label">Persona Esclavizada</label>
-            {{ form.personaesclavizada }}
-            <a href="{% url 'personaesclavizada-new' %}" id="addpersonaesclavizadaBtn" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir personaesclavizada" aria-label="Añadir personaesclavizada"><i class="fas fa-file-medical" aria-hidden="true"></i></a>
+            {{ form.personas.label_tag }}
+            {{ form.personas }}
+            {{ form.personas.errors }}
         </div>
-
         <div class="mb-3">
-            <div class="row g-2">
-                <div class="col">
-                    <label for="{{ form.ordinal.id_for_label }}" class="form-label">{{ form.ordinal.label }}</label>
-                    {{ form.ordinal }}
-                    <small class="form-text text-muted">Orden del lugar.</small>
-                </div>
-                <div class="col">
-                    <label for="{{ form.anterior_posterior.id_for_label }}" class="form-label">¿Es un lugar anterior o posterior al evento?</label>
-                    {{ form.anterior_posterior }}
-                </div>
-            </div>
+            {{ form.naturaleza_relacion.label_tag }}
+            {{ form.naturaleza_relacion }}
+            {{ form.naturaleza_relacion.errors }}
         </div>
-        
-
         <div class="mb-3">
-            <label for="{{ form.lugar.id_for_label }}" class="form-label">{{ form.lugar.label }}</label>
-            {{ form.lugar }}
-            <button type="button" id="add_lugar" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar"><i class="fas fa-map-marked"></i></button>
+            {{ form.descripcion_relacion.label_tag }}
+            {{ form.descripcion_relacion }}
+            {{ form.descripcion_relacion.errors }}
         </div>
-
 
 
         <div class="text-center">

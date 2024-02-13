@@ -5,11 +5,11 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6 shadow auth-forms-container">
-    <h2 class="mb-4">Agregar persona esclavizada</h2>
+    <h2 class="mb-4">Agregar persona no esclavizada</h2>
 
-    {% if perms.dbgestor.add_personaesclavizada %}
+    {% if perms.dbgestor.add_personanoesclavizada %}
 
-    <form method="post" class="form" id="newPereForm">
+    <form method="post" class="form" id="newPernoForm">
         {% csrf_token %}
         {% include '_form_errors.html' %}
 
@@ -19,7 +19,8 @@
             <a href="{% url 'documento-new' %}" id="adddocumentosBtn" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir documentos" aria-label="Añadir documentos"><i class="fas fa-file-medical" aria-hidden="true"></i></a>
         </div>
 
-        {% bootstrap_input_group form.nombres form.apellidos label="Nombre" %}
+        
+        {% bootstrap_input_group form.honorifico form.nombres form.apellidos label="Nombre" %}
 
         <div class="mb-3">
             <label for="{{ form.nombre_normalizado.id_for_label }}" class="form-label">Nombre y apellido estandarizados</label>
@@ -32,49 +33,19 @@
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.edad.id_for_label }}" class="form-label">{{ form.edad.label }}</label>
-            {{ form.edad }}
-        </div>
-
-        <div class="mb-3">
-            <label for="{{ form.altura.id_for_label }}" class="form-label">{{ form.altura.label }}</label>
-            {{ form.altura }}
-        </div>
-
-        <div class="mb-3">
-            <label for="{{ form.ojos.id_for_label }}" class="form-label">{{ form.ojos.label }}</label>
-            {{ form.ojos }}
-        </div>
-
-        <div class="mb-3">
             <label for="{{ form.calidades.id_for_label }}" class="form-label">{{ form.calidades.label }}</label>
             {{ form.calidades }}
             <button type="button" id="add_calidad" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir calidad"><i class="fas fa-user-tag"></i></button>
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.hispanizacion.id_for_label }}" class="form-label">{{ form.hispanizacion.label }}</label>
-            {{ form.hispanizacion }}
-            <button type="button" id="add_hispanizacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir hispanización"><i class="fas fa-address-card"></i></button>
-        </div>
-
-        <div class="mb-3">
-            <label for="{{ form.etnonimos.id_for_label }}" class="form-label">{{ form.etnonimos.label }}</label>
-            {{ form.etnonimos }}
-            <button type="button" id="add_etnonimo" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir etnónimo"><i class="fas fa-street-view"></i></button>
-        </div>
-
-        {% bootstrap_field form.ocupacion_categoria %}
-
-        {% bootstrap_field form.marcas_corporales %}
-
-        {% bootstrap_field form.conducta %}
-
-        <div class="mb-3">
             <label for="{{ form.actividad.id_for_label }}" class="form-label">{{ form.actividad.label }}</label>
             {{ form.actividad }}
             <button type="button" id="add_ocupacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir ocupación"><i class="fas fa-user-cog"></i></button>
         </div>
+        {% bootstrap_field form.ocupacion_categoria %}
+
+        {% bootstrap_field form.rol_evento %}
 
         <div class="text-center">
             <button type="submit" class="btn btn-primary me-2">Guardar</button>

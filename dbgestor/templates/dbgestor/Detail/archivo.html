@@ -10,11 +10,30 @@
         <div class="card-body">
             <h2 class="card-title">Archivo: {{ archivo.nombre }}</h2>
             <p class="card-text"> {{ archivo.nombre_abreviado }}</p>
-            <!-- ForeignKey Links -->
-            
-        
-            {% if perms.dbgestor.add_documento %} <a href='{% url 'documento-new' %}' class="btn btn-primary me-2"><i class="far fa-plus-square"></i> Agregar un nuevo documento a {{ archivo.nombre }}</a>{% endif %}
-        </div>
+
+            <p class="card-text"> {{ archivo.ubicacion_archivo }} <a href="https://www.google.com/maps/place/{{ archivo.ubicacion_archivo }},+Mexico", target="_blank"><i class="fas fa-map-marker-alt"></i> </a> </p>
+
+            {% if perms.dbgestor.add_documento %} <a href='{% url 'documento-new' %}?archivo_initial={{ archivo.pk }}' class="btn btn-primary me-2"><i class="far fa-plus-square"></i> Agregar un nuevo documento a {{ archivo.nombre_abreviado }}</a>{% endif %}
+
+            <div class="row" style="padding:15px;">
+                {% for documento in documentos %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            {{ documento.titulo }} (ID: {{ documento.documento_idno }})
+                            {% if perms.dbgestor.add_documento %} <a href='{% url 'documento-detail' documento.pk %}' class="btn btn-outline-dark me-2"><i class="far fa-eye"></i></a>{% endif %}
+                        </div>
+                        <div class="card-body">
+                            <p><i class="far fa-folder-open"></i> {{ documento.fondo }}, {{ documento.subfondo }},
+                                {% if documento.sigla_documento %} {{ documento.sigla_documento }}, {% endif %} {{ documento.get_tipo_udc_display }} {{ documento.unidad_documental_compuesta }}, f. {{ documento.folio_inicial }}</p>
+                                <p class="card-text">{{ documento.get_tipo_documento_display }}</p>
+                                <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>        
     </div>
 
     <!-- Action Buttons -->

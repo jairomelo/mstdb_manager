@@ -5,19 +5,19 @@
 <div class="container mt-5">
     <div class="row">
         <div class="col-lg-8 mx-auto">
-            <h1 class="mb-4">Detalle de la Persona Esclavizada</h1>
+            <h1 class="mb-4">Detalle de la Persona No Esclavizada</h1>
 
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title">{{ personaesclavizada.nombres }} {{ personaesclavizada.apellidos }}</h2>
-                    <p class="card-text"><small class="text-muted">{{ personaesclavizada.nombre_normalizado }}</small></p>
+                    <h2 class="card-title">{{ personanoesclavizada.nombres }} {{ personanoesclavizada.apellidos }}</h2>
+                    <p class="card-text"><small class="text-muted">{{ personanoesclavizada.nombre_normalizado }}</small></p>
 
-                    {% if personaesclavizada.fecha_nacimiento %}
-                        <p class="card-text"><i class="fas fa-birthday-cake me-2"></i>{{ personaesclavizada.fecha_nacimiento }} {% if personaesclavizada.lugar_nacimiento %} - {{ personaesclavizada.lugar_nacimiento }} {% endif %}</p>
+                    {% if personanoesclavizada.fecha_nacimiento %}
+                        <p class="card-text"><i class="fas fa-birthday-cake me-2"></i>{{ personanoesclavizada.fecha_nacimiento }} {% if personanoesclavizada.lugar_nacimiento %} - {{ personanoesclavizada.lugar_nacimiento }} {% endif %}</p>
                     {% endif %}
 
-                    {% if personaesclavizada.fecha_defuncion %}
-                        <p class="card-text"><i class="fas fa-cross me-2"></i>{{ personaesclavizada.fecha_defuncion }} {% if personaesclavizada.lugar_defuncion %} - {{ personaesclavizada.lugar_defuncion }} {% endif %} </p>
+                    {% if personanoesclavizada.fecha_defuncion %}
+                        <p class="card-text"><i class="fas fa-cross me-2"></i>{{ personanoesclavizada.fecha_defuncion }} {% if personanoesclavizada.lugar_defuncion %} - {{ personanoesclavizada.lugar_defuncion }} {% endif %} </p>
                     {% endif %}
 
                     <div class="mb-3">
@@ -44,11 +44,11 @@
             <div class="d-flex justify-content-between align-items-center mt-4">
                 <a href="{% url 'personasesclavizadas-browse' %}" class="btn btn-outline-secondary">Regresar</a>
                 <div>
-                    {% if perms.dbgestor.add_personaesclavizada %}
-                        <a href="{% url 'personaesclavizada-update' personaesclavizada.pk %}" class="btn btn-outline-primary me-2">Editar</a>
+                    {% if perms.dbgestor.add_personanoesclavizada %}
+                        <a href="{% url 'personanoesclavizada-update' personanoesclavizada.pk %}" class="btn btn-outline-primary me-2">Editar</a>
                     {% endif %}
-                    {% if perms.dbgraphic.delete_personaesclavizada %}
-                        <a href="{% url 'personaesclavizada-delete' personaesclavizada.pk %}" class="btn btn-outline-danger">Borrar</a>
+                    {% if perms.dbgraphic.delete_personanoesclavizada %}
+                        <a href="{% url 'personanoesclavizada-delete' personanoesclavizada.pk %}" class="btn btn-outline-danger">Borrar</a>
                     {% endif %}
                 </div>
             </div>

@@ -21,6 +21,7 @@
                         <li><a class="dropdown-item" href="{% url 'archivo-browse' %}">Archivos</a></li>
                         <li><a class="dropdown-item" href="{% url 'documento-browse' %}">Documentos</a></li>
                         <li><a class="dropdown-item" href="{% url 'personasesclavizadas-browse' %}">Personas Esclavizadas</a></li>
+                        <li><a class="dropdown-item" href="{% url 'personasnoesclavizadas-browse' %}">Personas No Esclavizadas</a></li>
                     </ul>
                 </li> 
                 {% endif %}
@@ -41,7 +42,7 @@
                   <ul class="dropdown-menu dropdown-menu-lg-end" aria-labelledby="userDropdown">
                     {% if request.user.is_superuser %}
                         <li class='nav-item'>
-                            <a class='nav-link' href="{% url 'admin:index' %}">Administración</a>
+                            <a class='nav-link' href="{% url 'admin:index' %}" target="_blank">Administración</a>
                         </li>
 
                     {% endif %}

@@ -18,3 +18,12 @@
         padding-right: 1rem;
         background-color: rgba(121, 76, 40, 0.02);
 }
+
+.toggle-button {
+    display: inline-block;
+    /* Add any additional styling as needed */
+}
+
+.hidden {
+    display: none;
+}
