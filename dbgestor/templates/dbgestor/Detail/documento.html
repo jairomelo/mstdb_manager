@@ -150,6 +150,26 @@
         </div>
     </div>
 
+    <div class="card mb-3">
+        <div class="card-header" data-bs-toggle="collapse" href="#changeHistory" role="button" aria-expanded="false" aria-controls="changeHistory">
+            <i class="fas fa-history"></i> Historial de cambios:
+        </div>
+        <div class="collapse" id="changeHistory">
+            <ul class="list-group list-group-flush">
+                {% for record in history_records %}
+                    <li class="list-group-item">
+                        <i class="far fa-user"></i> {{ record.history_user }} 
+                        <span class="text-muted" style="float:right;">
+                            <i class="far fa-calendar-alt"></i> {{ record.history_date|date:"d M Y H:i" }}
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <a href="{% url 'documento-browse' %}" class="btn btn-outline-secondary">Regresar</a>
