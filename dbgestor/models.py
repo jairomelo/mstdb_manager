@@ -349,7 +349,7 @@ class PersonaNoEsclavizada(Persona):
     
     honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
     
-    rol_evento = models.CharField(max_length=200, null=True, blank=True, choices=FUNCION, default='nan')
+    rol_evento = models.CharField(max_length=200, null=True, blank=True, default='nan')
 
 
 class PersonaLugarRel(models.Model):
