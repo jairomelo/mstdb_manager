@@ -1,0 +1,149 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-02-26 21:09+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: dbgestor/forms.py:160
+msgid "Número de la unidad"
+msgstr ""
+
+#: dbgestor/forms.py:162
+msgid "Título/resumen del documento"
+msgstr ""
+
+#: dbgestor/forms.py:164
+msgid "incluir número y 'r' o 'v'"
+msgstr ""
+
+#: dbgestor/forms.py:165
+msgid "folio final opcional"
+msgstr ""
+
+#: dbgestor/forms.py:168 dbgestor/forms.py:173
+msgid "AAAA-MM-DD, AAAA-MM, o AAAA."
+msgstr "YYYY-MM-DD, YYYY-MM, or YYYY."
+
+#: dbgestor/templates/dbgestor/Add/documento.html:9
+msgid "Crear documento"
+msgstr "Add a Document"
+
+#: dbgestor/templates/dbgestor/Add/documento.html:34
+msgid "Sigla completa"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:39
+#, fuzzy
+#| msgid "Crear documento"
+msgid "Unidad documental"
+msgstr "Add a Document"
+
+#: dbgestor/templates/dbgestor/Add/documento.html:55
+msgid "Folios inicial y final"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:61
+msgid "Fecha inicial"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:65
+msgid "Checkbox para fecha inicial aproximada"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:65
+#: dbgestor/templates/dbgestor/Add/documento.html:76
+msgid "Seleccionar si no es una fecha claramente obtenida del documento"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:66
+#: dbgestor/templates/dbgestor/Add/documento.html:77
+msgid "Fecha aproximada"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:72
+msgid "Fecha final (opcional)"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:76
+msgid "Checkbox para fecha final aproximada"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:85
+msgid "Valor en pesos de la transacción"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:90
+msgid "Forma de pago"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:95
+msgid "Pago total"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:100
+#: dbgestor/templates/dbgestor/Add/personaesclavizada.html:99
+#: dbgestor/templates/dbgestor/Add/personanoesclavizada.html:61
+#, fuzzy
+#| msgid "Crear documento"
+msgid "Notas al documento"
+msgstr "Add a Document"
+
+#: dbgestor/templates/dbgestor/Add/documento.html:105
+msgid "Guardar"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/documento.html:106
+msgid "Cancelar"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/lugar.html:20
+msgid "Nombres alternativos"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Add/personaesclavizada.html:92
+msgid "Marcas corporales"
+msgstr ""
+
+#: dbgestor/templates/dbgestor/Relaciones/persona_x_lugar.html:37
+msgid ""
+"Números positivos indican los lugares después del evento. Los números "
+"negativos los lugares previos al evento."
+msgstr ""
+
+#: mdb/settings.py:134
+msgid "English"
+msgstr ""
+
+#: mdb/settings.py:135
+msgid "Spanish"
+msgstr ""
+
+#: templates/navbar.html:22
+msgid "Archivos"
+msgstr "Archives"
+
+#: templates/navbar.html:23
+msgid "Documentos"
+msgstr "Documents"
+
+#: templates/navbar.html:24
+msgid "Personas esclavizadas"
+msgstr ""
+
+#: templates/navbar.html:25
+msgid "Personas no esclavizadas"
+msgstr ""

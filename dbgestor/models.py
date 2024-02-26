@@ -1,3 +1,4 @@
+import re
 from django.db import models
 from simple_history.models import HistoricalRecords
 from datetime import datetime
@@ -8,39 +9,12 @@ import logging
 logger = logging.getLogger("dbgestor")
 # Create your models here.
 
-
-PLACE_TYPE_CHOICES = (
-        ('ciudad', 'Ciudad'),
-        ('pueblo', 'Pueblo'),
-        ('estado', 'Estado'),
-        ('gobernacion', 'Gobernación'),
-        ('pais', 'País'),
-        ('provincia', 'Provincia'),
-        ('villa', 'Villa'),
-        ('real', 'Real de Minas'),
-        ('parroquia', 'Parroquia'),
-        ('fuerte', 'Fuerte')
-    )
-
 UDC = (
         ('exp', 'Expediente'),
         ('caj', 'Caja'),
         ('vol', 'Volumen'),
         ('lib', 'Libro'),
         ('leg', 'Legajo')
-    )
-
-SITUACION_LUGAR = (
-        ('pro', 'Procedencia'),
-        ('res', 'Residencia'), 
-        ('est', 'Estancia'),
-        ('tra', 'Tránsito'),
-        ('viv', 'Habitación'),
-        ('vec', 'Vecindad'),
-        ('nac', 'Nacimiento'),
-        ('def', 'Defunción'),
-        ('mat', 'Matrimonio'),
-        ('nan', 'N/A')
     )
 
 SEXOS = (
@@ -56,46 +30,60 @@ HONORIFICOS = (
         ('fra', 'Fray')
     )
 
-PERSONAS_TIPOS = (
-        ('pere', 'Persona Esclavizada'),
-        ('peri', 'Persona no esclavizada')
+PLACE_TYPE_CHOICES = (
+        ('ciudad', 'Ciudad'),
+        ('pueblo', 'Pueblo'),
+        ('estado', 'Estado'),
+        ('gobernacion', 'Gobernación'),
+        ('pais', 'País'),
+        ('provincia', 'Provincia'),
+        ('villa', 'Villa'),
+        ('real', 'Real de Minas'),
+        ('parroquia', 'Parroquia'),
+        ('fuerte', 'Fuerte'),
+        ('puerto', 'Puerto'),
+        ('region', 'Región'),
+        ('diocesis', 'Diócesis')
     )
 
 
+###############
+# Vocabularies
+# Not so strict as controlled vocabularies, but a little more controled than a simple charfield.
+###############
 
-TIPOS_DOCUMENTALES = (
-    ('ccv', 'Carta de compra/venta'),
-    ('lib', 'Carta de libertad'),
-    ('tes', 'Testamento'),
-    ('tru', 'Trueque, cambio y traspaso'),
-    ('pod', 'Poder especial'),
-    ('obl', 'Obligación por pesos'),
-    ('inv', 'Inventario de bienes'),
-    ('dot', 'Carta de dote'),
-    ('sus', 'Sustitución de poder'),
-    ('hip', 'Hipoteca/empeño'),
-    ('pag', 'Carta de pago'),
-    ('don', 'Donación de esclavos'),
-    ('lic', 'Licencia'),
-    ('rem', 'Remate'),
-    ('tra', 'Traspaso'),
-    ('her', 'Herencia'),
-    ('sub', 'Subasta')
-)
 
-FUNCION = (
-    ('comp', 'Comprador'),
-    ('vend', 'Vendedor'),
-    ('comi', 'Comisionado'),
-    ('test', 'Testador'),
-    ('dota', 'Dotada'),
-    ('otpo', 'Otorgante del poder'),
-    ('repo', 'Receptor del poder'),
-    ('capi', 'Capitán de barco'),
-    ('arri', 'Arriero'),
-    ('inte', 'Intermediario'),
-    ('nan', 'N/A')
-)
+class SituacionLugar(models.Model):
+    situacion_id = models.AutoField(primary_key=True)
+    situacion = models.CharField(max_length=150)
+    descripcion = models.TextField(null=True, blank=True)
+    
+    def __str__(self) -> str:
+        return f'{self.situacion}'
+
+class TipoDocumental(models.Model):
+    
+    tipo_documental = models.CharField(max_length=70)
+    descripcion = models.TextField(null=True, blank=True)
+    
+    def __str__(self) -> str:
+        return f'{self.tipo_documental}'
+
+class RolEvento(models.Model):
+    
+    rol_evento = models.CharField(max_length=70)
+    descripcion = models.TextField(null=True, blank=True)
+    
+    def __str__(self) -> str:
+        return f'{self.rol_evento}'
+
+class TipoLugar(models.Model):
+    
+    tipo_lugar = models.CharField(max_length=70)
+    descripcion = models.TextField(null=True, blank=True)
+    
+    def __str__(self) -> str:
+        return f'{self.tipo_lugar}'
 
 ###############
 # Lugares
@@ -105,6 +93,7 @@ class Lugar(models.Model):
     
     lugar_id = models.AutoField(primary_key=True)
     nombre_lugar = models.CharField(max_length=255)
+    otros_nombres = models.TextField(null=True, blank=True)
     es_parte_de = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
     lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     lon = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -116,23 +105,7 @@ class Lugar(models.Model):
     def __str__(self) -> str:
         return f"{self.nombre_lugar} ({self.tipo})"
 
-class PlaceHistorical(models.Model):
-    
-    registro_id = models.AutoField(primary_key=True)
-    
-    lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='historical_names')
-    nombre_original = models.CharField(max_length=255, default="Legacy")
-    tipo_original = models.CharField(max_length=255, default="Legacy")
-    otro_nombre = models.CharField(max_length=255, help_text="¿Es un nombre diferente?", null=True, blank=True)
-    fecha_inicial = models.DateField()
-    fecha_final = models.DateField(null=True, blank=True)
-    otro_tipo = models.CharField(max_length=50, choices=PLACE_TYPE_CHOICES, help_text="¿Es un tipo diferente?", null=True, blank=True)
-    narrativa = models.TextField(null=True, blank=True)
-    
-    history = HistoricalRecords()
-    
-    def __str__(self):
-        return f"{self.otro_nombre} | {self.lugar.nombre_lugar} ({self.fecha_inicial} - {self.fecha_final or 'Present'})"
+
     
 ####################
 # Documento
@@ -144,8 +117,8 @@ class Archivo(models.Model):
     
     archivo_idno = models.CharField(max_length=50, null=True, blank=True)
     
-    nombre = models.CharField(max_length=255)
-    nombre_abreviado = models.CharField(max_length=50)
+    nombre = models.CharField(max_length=255, unique=True)
+    nombre_abreviado = models.CharField(max_length=50, null=True, blank=True)
     ubicacion_archivo = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='archivos_lugares')
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -156,7 +129,27 @@ class Archivo(models.Model):
     class Meta:
         ordering = ['-updated_at']
     
+    def create_acronym(self, text):
+        
+        connectors = ["de", "del", "la", "las", "los", "a", "y"]
+        
+        words = re.findall(r'\b\w+\b', text)
+        acronym = ""
+        for word in words:
+            if word not in connectors:
+                acronym += word[0].upper()
+                
+        return acronym
+    
     def save(self, *args, **kwargs):
+        
+        if not self.nombre_abreviado:
+            siglas = self.create_acronym(self.nombre)
+            self.nombre_abreviado = siglas
+        
+        if not self.pk:
+            super(Archivo, self).save(*args, **kwargs)
+            
         self.archivo_idno = f"mx-sv-doc-{str(self.archivo_id).zfill(6)}"
 
         super(Archivo, self).save(*args, **kwargs)
@@ -178,16 +171,17 @@ class Documento(models.Model):
     tipo_udc = models.CharField(max_length=50, choices=UDC, default='lib')
     unidad_documental_compuesta = models.CharField(max_length=200)
     
-    tipo_documento = models.CharField(max_length=100, choices=TIPOS_DOCUMENTALES, default='ccv')
+    #tipo_documento = models.CharField(max_length=100, choices=TIPOS_DOCUMENTALES, default='ccv')
+    tipo_documento =  models.ForeignKey(TipoDocumental, on_delete=models.SET_NULL, default=1, null=True, related_name='tipo_documento')
     sigla_documento = models.CharField(max_length=100, null=True, blank=True)
     
     titulo = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     
     fecha_inicial = models.DateField(null=True, blank=True)
-    fecha_inicial_factual = models.BooleanField(null=True, blank=True)
+    fecha_inicial_aproximada = models.BooleanField(null=True, blank=True)
     fecha_final = models.DateField(null=True, blank=True)
-    fecha_final_factual = models.BooleanField(null=True, blank=True)
+    fecha_final_aproximada = models.BooleanField(null=True, blank=True)
     
     lugar_de_produccion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_doc')
     
@@ -197,6 +191,8 @@ class Documento(models.Model):
     evento_valor_sp = models.CharField(max_length=50, null=True, blank=True)
     evento_forma_de_pago = models.CharField(max_length=100, null=True, blank=True)
     evento_total = models.CharField(max_length=100, null=True, blank=True)
+    
+    notas = models.TextField(max_length=500, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -291,6 +287,8 @@ class Persona(PolymorphicModel):
     apellidos = models.CharField(max_length=150, blank=True, null=True)
     nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
     
+    entidad_asociada = models.CharField(max_length=300, help_text="Asociación de la persona con una institución", null=True, blank=True)
+    
     calidades = models.ManyToManyField(Calidades)
     
     # Dates of existence
@@ -308,14 +306,42 @@ class Persona(PolymorphicModel):
     ocupacion = models.ForeignKey(Actividades, null=True, blank=True, on_delete=models.CASCADE, related_name='%(class)s_ocupacion_per')
     ocupacion_categoria = models.CharField(max_length=150, null=True, blank=True)
     
+    notas = models.TextField(max_length=500, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     history = HistoricalRecords(inherit=True)
     
+    def capitalize_name(self, name):
+        
+        name_connectors = ["de", "del", "la", "y", "e"]
+        
+        nombre_capitalizado = ""
+        
+        name = name.split()
+        
+        for palabra in name:
+            palabra = palabra.lower()
+            if palabra not in name_connectors:
+                palabra = palabra.title()
+                nombre_capitalizado += f" {palabra} "
+            else:
+                nombre_capitalizado += f" {palabra} "
+                
+        return nombre_capitalizado
+    
     def save(self, *args, **kwargs):
+        
+        if self.nombres:
+            self.nombres = self.capitalize_name(self.nombres)
+        
+        if self.apellidos:
+            self.apellidos = self.capitalize_name(self.apellidos)
+        
         if not self.nombre_normalizado:
-            self.nombre_normalizado = f"{self.nombres} {self.apellidos}"
+            nombre_normalizado = f"{self.nombres} {self.apellidos}"
+            self.nombre_normalizado = self.capitalize_name(nombre_normalizado)
         
         if not self.pk:
             super(Persona, self).save(*args, **kwargs)
@@ -341,6 +367,9 @@ class PersonaEsclavizada(Persona):
     hispanizacion = models.ManyToManyField(Hispanizaciones)
     etnonimos = models.ManyToManyField(Etonimos)
     
+    procedencia = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='procedencia_persona_esclavizada')
+    procedencia_adicional = models.CharField(max_length=200, null=True, blank=True)
+    
     marcas_corporales = models.TextField(null=True, blank=True)
     conducta = models.TextField(null=True, blank=True)
     
@@ -349,7 +378,7 @@ class PersonaNoEsclavizada(Persona):
     
     honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
     
-    rol_evento = models.CharField(max_length=200, null=True, blank=True, default='nan')
+    rol_evento = models.ManyToManyField(RolEvento)
 
 
 class PersonaLugarRel(models.Model):
@@ -365,15 +394,17 @@ class PersonaLugarRel(models.Model):
     
     lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='p_x_l_lugar')
     
-    relacion_lugar = models.CharField(max_length=10, choices=SITUACION_LUGAR, default='nan')
+    situacion_lugar = models.ManyToManyField(SituacionLugar, default=1)
     
-    ordinal = models.SmallIntegerField(default=1) 
-    anterior_posterior = models.CharField(max_length=50, choices=(('1', 'Anterior al evento'), ('2', 'Posterior al evento')))
+    ordinal = models.SmallIntegerField(default=0) 
+    #anterior_posterior = models.CharField(max_length=50, choices=(('1', 'Anterior al evento'), ('2', 'Posterior al evento')))
 
     fecha_inicial_lugar = models.DateField(null=True, blank=True)
     fecha_inicial_lugar_factual = models.BooleanField(null=True, blank=True)
     fecha_final_lugar = models.DateField(null=True, blank=True)
     fecha_final_lugar_factual = models.BooleanField(null=True, blank=True)
+    
+    notas = models.TextField(max_length=500, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -405,6 +436,8 @@ class PersonaRelaciones(models.Model):
     fecha_inicial_relacion_factual = models.BooleanField(null=True, blank=True)
     fecha_final_relacion = models.DateField(null=True, blank=True)
     fecha_final_relacion_factual = models.BooleanField(null=True, blank=True)
+    
+    notas = models.TextField(max_length=500, null=True, blank=True)
     
     history = HistoricalRecords()
     

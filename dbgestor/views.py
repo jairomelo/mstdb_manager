@@ -3,20 +3,21 @@ from django.urls import reverse_lazy, reverse
 from django.db import transaction, models
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import (ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView)
 
 from collections import defaultdict
 
 from dal import autocomplete
 
-from .models import (Lugar, PlaceHistorical, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
+from .models import (Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
                      Archivo, Calidades, Hispanizaciones, Etonimos, Actividades,
-                     PersonaLugarRel, Persona, PersonaRelaciones)
+                     PersonaLugarRel, Persona, PersonaRelaciones, SituacionLugar,
+                     TipoDocumental, RolEvento, TipoLugar)
 
-from .forms import (LugarForm, LugarHistoria, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
+from .forms import (LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
-                    PersonaLugarRelForm, PersonaRelacionesForm)
+                    PersonaLugarRelForm, PersonaRelacionesForm, RolesForm, SituacionLugarForm)
 
 # Create your views here.
 
@@ -37,6 +38,7 @@ class PersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
         qs = PersonaEsclavizada.objects.all()
         if self.q:
             qs = qs.filter(nombre_normalizado__icontains=self.q)
+            
         return qs
 
 class PersonaNoEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
@@ -75,12 +77,48 @@ class ArchivoAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             qs = qs.filter(nombre__icontains=self.q)
         return qs
+
+
+class FondoAutocomplete(autocomplete.Select2QuerySetView):
+    def get_context_data(self, **kwargs):
+        pass
     
 class CalidadesAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         qs = Calidades.objects.all()
+
         if self.q:
-            qs = qs.filter(nombre__icontains=self.q)
+            qs = qs.filter(calidad__icontains=self.q)
+            
+        return qs
+    
+class CalidadesPersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        # Fetch all Calidades IDs that are linked to a PersonaEsclavizada.
+        # This requires a query across the relation to filter Calidades based on their association.
+        # Note: Adjust the query if Calidades are linked through a different pattern or specific conditions.
+        calidades_ids = Calidades.objects.filter(
+            persona__personaesclavizada__isnull=False
+        ).values_list('calidad_id', flat=True).distinct()
+
+        qs = Calidades.objects.filter(calidad_id__in=calidades_ids)
+
+        if self.q:
+            qs = qs.filter(calidad__icontains=self.q)
+
+        return qs
+
+class CalidadesPersonasNoEsclavizadasAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        calidades_ids = Calidades.objects.filter(
+            persona__personanoesclavizada__isnull=False
+            ).values_list('calidad_id', flat=True).distinct()
+        
+        qs = Calidades.objects.filter(calidad_id__in=calidades_ids)
+        
+        if self.q:
+            qs = qs.filter(calidad__icontains=self.q)
+
         return qs
 
 class HispanizacionesAutocomplete(autocomplete.Select2QuerySetView):
@@ -102,6 +140,35 @@ class OcupacionesAutocomplete(autocomplete.Select2QuerySetView):
         qs = Actividades.objects.all()
         if self.q:
             qs = qs.filter(nombre__icontains=self.q)
+        return qs
+
+
+class SituacionLugarAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = SituacionLugar.objects.all()
+        if self.q:
+            qs = qs.filter(situacion__icontains=self.q)
+        return qs
+
+class TipoDocumentalAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = TipoDocumental.objects.all()
+        if self.q:
+            qs = qs.filter(tipo_documental__icontains=self.q)
+        return qs
+
+class RolEventoAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = RolEvento.objects.all()
+        if self.q:
+            qs = qs.filter(rol_evento__icontains=self.q)
+        return qs
+
+class TipoLugarAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = TipoLugar.objects.all()
+        if self.q:
+            qs = qs.filter(tipo_lugar__icontains=self.q)
         return qs
 
 # Create Views
@@ -169,7 +236,12 @@ class DocumentoCreateView(CreateView):
     def form_valid(self, form):
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
-        self.object = form.save()
+        self.object = form.save(commit=False)
+        
+        self.object.fecha_inicial_aproximada = self.request.POST.get('fecha_inicial_aproximada', '') == 'on'
+        self.object.fecha_final_aproximada = self.request.POST.get('fecha_final_aproximada', '') == 'on'
+        
+        self.object.save()
 
         # Check if the request is AJAX
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -479,6 +551,70 @@ class OcupacionesCreateView(CreateView):
         # For non-AJAX requests, redirect as usual
         return super().form_valid(form)
 
+
+class SituacionLugarCreateView(CreateView):
+    model = SituacionLugar
+    form_class = SituacionLugarForm
+    template_name = 'dbgestor/Vocab/situacion_lugar.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['create_situacion'] = context['form']
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'añadir'
+        return context
+    
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return ['dbgestor/Modals/situacion_lugar.html']
+        return ['dbgestor/Vocab/situacion_lugar.html']
+    
+    def form_valid(self, form):
+        self.object = form.save()
+
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = {
+                'situacion_id': self.object.situacion_id,
+                'situacion_lugar_name': str(self.object) 
+            }
+            return JsonResponse(data)
+
+        # For non-AJAX requests, redirect as usual
+        return super().form_valid(form)
+
+class RolesCreateView(CreateView):
+    model = RolEvento
+    form_class = RolesForm
+    template_name = 'dbgestor/Vocab/rol.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['create_rol'] = context['form']
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'añadir'
+        return context
+    
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return ['dbgestor/Modals/rol.html']
+        return ['dbgestor/Vocab/rol.html']
+    
+    def form_valid(self, form):
+        self.object = form.save()
+
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = {
+                'id': self.object.id,
+                'rol_evento_name': str(self.object) 
+            }
+            return JsonResponse(data)
+
+        # For non-AJAX requests, redirect as usual
+        return super().form_valid(form)
+
+
 # Browse Views
 
 class ArchivoBrowse(ListView):
@@ -559,6 +695,23 @@ class PersonaNoEsclavizadaBrowse(ListView):
             )
         
         return queryset.order_by(sort)
+
+# Consolidated view
+
+class TotalBrowseView(TemplateView):
+    """
+    Mostrar todo a modo de Excel :p
+    """
+    template_name = 'dbgestor/Browse/todo.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['Documentos'] = Documento.objects.all()
+        context['PersonasEsclavizadas'] = PersonaEsclavizada.objects.all()
+        context['PersonasNoEsclavizadas'] = PersonaNoEsclavizada.objects.all()
+        
+        return context
+    
 
 # Detail views
 

@@ -45,6 +45,25 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                     } else if(modalId.includes("Archivo")) {
                         value = response.archivo_id;
                         text = response.archivo_name;
+                    } else if(modalId.includes("Rol")) {
+                        value = response.id;
+                        text = response.rol_evento_name;
+                    } else if(modalId.includes("Situacion")) {
+                        value = response.situacion_id;
+                        text = response.situacion_lugar_name;
+                    } else if(modalId.includes("Calidad")) {
+                        value = response.calidad_id;
+                        text = response.calidad_name;
+                    } else if(modalId.includes("Etnonimo")) {
+                        value = response.etnonimo_id;
+                        text = response.etnonimo_name;
+                    } else if(modalId.includes("Hispanizacion")) {
+                        value = response.hispanizacion_id;
+                        text = response.hispanizacion_name;
+                    } else if(modalId.includes("Ocupacion")) {
+                        console.log(response);
+                        value = response.ocupacion_id;
+                        text = response.ocupacion_name;
                     }
                     
                     newOption.value = value;

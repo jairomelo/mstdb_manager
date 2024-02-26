@@ -1,9 +1,13 @@
 # pages/urls.py
 from django.urls import path
 from .views import home, LugarCreateView, LugarAutocomplete, PersonaEsclavizadaAutocomplete
-from .views import (PersonaNoEsclavizadaAutocomplete, DocumentoAutocomplete, LugarEventoAutocomplete,
-                    ArchivoAutocomplete, DocumentoCreateView, ArchivoCreateView, DocumentoBrowse,
+from .views import (PersonaNoEsclavizadaAutocomplete, DocumentoAutocomplete, LugarEventoAutocomplete, 
+                    CalidadesPersonaEsclavizadaAutocomplete, CalidadesPersonasNoEsclavizadasAutocomplete,
+                    ArchivoAutocomplete, SituacionLugarAutocomplete, TipoDocumentalAutocomplete,
+                    TipoLugarAutocomplete, RolEventoAutocomplete,
+                    DocumentoCreateView, ArchivoCreateView, DocumentoBrowse,
                     DocumentoDetailView, DocumentoUpdateView, DocumentoDeleteView, ArchivoBrowse,
+                    TotalBrowseView,
                     ArchivoDetailView, ArchivoUpdateView, ArchivoDeleteView, PersonaEsclavizadaCreateView,
                     PersonaNoEsclavizadaCreateView, PersonaNoEsclavizadaBrowse, PersonaNoEsclavizadaDeleteView,
                     PersonaNoEsclavizadaDetailView, PersonaNoEsclavizadaUpdateView,
@@ -11,8 +15,9 @@ from .views import (PersonaNoEsclavizadaAutocomplete, DocumentoAutocomplete, Lug
                     EtnonimosCreateView, HispanizacionesCreateView, CalidadesCreateView,
                     OcupacionesCreateView, OcupacionesAutocomplete,
                     PersonaEsclavizadaBrowse, PersonaEsclavizadaDeleteView, PersonaEsclavizadaDetailView,
-                    PersonaEsclavizadaUpdateView,
-                    PersonaLugarRelCreateView, PersonaPersonaRelCreateView, PersonaAutocomplete)
+                    PersonaEsclavizadaUpdateView, RolesCreateView,
+                    PersonaLugarRelCreateView, PersonaPersonaRelCreateView, PersonaAutocomplete,
+                    SituacionLugarCreateView)
 
 
 urlpatterns = [
@@ -21,21 +26,24 @@ urlpatterns = [
     path('lugar-autocomplete/', LugarAutocomplete.as_view(), name='lugar-autocomplete'),
     path('Add/documento/', DocumentoCreateView.as_view(), name='documento-new'),
     path('Add/archivo/', ArchivoCreateView.as_view(), name='archivo-new'),
-    path('Add/personaesclavizada', PersonaEsclavizadaCreateView.as_view(), name='personaesclavizada-new'),
-    path('Add/personanoesclavizada', PersonaNoEsclavizadaCreateView.as_view(), name='personanoesclavizada-new'),
+    path('Add/personaesclavizada/', PersonaEsclavizadaCreateView.as_view(), name='personaesclavizada-new'),
+    path('Add/personanoesclavizada/', PersonaNoEsclavizadaCreateView.as_view(), name='personanoesclavizada-new'),
     # relations
-    path('Add/peresclavizada_x_lugar', PersonaLugarRelCreateView.as_view(), name='persona_x_lugar-new'),
-    path('Add/persona_x_persona', PersonaPersonaRelCreateView.as_view(), name='persona_x_persona-new'),
+    path('Add/peresclavizada_x_lugar/', PersonaLugarRelCreateView.as_view(), name='persona_x_lugar-new'),
+    path('Add/persona_x_persona/', PersonaPersonaRelCreateView.as_view(), name='persona_x_persona-new'),
     # vocabs create
-    path('Add/voc/calidad', CalidadesCreateView.as_view(), name='calidad-new'),
-    path('Add/voc/hispanizacion', HispanizacionesCreateView.as_view(), name='hispanizacion-new'),
-    path('Add/voc/etnonimo', EtnonimosCreateView.as_view(), name='etnonimo-new'),
-    path('Add/voc/ocupacion', OcupacionesCreateView.as_view(), name='ocupacion-new'),
+    path('Add/voc/calidad/', CalidadesCreateView.as_view(), name='calidad-new'),
+    path('Add/voc/hispanizacion/', HispanizacionesCreateView.as_view(), name='hispanizacion-new'),
+    path('Add/voc/etnonimo/', EtnonimosCreateView.as_view(), name='etnonimo-new'),
+    path('Add/voc/ocupacion/', OcupacionesCreateView.as_view(), name='ocupacion-new'),
+    path('Add/voc/rol/', RolesCreateView.as_view(), name='rol-new'),
+    path('Add/voc/situacion/', SituacionLugarCreateView.as_view(), name='situacion-new'),
     # browse views
     path('Browse/archivos', ArchivoBrowse.as_view(), name="archivo-browse"),
     path('Browse/documentos', DocumentoBrowse.as_view(), name="documento-browse"),
     path('Browse/personasesclavizadas', PersonaEsclavizadaBrowse.as_view(), name="personasesclavizadas-browse"),
     path('Browse/personasnoesclavizadas', PersonaNoEsclavizadaBrowse.as_view(), name="personasnoesclavizadas-browse"),
+    path('Browse/vistaconsolidada', TotalBrowseView.as_view(), name='vista-consolidada'),
     # detail views
     path('Detail/archivo/<int:pk>', ArchivoDetailView.as_view(), name='archivo-detail'),
     path('Detail/documento/<int:pk>', DocumentoDetailView.as_view(), name='documento-detail'),
@@ -57,11 +65,16 @@ urlpatterns = [
     path('persona-no-esclavizada-autocomplete/', PersonaNoEsclavizadaAutocomplete.as_view(), name='persona-no-esclavizada-autocomplete'),
     path('persona-autocomplete/', PersonaAutocomplete.as_view(), name='personas-autocomplete'),
     path('lugar-autocomplete/', LugarEventoAutocomplete.as_view(), name='lugar-autocomplete'),
-    path('lugar-evento-autocomplete/', LugarEventoAutocomplete.as_view(), name='lugar-evento-autocomplete'),
     path('documento-autocomplete/', DocumentoAutocomplete.as_view(), name='documento-autocomplete'),
     path('archivo-autocomplete/', ArchivoAutocomplete.as_view(), name='archivo-autocomplete'),
     path('calidad-autocomplete/', CalidadesAutocomplete.as_view(), name='calidades-autocomplete'),
+    path('calidades-personas-esclavizadas/', CalidadesPersonaEsclavizadaAutocomplete.as_view(), name='calidades-personas-esclavizadas'),
+    path('calidades-personas-no-esclavizadas/', CalidadesPersonasNoEsclavizadasAutocomplete.as_view(), name='calidades-personas-no-esclavizadas'),
     path('hispanizacion-autocomplete/', HispanizacionesAutocomplete.as_view(), name='hispanizaciones-autocomplete'),
     path('etnonimo-autocomplete/', EtnonimosAutocomplete.as_view(), name='etnonimos-autocomplete'),
-    path('ocupacion-autocomplete/', OcupacionesAutocomplete.as_view(), name='ocupaciones-autocomplete')
+    path('ocupacion-autocomplete/', OcupacionesAutocomplete.as_view(), name='ocupaciones-autocomplete'),
+    path('situacion-autocomplete', SituacionLugarAutocomplete.as_view(), name='situacion-autocomplete'),
+    path('tipodocumental-autocomplete', TipoDocumentalAutocomplete.as_view(), name='tiposdocumentales-autocomplete'),
+    path('tipolugar-autocomplete', TipoLugarAutocomplete.as_view(), name='tiposlugar-autocomplete'),
+    path('rolesevento-autocomplete', RolEventoAutocomplete.as_view(), name='rolesevento-autocomplete'),
 ]

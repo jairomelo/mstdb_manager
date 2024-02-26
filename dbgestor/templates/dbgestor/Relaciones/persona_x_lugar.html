@@ -1,6 +1,7 @@
 {% extends 'main.html' %}
 {% load django_bootstrap5 django_bootstrap_input_group static %}
 {% block content %}
+{% load i18n %}
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -30,22 +31,17 @@
         </div>
 
         <div class="mb-3">
-            <div class="row g-2">
-                <div class="col">
-                    <label for="{{ form.ordinal.id_for_label }}" class="form-label">{{ form.ordinal.label }}</label>
-                    {{ form.ordinal }}
-                    <small class="form-text text-muted">Orden del lugar.</small>
-                </div>
-                <div class="col">
-                    <label for="{{ form.anterior_posterior.id_for_label }}" class="form-label">Anterior/Posterior al evento</label>
-                    {{ form.anterior_posterior }}
-                </div>
-            </div>
+            <label for="{{ form.ordinal.id_for_label }}" class="form-label">{{ form.ordinal.label }}</label>
+            {{ form.ordinal }}
+            <small class="form-text text-muted">
+                {% trans "Números positivos indican los lugares después del evento. Los números negativos los lugares previos al evento." %}
+            </small>
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.relacion_lugar.id_for_label }}" class="form-label">{{ form.relacion_lugar.label }}</label>
-            {{ form.relacion_lugar }}
+            <label for="{{ form.situacion_lugar.id_for_label }}" class="form-label">{{ form.situacion_lugar.label }}</label>
+            {{ form.situacion_lugar }}
+            <button type="button" id="add_situacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir situación en el lugar"><i class="fas fa-street-view"></i></button>
         </div>
 
 
@@ -96,6 +92,15 @@
     </div>
 </div>
 
+<div class="modal fade" id="addSituacionModal" tabindex="-1" aria-labelledby="addSituacionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
 
 {% include '_cancel_warning.html' %}
 
@@ -106,6 +111,7 @@
 <script type="text/javascript">
     bindEventToButton('add_documento', '#addDocumentoModal .modal-content', "{% url 'documento-new' %}", "#newDocumentoForm", "{% url 'documento-new' %}", 'id_documento', '#addDocumentoModal');
     bindEventToButton('add_lugar', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", "{% url 'lugar-new' %}", 'id_lugar', '#addLugarModal');
+    bindEventToButton('add_situacion', '#addSituacionModal .modal-content', "{% url 'situacion-new' %}", "#newSituacionForm", "{% url 'situacion-new' %}", 'id_situacion_lugar', '#addSituacionModal');
     
 </script>
 

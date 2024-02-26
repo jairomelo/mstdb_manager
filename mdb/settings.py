@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from customscripts import CustomScripts
+from django.utils.translation import gettext_lazy as _
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'import_export',
     'django_bootstrap5',
     'django_bootstrap_input_group',
     'simple_history',
@@ -55,6 +57,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -125,9 +128,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-mx'
 
-TIME_ZONE = 'UTC'
-
 USE_I18N = True
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('es', _('Spanish')),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
+TIME_ZONE = 'UTC'
 
 USE_TZ = True
 
@@ -141,6 +153,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -192,7 +205,7 @@ LOGGING = {
         },
         'dbgestor': {
             'handlers': ['appsfile', 'console'],
-            'level': 'WARNING',
+            'level': 'DEBUG',
             'propagate': True,
         }
     },

@@ -1,11 +1,12 @@
 {% extends 'main.html' %}
 {% load django_bootstrap5 django_bootstrap_input_group static %}
 {% block content %}
+{% load i18n %}
 
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-6 shadow auth-forms-container">
-    <h2 class="mb-4">Crear documento</h2>
+    <h2 class="mb-4">{% trans "Crear documento" %}</h2>
 
     {% if perms.dbgestor.add_documento %}
 
@@ -30,11 +31,15 @@
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.sigla_documento.id_for_label }}" class="form-label">Sigla completa</label>
+            <label for="{{ form.sigla_documento.id_for_label }}" class="form-label">{% trans 'Sigla completa' %}</label>
             {{ form.sigla_documento }}
         </div>
 
-        {% bootstrap_input_group form.tipo_udc form.unidad_documental_compuesta label="Unidad documental" %}
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="basic-addon1">{% trans "Unidad documental" %}</span>
+            {{ form.tipo_udc }} 
+            {{ form.unidad_documental_compuesta }}
+          </div>
 
         <div class="mb-3">
             <label for="{{ form.tipo_documento.id_for_label }}" class="form-label">{{ form.tipo_documento.label }}</label>
@@ -46,34 +51,59 @@
             {{ form.titulo }}
         </div>
 
-        <div class="mb-3">
-            <label for="{{ form.folio_inicial.id_for_label }}" class="form-label">Folio</label>
-            {{ form.folio_inicial }}
-        </div>
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="basic-addon1">{% trans "Folios inicial y final" %}</span>
+            {{ form.folio_inicial }} 
+            {{ form.folio_final }}
+          </div>
 
         <div class="mb-3">
-            <label for="{{ form.fecha_inicial.id_for_label }}" class="form-label">Fecha evento</label>
-            {{ form.fecha_inicial }}
+            <label class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="Las fechas pueden ser completas o parciales">{% trans 'Fecha inicial'%}</label>
+            <div class="input-group">
+                {{ form.fecha_inicial }}
+                <div class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" name="fecha_inicial_aproximada" id="fecha_inicial_aproximada" aria-label="{% trans 'Checkbox para fecha inicial aproximada' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="{% trans 'Seleccionar si no es una fecha claramente obtenida del documento' %}">
+                    <label for="{{ form.fecha_inicial_aproximada.id_for_label }}" class="ms-2">{% trans 'Fecha aproximada'%}</label>
+                </div>
+            </div>
         </div>
+        
+        <div class="mb-3">
+            <label class="form-label">{% trans 'Fecha final (opcional)'%}</label>
+            <div class="input-group">
+                <input type="text" name="fecha_final" class="form-control is-valid" placeholder="YYYY-MM-DD or YYYY" id="id_fecha_final">
+                <div class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" name="fecha_final_aproximada" id="fecha_final_aproximada" aria-label="{% trans 'Checkbox para fecha final aproximada' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="{% trans 'Seleccionar si no es una fecha claramente obtenida del documento' %}">
+                    <label for="fecha_final_aproximada" class="ms-2">{% trans 'Fecha aproximada' %}</label>
+                </div>
+            </div>
+        </div>
+        
+        
 
         <div class="mb-3">
-            <label for="{{ form.evento_valor_sp.id_for_label }}" class="form-label">Valor en pesos de la transacción</label>
+            <label for="{{ form.evento_valor_sp.id_for_label }}" class="form-label">{% trans 'Valor en pesos de la transacción' %}</label>
             {{ form.evento_valor_sp }}
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.evento_forma_de_pago.id_for_label }}" class="form-label">Forma de pago</label>
+            <label for="{{ form.evento_forma_de_pago.id_for_label }}" class="form-label">{% trans 'Forma de pago'%}</label>
             {{ form.evento_forma_de_pago }}
         </div>
 
         <div class="mb-3">
-            <label for="{{ form.evento_total.id_for_label }}" class="form-label">Pago total</label>
+            <label for="{{ form.evento_total.id_for_label }}" class="form-label">{% trans 'Pago total'%}</label>
             {{ form.evento_total }}
         </div>
 
+        <div class="mb-3">
+            <label for="{{ form.notas.id_for_label }}" class="form-label">{% trans 'Notas al documento' %}</label>
+            <textarea name="{{ form.notas.html_name }}" id="{{ form.notas.id_for_label }}" rows="3" cols="40" class="form-control">{{ form.notas.value|default_if_none:'' }}</textarea>
+        </div>
+
         <div class="text-center">
-            <button type="submit" class="btn btn-primary me-2">Guardar</button>
-            <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+            <button type="submit" class="btn btn-primary me-2">{% trans 'Guardar'%}</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">{% trans 'Cancelar' %}</a>
         </div>
     </form>
 </div>

@@ -213,6 +213,8 @@
         });
         if(ids.length >= 2) { 
             window.location.href = `{% url 'persona_x_persona-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
+        } else if(ids.length == 1){
+            window.location.href = `{% url 'persona_x_persona-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
         } else {
             showWarningAlert();
         }

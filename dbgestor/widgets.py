@@ -10,7 +10,7 @@ class PersonaNoEsclavizadaAutocomplete(autocomplete.Select2Multiple):
         
 class LugarEventoAutocomplete(autocomplete.Select2):
     def __init__(self, *args, **kwargs):
-        super().__init__(url='lugar-evento-autocomplete', *args, **kwargs)
+        super().__init__(url='lugar-autocomplete', *args, **kwargs)
 
 class DocumentoAutocomplete(autocomplete.Select2):
     def __init__(self, *args, **kwargs):

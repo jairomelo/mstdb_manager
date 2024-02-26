@@ -1,13 +1,15 @@
 from typing import Any
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from datetime import datetime
 from dal import autocomplete
 import re
 
-from .models import (Lugar, PlaceHistorical, PersonaEsclavizada, 
+from .models import (Lugar, PersonaEsclavizada, 
                      PersonaNoEsclavizada, Persona, Documento, Archivo,
                      Calidades, Hispanizaciones, Etonimos, Actividades,
-                     PersonaLugarRel, PersonaRelaciones)
+                     PersonaLugarRel, PersonaRelaciones, TipoLugar,
+                     SituacionLugar, TipoDocumental, RolEvento)
 
 from .widgets import (PersonaEsclavizadaAutocomplete, PersonaNoEsclavizadaAutocomplete, 
                       LugarEventoAutocomplete, DocumentoAutocomplete, ArchivoAutocomplete, CalidadesAutocomplete)
@@ -18,35 +20,32 @@ logger = logging.getLogger("dbgestor")
 
 
 class CustomValidators:
-    def validate_date(self, date_text: str) -> tuple:
-        """_summary_
-
-        Args:
-            date_text (str): Cadena de caracteres con una fecha completa o parcial.
-
-        Raises:
-            forms.ValidationError: Formatos de fecha incorrectos por no ajustarse al formato dd/mm/aaaa
-
-        Returns:
-            tuple: Fecha formateada.
-        """
+    def validate_date(self, date_text):
         if not isinstance(date_text, str):
             return date_text
         date_text = date_text.strip()
         if len(date_text) > 10:
-            raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
+            raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use AAAA-MM-DD, AAAA-MM, o AAAA.")
+        
+        date_text = date_text.replace("/", "-")
         
         try:
-            parsed_date = datetime.strptime(date_text, '%d-%m-%Y')
+            parsed_date = datetime.strptime(date_text, '%Y-%m-%d')
             return parsed_date.date()
         except ValueError:
             parts = date_text.split('-')
             if len(parts) == 1 and len(parts[0]) == 4:
                 return datetime.strptime(date_text, '%Y').date()
             elif len(parts) == 2:
-                return datetime.strptime(date_text, '%m-%Y').date()
+                return datetime.strptime(date_text, '%Y-%m').date()
             else:
-                raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
+                raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use AAAA-MM-DD, AAAA-MM, o AAAA.")
+
+
+    def validate_date_range(self, date_inicial, date_final):
+        
+        if date_inicial > date_final:
+            raise forms.ValidationError(f"La fecha final {date_final} no puede estar en el pasado de la fecha inicial {date_inicial}")
 
     def validate_folios(self, folio_inicial, folio_final):
         
@@ -106,6 +105,7 @@ class LugarForm(forms.ModelForm):
     lat = forms.DecimalField(max_digits=9, decimal_places=6, required=False)
     lon = forms.DecimalField(max_digits=9, decimal_places=6, required=False)
     
+    
     def clean(self):
         cleaned_data = super().clean()
         lat = cleaned_data.get('lat')
@@ -123,14 +123,6 @@ class LugarForm(forms.ModelForm):
         if commit:
             lugar.save()
             
-        if 'nombre_lugar' in self.changed_data or 'tipo' in self.changed_data:
-            # Assume lugar instance already exists and we are updating it
-            PlaceHistorical.objects.update_or_create(
-                lugar=lugar,
-                nombre_original=lugar.nombre_lugar,
-                fecha_inicial=datetime(1500,1,1),
-                tipo_original=lugar.tipo
-            )
 
         return lugar
     
@@ -139,32 +131,7 @@ class LugarForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
     
-class LugarHistoria(forms.ModelForm):
-    
-    class Meta:
-        model = PlaceHistorical
-        fields = '__all__'
-    
-    lugar = forms.ModelChoiceField(
-        queryset=Lugar.objects.all(),
-        widget=autocomplete.ModelSelect2(url='lugar-autocomplete')
-    )
-    
-    fecha_inicial = forms.DateField(required=False,
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'date-input'}, format='%Y-%m-%d'),
-        input_formats=['%Y-%m-%d']
-    )
-    fecha_final = forms.DateField(required=False,
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'date-input'}, format='%Y-%m-%d'),
-        input_formats=['%Y-%m-%d']
-    )
-    
-    def save(self) -> Any:
-        logger.debug("LugarHistoria save method called.")
-    
-        lugar_tipo = super().save(commit=False)
-        lugar_tipo.save()
-        
+
 
 class ArchivoForm(forms.ModelForm):
     class Meta:
@@ -189,31 +156,116 @@ class DocumentoForm(forms.ModelForm):
         widgets = {
             'archivo': ArchivoAutocomplete()
         }
-        
-    unidad_documental_compuesta = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Número de la unidad'}))
     
-    titulo = forms.CharField(label='Título/resumen del documento')
+    unidad_documental_compuesta = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('Número de la unidad')}))
     
-    folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': '0r'}))
+    titulo = forms.CharField(label= _('Título/resumen del documento'))
     
-    fecha_inicial = forms.DateField(
-        widget=forms.DateInput(format='%d/%m/%Y', attrs={'class': 'date-input', 'placeholder': 'DD/MM/YYYY'}),
-        input_formats=['%d/%m/%Y', '%Y-%m-%d']
+    folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('incluir número y \'r\' o \'v\'')}))
+    folio_final = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('folio final opcional')}), required=False)
+    
+    fecha_inicial = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('AAAA-MM-DD, AAAA-MM, o AAAA.')}),
+        required=True 
+    )
+    
+    fecha_final = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('AAAA-MM-DD, AAAA-MM, o AAAA.')}),
+        required=False
+    )
+    
+    tipo_documento = forms.ModelChoiceField(
+        queryset=TipoDocumental.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(url='tiposdocumentales-autocomplete'),
+        label='Tipo documental'
     )
     
     def clean_fecha_inicial(self):
-        fecha_inicial = self.cleaned_data.get('fecha_inicial')
         
+        fecha_inicial = self.cleaned_data.get('fecha_inicial')
         logger.debug(f"Cleaning Documento/fecha_inicial {fecha_inicial}")
+        
         fecha_inicial_valid = CustomValidators().validate_date(fecha_inicial)
         logger.debug(f"Fecha inicial cleaned {fecha_inicial_valid}")
-        return fecha_inicial_valid
         
+        return fecha_inicial_valid
+    
+    def clean_fecha_final(self):
+        
+        fecha_final = self.cleaned_data.get('fecha_final')
+        logger.debug(f"Cleaning Documento/fecha_final \"{fecha_final}\"")
+        
+        if not fecha_final or fecha_final == "":
+            fecha_final = self.cleaned_data.get('fecha_inicial', '')
+            return fecha_final
+        
+        fecha_final_valid = CustomValidators().validate_date(fecha_final)
+        logger.debug(f"Fecha final cleaned {fecha_final_valid}")
+        
+        return fecha_final_valid
+    
+    def clean_folio_inicial(self):
+        folio_inicial = self.cleaned_data.get('folio_inicial')
+        if not folio_inicial or folio_inicial == "":
+            raise forms.ValidationError(f"El valor del folio inicial no puede estar vacío.")
+            
+        pat = re.compile(r'^\d+[rv]$')
+        
+        if not re.fullmatch(pat, folio_inicial):
+            raise forms.ValidationError(f"El formato de {folio_inicial} no es correcto.\nEj: 25r o 25v")
+        
+        return folio_inicial
+
+    def clean_folio_final(self):
+        folio_final = self.cleaned_data.get('folio_final')
+
+        # If folio_final is empty, use folio_inicial as folio_final
+        if not folio_final:
+            folio_inicial = self.cleaned_data.get('folio_inicial', '')
+            return folio_inicial
+
+        # Validate the format of folio_final
+        pat = re.compile(r'^\d+[rv]$')
+        if not re.fullmatch(pat, folio_final):
+            raise forms.ValidationError(f"El formato de {folio_final} no es correcto.\nEj: 25r o 25v")
+        
+        return folio_final
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        folio_inicial = cleaned_data.get('folio_inicial')
+        folio_final = cleaned_data.get('folio_final')
+
+        try:
+            CustomValidators().validate_folios(folio_inicial, folio_final)
+            logger.debug(f"folios {folio_inicial} y {folio_final} validados")
+        except forms.ValidationError as e:
+            # Add the error to the form's error list
+            self.add_error(None, e)
+            
+        fecha_inicial = cleaned_data.get('fecha_inicial')
+        fecha_final = cleaned_data.get('fecha_final')
+        logger.debug(f"validando si {fecha_final} existe")
+        try:
+            logger.debug(f"validando {fecha_inicial}")
+            fecha_inicial = CustomValidators().validate_date(fecha_inicial)
+            if fecha_final:
+                logger.debug(f"validando {fecha_final}")
+                fecha_final = CustomValidators().validate_date(fecha_final)
+                CustomValidators().validate_date_range(fecha_inicial, fecha_final)
+        except forms.ValidationError as e:
+            logger.warning(e)
+            self.add_error(None, e)
+        return cleaned_data
     
     def __init__(self, *args, **kwargs):
         super(DocumentoForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
-            field.widget.attrs['class'] = 'form-control'
+            if isinstance(field, forms.fields.TypedChoiceField):
+                field.widget.attrs['class'] = 'form-select'
+            else:
+                field.widget.attrs['class'] = 'form-control'
 
 
 class PersonaEsclavizadaForm(forms.ModelForm):
@@ -253,11 +305,18 @@ class PersonaEsclavizadaForm(forms.ModelForm):
         label='Etnónimos'
     )
     
+    procedencia = forms.ModelChoiceField(
+        queryset=Lugar.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(url='lugar-autocomplete'),
+        label='Lugar de procedencia'
+    )
+    
     actividad = forms.ModelChoiceField(
         queryset=Actividades.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
-        label='Ocupaciones'
+        label='Ocupación'
     )
     
     ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
@@ -315,10 +374,17 @@ class PersonaNoEsclavizadaForm(forms.ModelForm):
         queryset=Actividades.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
-        label='Ocupaciones'
+        label='Ocupación'
     )
     
     ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
+    
+    rol_evento = forms.ModelMultipleChoiceField(
+        queryset=RolEvento.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='rolesevento-autocomplete'),
+        label='Rol en el evento'
+    )
     
     def __init__(self, *args, **kwargs):
         super(PersonaNoEsclavizadaForm, self).__init__(*args, **kwargs)
@@ -349,6 +415,12 @@ class PersonaLugarRelForm(forms.ModelForm):
         required=True,
         widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
         label='Personas relacionadas'
+    )
+    
+    situacion_lugar = forms.ModelMultipleChoiceField(
+        queryset=SituacionLugar.objects.all(),
+        widget=autocomplete.ModelSelect2Multiple(url='situacion-autocomplete'),
+        label='Sitación en el lugar'
     )
 
     def __init__(self, *args, **kwargs):
@@ -426,5 +498,27 @@ class OcupacionesForm(forms.ModelForm):
         
     def __init__(self, *args, **kwargs):
         super(OcupacionesForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+            
+class SituacionLugarForm(forms.ModelForm):
+    
+    class Meta:
+        model = SituacionLugar
+        fields = ['situacion']
+    
+    def __init__(self, *args, **kwargs):
+        super(SituacionLugarForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+
+class RolesForm(forms.ModelForm):
+    
+    class Meta:
+        model = RolEvento
+        fields = ['rol_evento']
+        
+    def __init__(self, *args, **kwargs):
+        super(RolesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'

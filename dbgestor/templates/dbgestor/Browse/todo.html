@@ -1,0 +1,50 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container">
+    <h2>Información completa</h2>
+    <table id="todoTable" class="table table-striped">
+        <thead>
+            <tr>
+                <th>Archivo</th>
+                <th>Fondo</th>
+                <th>Persona esclavizada</th>
+                <th>Sexo Persona esclavizada</th>
+                <th>Persona no esclavizada</th>
+                <th>Sexo persona no esclavizada</th>
+                <!-- More fields as needed -->
+            </tr>
+        </thead>
+        <tbody>
+            
+            <tr>
+                {% for item in Documentos %}
+                <td>{{ item.archivo }}</td>
+                <td>{{ item.fondo }}</td>
+                {% endfor %}
+                {% for persona in PersonasEsclavizadas %}
+                <td>{{ persona.nombre_normalizado }}</td>
+                <td>{{ persona.sexo }}</td>
+                {% endfor %}
+                {% for persona in PersonasNoEsclavizadas %}
+                <td>{{ persona.nombre_normalizado }}</td>
+                <td>{{ persona.sexo }}</td>
+                {% endfor %}
+            </tr>
+            
+        </tbody>
+    </table>
+
+    <!-- Repeat for other models -->
+</div>
+
+
+<script>
+
+    $(document).ready( function() {
+        $("#todoTable").DataTable();
+    });
+
+</script>
+{% endblock content %}

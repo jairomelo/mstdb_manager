@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %}
 
 <nav class="navbar navbar-expand-lg navbar-light" style="background-color: #ffffff;">
     <div class="container-fluid">
@@ -18,10 +19,10 @@
                         Ver / Explorar
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="browseDropdown">
-                        <li><a class="dropdown-item" href="{% url 'archivo-browse' %}">Archivos</a></li>
-                        <li><a class="dropdown-item" href="{% url 'documento-browse' %}">Documentos</a></li>
-                        <li><a class="dropdown-item" href="{% url 'personasesclavizadas-browse' %}">Personas Esclavizadas</a></li>
-                        <li><a class="dropdown-item" href="{% url 'personasnoesclavizadas-browse' %}">Personas No Esclavizadas</a></li>
+                        <li><a class="dropdown-item" href="{% url 'archivo-browse' %}">{% trans "Archivos" %}</a></li>
+                        <li><a class="dropdown-item" href="{% url 'documento-browse' %}">{% trans "Documentos" %}</a></li>
+                        <li><a class="dropdown-item" href="{% url 'personasesclavizadas-browse' %}">{% trans "Personas esclavizadas" %}</a></li>
+                        <li><a class="dropdown-item" href="{% url 'personasnoesclavizadas-browse' %}">{% trans "Personas no esclavizadas" %}</a></li>
                     </ul>
                 </li> 
                 {% endif %}

@@ -24,6 +24,16 @@
             {{ form.personas }}
             {{ form.personas.errors }}
         </div>
+
+        <div class="mb-3">
+            <label for="{{ form.personas.id_for_label }}" class="form-label">{{ form.personas.label }}</label>
+            {{ form.personas }}
+            {{ form.personas.errors }}
+
+            <button type="button" id="add_persona_esclavizada" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona esclavizada"><i class="fas fa-user-circle"></i></button><button type="button" id="add_persona_no_esclavizada" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona no esclavizada"><i class="far fa-user-circle"></i></button>
+
+        </div>
+
         <div class="mb-3">
             {{ form.naturaleza_relacion.label_tag }}
             {{ form.naturaleza_relacion }}
@@ -91,8 +101,7 @@
 
 <script type="text/javascript">
     bindEventToButton('add_documento', '#addDocumentoModal .modal-content', "{% url 'documento-new' %}", "#newDocumentoForm", "{% url 'documento-new' %}", 'id_documento', '#addDocumentoModal');
-        bindEventToButton('add_ubicacion_archivo', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", 'dbgestor/Add/lugar.html', 'id_ubicacion_archivo', '#addLugarModal');
-    
+    bindEventToButton('add_ubicacion_archivo', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", 'dbgestor/Add/lugar.html', 'id_ubicacion_archivo', '#addLugarModal');
 </script>
 
 <script>
@@ -101,8 +110,6 @@
         return new bootstrap.Tooltip(tooltipTriggerEl)
     })
 </script>
-
-    
 
 {% else %}
     

@@ -1,0 +1,201 @@
+Descripción de variables de la base de datos:
+“La circulación de afrodescendientes esclavizados y libres en la Nueva España”
+
+archivo_país: país del archivo.
+
+archivo_ciudad/pueblo: ciudad o pueblo del archivo.
+
+archivo_estado: Estado en donde se encuentra el archivo.
+
+archivo_nombre: Nombre del Archivo.
+
+archivo_fondo: Fondo en donde se encuentra el documento.
+
+archivo_subfondo: Sub-fondo en donde se encuentra el documento.
+
+fuente_sigla total: Sigla de la ubicación del documento.
+
+fuente_vol: Volumen en donde se encuentra el documento.
+
+fuente_folio: folios del documento, si está disponible.
+
+asunto: tipo de evento, puede ser carta de dote, poder, carta de Libertad, carta compra/venta, hipoteca/empeño, Inventario, testamento, carta de pago, Trueque, Donación, Remate, Traspaso, Herencia, subasta.
+
+resumen del documento: resumen con información que no está en la base de datos.
+
+evento_id: número de evento, para singularizar el evento.
+
+evento_valor_sp: valor en pesos de la transacción.
+
+evento_forma_de_pago: forma de pago, puede ser pesos, mercaderías, servicios, trueque de persona esclavizada, crédito.
+
+evento_total: [diferentes deficiones]
+ 
+evento_día: día del evento.
+
+evento_mes: mes del evento.
+
+evento_año: año del evento.
+
+evento_fecha_completa: fecha completa del evento [dd/mm/año].
+
+persona esclavizada_id: número de persona para singularizar la persona.
+
+persona esclavizada_primer nombre: primer nombre de la persona esclavizada.
+
+persona esclavizada_apellido: apellido de la persona esclavizada.
+
+persona esclavizada_nombre_y_apellido_estandarizados: nombre y apellido en español moderno.
+
+persona esclavizada _sexo: sexo como señalado en el documento, por ejemplo varón o mujer.
+
+persona esclavizada _edad: edad, puede tener promedio.
+
+persona esclavizada _altura: altura de la persona esclavizada.
+
+persona esclavizada _cabello: descripción sobre Cabello.
+
+persona esclavizada _ojos: descripción sobre ojos.
+
+persona esclavizada _calidad_1: calidad sobre la persona esclavizada, puede figurar, pero no limitarse a "Mulato", "Negro", "Pardo", “Moreno”, “Trigueño”.
+
+persona esclavizada _calidad_2: si figura más de una adscripción de calidad se usa esta variable.
+
+persona esclavizada _calidad_3: si figuran más de dos adscripciones de calidad, se usa esta variable.
+
+persona esclavizada _hispanización: descripción del nivel de hispanización, puede figurar pero no está limitada a Bozal, Ladino, y Criollo.
+
+persona esclavizada_etnónimo: adscripción a una región, puerto, o etnia en África, o a un etnónimo usado en la trata de personas esclavizadas.
+
+persona esclavizada_procedencia1: si se menciona en documento procedencia específica de África.
+
+persona esclavizada_procedencia2: si se menciona en documento otro rastro de itinerario, puede ser pero no está limitado a barco esclavista, establecimiento jesuita, convento.
+
+persona esclavizada_lugar_anterior_2: nombre de la segunda ciudad o distrito rural de donde viene la persona esclavizada en Nueva España, anterior al evento.
+
+persona esclavizada_lugar_anterior_1: nombre de la primera ciudad o distrito rural de donde viene la persona esclavizada en Nueva España, anterior al evento.
+
+persona esclavizada_lugar_nuevo_1: nombre de la primera ciudad o distrito rural a donde fue la persona esclavizada en Nueva España, luego del evento.
+
+persona esclavizada_lugar_nuevo_2: nombre de la segunda ciudad o distrito rural a donde fue la persona esclavizada en Nueva España, luego del evento.
+
+persona esclavizada_marcas_corporales: descripciones de marcas o carimbos, latigazos, escarificaciones rituales, falta de un miembro corporal, ceguera, o audición.
+
+persona esclavizada_marcas_corporales_forma_de_marca: si tiene marca o carimbo, descripción de la forma.
+
+persona esclavizada_registros_de_conductas y condiciones: descripción sobre la persona que puede incluir huidor, alcoholism, comentarios sobre trabajo, vacunado, o embarazada, entro otros.
+
+persona esclavizada _ocupación: ocupación de la persona esclavizada.
+
+persona esclavizada _ocupación_categoría: categoría de la ocupación de la persona esclavizada, puede ser pero no está limitado a servicio doméstico, artesanía, obraje.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_1: nombre de otra persona esclavizada que se menciona en ese mismo evento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_1_conexión: conexión con esa otra persona esclavizada, puede ser lazo familiar o haber sido esclavizados por la misma persona.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_1_id: número de identificación de persona esclavizada que está mencionada en este mismo documento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_2: nombre de una segunda persona esclavizada que se menciona en ese mismo evento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_2_conexión: conexión con esa segunda persona esclavizada, puede ser lazo familiar o haber sido esclavizados por la misma persona.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_2_id: número de identificación de esa segunda persona esclavizada que está mencionada en este mismo documento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_3: nombre de una tercera persona esclavizada que se menciona en ese mismo evento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_3_conexión: conexión con esa tercera persona esclavizada, puede ser lazo familiar o haber sido esclavizados por la misma persona.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_3_id: número de identificación de esa tercera persona esclavizada que está mencionada en este mismo documento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_4: nombre de una cuarta persona esclavizada que se menciona en ese mismo evento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_4_conexión: conexión con esa cuarta persona esclavizada, puede ser lazo familiar o haber sido esclavizados por la misma persona.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_4_id: número de identificación de esa cuarta persona esclavizada que está mencionada en este mismo documento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_5: nombre de una quinta persona esclavizada que se menciona en ese mismo evento.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_5_conexión: conexión con esa quinta persona esclavizada, puede ser lazo familiar o haber sido esclavizados por la misma persona.
+
+persona esclavizada _relación con otras esclavizadas del mismo evento_5_id: número de identificación de esa quinta persona esclavizada que está mencionada en este mismo documento.
+
+persona 2_nombre: nombre de persona no esclavizada asociada al evento.
+
+persona 2_apellido: apellido de persona no esclavizada asociada al evento.
+
+persona 2_estatus: variable de estatus como don o doña, o si no figura N/A.
+
+persona 2_sexo: varón o mujer.
+
+persona 2_calidad: variable de calidad asociada a esta persona y si no figura N/A.
+
+persona 2_rol/función en el documento: la función de esta persona en el documento, puede ser pero no se limita a comprador, vendedor, comisionado, testador, dotada, otorgante del poder, receptor del poder, capitán de barco esclavista, arriero, intermediario
+
+persona 2_ocupación: ocupación de esta persona.
+
+persona 2_ocupación_categoría: categoría de esta ocupación, por ejemplo, comercio.
+
+persona 2_lugar: lugar asociado a esta persona.
+
+persona 2_lugar_situación: situación de esta persona con relación al lugar, si es vecino, residente, o estante, por ejemplo.
+
+persona 3_primer nombre: nombre de persona no esclavizada asociada al evento.
+
+persona 3_apellido: apellido de persona no esclavizada asociada al evento.
+
+persona 3_estatus: variable de estatus como don o doña, o si no figura N/A.
+
+persona 3_sexo: varón o mujer.
+
+persona 3_calidad: variable de calidad asociada a esta persona y si no figura N/A.
+
+persona 3_rol/función en el documento: la función de esta persona en el documento, puede ser pero no se limita a comprador, vendedor, comisionado, testador, dotada, otorgante del poder, receptor del poder, capitán de barco esclavista, arriero, intermediario.
+
+persona 3_ocupación: ocupación de esta persona.
+
+persona 3_ocupación_categoría: categoría de esta ocupación, por ejemplo, comercio.
+
+persona 3_lugar: lugar asociado a esta persona.
+
+persona 3_lugar_situación: situación de esta persona con relación al lugar, si es vecino, residente, o estante, por ejemplo.
+
+persona 4_primer nombre: nombre de persona no esclavizada asociada al evento.
+
+persona 4_apellido: apellido de persona no esclavizada asociada al evento.
+
+persona 4_estatus: variable de estatus como don o doña, o si no figura N/A.
+
+persona 4_sexo: varón o mujer.
+
+persona 4_calidad: variable de calidad asociada a esta persona y si no figura N/A.
+
+persona 4_rol/función en el documento: la función de esta persona en el documento, puede ser pero no se limita a comprador, vendedor, comisionado, testador, dotada, otorgante del poder, receptor del poder, capitán de barco esclavista, arriero, intermediario.
+
+persona 4_ocupación: ocupación de esta persona.
+
+persona 4_ocupación_categoría: categoría de esta ocupación, por ejemplo, comercio.
+
+persona 4_lugar: lugar asociado a esta persona.
+
+persona 4_lugar_situación: situación de esta persona con relación al lugar, si es vecino, residente, o estante, por ejemplo.
+
+persona 5_primer nombre: nombre de persona no esclavizada asociada al evento.
+
+persona 5_apellido: apellido de persona no esclavizada asociada al evento.
+
+persona 5_estatus: variable de estatus como don o doña, o si no figura N/A.
+
+persona 5_sexo: varón o mujer.
+
+persona 5_calidad: variable de calidad asociada a esta persona y si no figura N/A.
+
+persona 5_rol/función en el documento: la función de esta persona en el documento, puede ser pero no se limita a comprador, vendedor, comisionado, testador, dotada, otorgante del poder, receptor del poder, capitán de barco esclavista, arriero, intermediario
+
+persona 5_ocupación: ocupación de esta persona.
+
+persona 5_ocupación_categoría: categoría de esta ocupación, por ejemplo, comercio.
+
+persona 5_lugar: lugar asociado a esta persona.
+
+persona 5_lugar_situación: situación de esta persona con relación al lugar, si es vecino, residente, o estante, por ejemplo.
+
