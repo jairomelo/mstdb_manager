@@ -785,7 +785,7 @@ class DocumentoDetailView(DetailView):
         place_data = defaultdict(lambda: defaultdict(dict))
 
         for rel in personalugarrel:
-            category = "Anteriores" if rel.anterior_posterior == '1' else "Posteriores"
+            category = "Anteriores" if rel.ordinal < 1 else "Posteriores"
             place_name = rel.lugar.nombre_lugar
             if place_name not in place_data[category]:
                 place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal}

@@ -417,10 +417,10 @@ class PersonaLugarRelForm(forms.ModelForm):
         label='Personas relacionadas'
     )
     
-    situacion_lugar = forms.ModelMultipleChoiceField(
+    situacion_lugar = forms.ModelChoiceField(
         queryset=SituacionLugar.objects.all(),
         widget=autocomplete.ModelSelect2Multiple(url='situacion-autocomplete'),
-        label='Sitación en el lugar'
+        label='Sitación en el lugar', required=False,
     )
 
     def __init__(self, *args, **kwargs):

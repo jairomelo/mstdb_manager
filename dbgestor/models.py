@@ -394,10 +394,9 @@ class PersonaLugarRel(models.Model):
     
     lugar = models.ForeignKey(Lugar, on_delete=models.CASCADE, related_name='p_x_l_lugar')
     
-    situacion_lugar = models.ManyToManyField(SituacionLugar, default=1)
+    situacion_lugar = models.ForeignKey(SituacionLugar, blank=True, null=True, on_delete=models.SET_NULL, related_name='situacion_lugar')
     
     ordinal = models.SmallIntegerField(default=0) 
-    #anterior_posterior = models.CharField(max_length=50, choices=(('1', 'Anterior al evento'), ('2', 'Posterior al evento')))
 
     fecha_inicial_lugar = models.DateField(null=True, blank=True)
     fecha_inicial_lugar_factual = models.BooleanField(null=True, blank=True)
@@ -412,7 +411,7 @@ class PersonaLugarRel(models.Model):
     history = HistoricalRecords()
 
     def __str__(self) -> str:
-        return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - {self.lugar} - {self.anterior_posterior}"
+        return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - {self.lugar} - {self.ordinal}"
 
 class PersonaRelaciones(models.Model):
     
