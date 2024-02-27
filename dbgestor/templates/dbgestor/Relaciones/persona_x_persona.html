@@ -20,17 +20,11 @@
         </div>
 
         <div class="mb-3">
-            {{ form.personas.label_tag }}
-            {{ form.personas }}
-            {{ form.personas.errors }}
-        </div>
-
-        <div class="mb-3">
             <label for="{{ form.personas.id_for_label }}" class="form-label">{{ form.personas.label }}</label>
             {{ form.personas }}
             {{ form.personas.errors }}
 
-            <button type="button" id="add_persona_esclavizada" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona esclavizada"><i class="fas fa-user-circle"></i></button><button type="button" id="add_persona_no_esclavizada" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona no esclavizada"><i class="far fa-user-circle"></i></button>
+           {% comment %}  <button type="button" id="add_persona_esclavizada" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona esclavizada"><i class="fas fa-user-circle"></i></button><button type="button" id="add_persona_no_esclavizada" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona no esclavizada"><i class="far fa-user-circle"></i></button> {% endcomment %}
 
         </div>
 

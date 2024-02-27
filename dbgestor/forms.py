@@ -25,21 +25,21 @@ class CustomValidators:
             return date_text
         date_text = date_text.strip()
         if len(date_text) > 10:
-            raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use AAAA-MM-DD, AAAA-MM, o AAAA.")
+            raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
         
         date_text = date_text.replace("/", "-")
         
         try:
-            parsed_date = datetime.strptime(date_text, '%Y-%m-%d')
+            parsed_date = datetime.strptime(date_text, '%d-%m-%Y')
             return parsed_date.date()
         except ValueError:
             parts = date_text.split('-')
             if len(parts) == 1 and len(parts[0]) == 4:
                 return datetime.strptime(date_text, '%Y').date()
             elif len(parts) == 2:
-                return datetime.strptime(date_text, '%Y-%m').date()
+                return datetime.strptime(date_text, '%m-%Y').date()
             else:
-                raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use AAAA-MM-DD, AAAA-MM, o AAAA.")
+                raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
 
 
     def validate_date_range(self, date_inicial, date_final):
@@ -165,12 +165,12 @@ class DocumentoForm(forms.ModelForm):
     folio_final = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('folio final opcional')}), required=False)
     
     fecha_inicial = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('AAAA-MM-DD, AAAA-MM, o AAAA.')}),
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
         required=True 
     )
     
     fecha_final = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('AAAA-MM-DD, AAAA-MM, o AAAA.')}),
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
         required=False
     )
     
@@ -419,9 +419,9 @@ class PersonaLugarRelForm(forms.ModelForm):
     
     situacion_lugar = forms.ModelChoiceField(
         queryset=SituacionLugar.objects.all(),
-        widget=autocomplete.ModelSelect2Multiple(url='situacion-autocomplete'),
+        widget=autocomplete.ModelSelect2(url='situacion-autocomplete'),
         label='Sitación en el lugar', required=False,
-    )
+    )   
 
     def __init__(self, *args, **kwargs):
         super(PersonaLugarRelForm, self).__init__(*args, **kwargs)

@@ -214,3 +214,10 @@ DEBUG 2024-02-26 15:03:51,505 forms <django.forms.fields.CharField object at 0x7
 DEBUG 2024-02-26 19:50:44,684 forms LugarForm save method called.
 DEBUG 2024-02-26 20:17:44,138 forms LugarForm save method called.
 DEBUG 2024-02-26 20:51:28,079 forms LugarForm save method called.
+DEBUG 2024-02-27 10:31:03,377 forms Cleaning Documento/fecha_inicial 30/12/1681
+DEBUG 2024-02-27 10:31:03,385 forms Fecha inicial cleaned 1681-12-30
+DEBUG 2024-02-27 10:31:03,385 forms Cleaning Documento/fecha_final ""
+DEBUG 2024-02-27 10:31:03,386 forms folios 159r y 159r validados
+DEBUG 2024-02-27 10:31:03,387 forms validando si 1681-12-30 existe
+DEBUG 2024-02-27 10:31:03,387 forms validando 1681-12-30
+DEBUG 2024-02-27 10:31:03,387 forms validando 1681-12-30

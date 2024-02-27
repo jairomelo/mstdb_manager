@@ -411,7 +411,7 @@ class PersonaLugarRel(models.Model):
     history = HistoricalRecords()
 
     def __str__(self) -> str:
-        return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - {self.lugar} - {self.ordinal}"
+        return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - ({self.ordinal}){self.lugar}"
 
 class PersonaRelaciones(models.Model):
     
