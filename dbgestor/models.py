@@ -225,7 +225,7 @@ class Calidades(models.Model):
     """
     
     calidad_id = models.AutoField(primary_key=True)
-    calidad = models.CharField(max_length=150)
+    calidad = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -235,7 +235,7 @@ class Calidades(models.Model):
 class Actividades(models.Model):
     
     actividad_id = models.AutoField(primary_key=True)
-    actividad = models.CharField(max_length=150)
+    actividad = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -247,7 +247,7 @@ class Hispanizaciones(models.Model):
     """
     
     hispanizacion_id = models.AutoField(primary_key=True)
-    hispanizacion = models.CharField(max_length=150)
+    hispanizacion = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -260,7 +260,7 @@ class Etonimos(models.Model):
     """
     
     etonimo_id = models.AutoField(primary_key=True)
-    etonimo = models.CharField(max_length=150)
+    etonimo = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:

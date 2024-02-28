@@ -486,7 +486,22 @@ class HispanizacionesForm(forms.ModelForm):
     class Meta:
         model = Hispanizaciones
         fields = ['hispanizacion']
+    
+    def save(self, commit=True):
+        hispanizaciones = super().save(commit=False)
         
+        hispanizacion = self.cleaned_data.get('hispanizacion')
+        hispanizacion = hispanizacion.title()
+        
+        hispanizaciones, created = Hispanizaciones.objects.update_or_create(
+        hispanizacion=hispanizacion
+        )
+        logger.debug(f"hispanizacion created: {created}, hispanizacion ID: {hispanizaciones.hispanizacion_id}")
+        
+        if commit:
+            hispanizaciones.save()
+        return hispanizaciones
+    
     def __init__(self, *args, **kwargs):
         super(HispanizacionesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -500,6 +515,21 @@ class EtnonimosForm(forms.ModelForm):
         
     etonimo = forms.CharField(required=True, label='Etnónimo')
     
+    def save(self, commit=True):
+        etonimo_object = super().save(commit=False)
+        
+        etonimo = self.cleaned_data.get('etonimo')
+        etonimo = etonimo.title()
+        
+        etonimo_object, created = Etonimos.objects.update_or_create(
+        etonimo=etonimo
+        )
+        logger.debug(f"Etnonimo created: {created}, Etnónimo ID: {etonimo_object.etonimo_id}")
+        
+        if commit:
+            etonimo_object.save()
+        return etonimo_object
+    
     def __init__(self, *args, **kwargs):
         super(EtnonimosForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -510,7 +540,22 @@ class OcupacionesForm(forms.ModelForm):
     class Meta:
         model = Actividades
         fields = ['actividad']
+    
+    def save(self, commit=True):
+        actividades = super().save(commit=False)
         
+        actividad = self.cleaned_data.get('actividad')
+        actividad = actividad.title()
+        
+        actividades, created = Actividades.objects.update_or_create(
+        actividad=actividad
+        )
+        logger.debug(f"Actividad created: {created}, Actividad ID: {actividades.actividad_id}")
+        
+        if commit:
+            actividades.save()
+        return actividades
+    
     def __init__(self, *args, **kwargs):
         super(OcupacionesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -522,6 +567,21 @@ class SituacionLugarForm(forms.ModelForm):
         model = SituacionLugar
         fields = ['situacion']
     
+    def save(self, commit=True):
+        situacion_lugar = super().save(commit=False)
+        
+        situacion = self.cleaned_data.get('situacion')
+        situacion = situacion.title()
+        
+        situacion_lugar, created = SituacionLugar.objects.update_or_create(
+        situacion=situacion
+        )
+        logger.debug(f"Situacion created: {created}, Situacion ID: {situacion_lugar.situacion_id}")
+        
+        if commit:
+            situacion_lugar.save()
+        return situacion_lugar
+    
     def __init__(self, *args, **kwargs):
         super(SituacionLugarForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -532,7 +592,22 @@ class RolesForm(forms.ModelForm):
     class Meta:
         model = RolEvento
         fields = ['rol_evento']
+    
+    def save(self, commit=True):
+        rol_evento_object = super().save(commit=False)
         
+        rol_evento = self.cleaned_data.get('rol_evento')
+        rol_evento = rol_evento.title()
+        
+        rol_evento_object, created = RolEvento.objects.update_or_create(
+        rol_evento=rol_evento
+        )
+        logger.debug(f"Rol created: {created}, Rol ID: {rol_evento_object.id}")
+        
+        if commit:
+            rol_evento_object.save()
+        return rol_evento_object
+    
     def __init__(self, *args, **kwargs):
         super(RolesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
