@@ -1,6 +1,7 @@
 from typing import Any
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
 from datetime import datetime
 from dal import autocomplete
 import re
@@ -421,7 +422,13 @@ class PersonaLugarRelForm(forms.ModelForm):
         queryset=SituacionLugar.objects.all(),
         widget=autocomplete.ModelSelect2(url='situacion-autocomplete'),
         label='Sitación en el lugar', required=False,
-    )   
+    ) 
+    
+    def clean_ordinal(self):
+        data = self.cleaned_data['ordinal']
+        if data == 0:
+            raise ValidationError(_('0 no es un valor permitido.'))
+        return data
 
     def __init__(self, *args, **kwargs):
         super(PersonaLugarRelForm, self).__init__(*args, **kwargs)

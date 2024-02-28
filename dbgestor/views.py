@@ -771,15 +771,22 @@ class DocumentoDetailView(DetailView):
             )
         )
         
-        relationship_data = defaultdict(set)
+        relationship_data = defaultdict(lambda: {'personas': [], 'associated_ids': set()})
         
         for relacion in personapersonarel:
             if relacion.documento == documento:
+                naturaleza_rel = relacion.get_naturaleza_relacion_display()
                 for persona in relacion.personas.all():
-                    relationship_data[relacion.get_naturaleza_relacion_display()].add(persona.nombre_normalizado)
+                    # This should correctly append a tuple to the list
+                    relationship_data[naturaleza_rel]['personas'].append({
+                        'nombre': persona.nombre_normalizado,
+                        'idno': persona.persona_idno,
+                        'id_rel': relacion.persona_relacion_id,
+                    })
+                    relationship_data[naturaleza_rel]['associated_ids'].add(persona.persona_idno)
         
-        for key in relationship_data:
-            relationship_data[key] = list(relationship_data[key])
+        """ for key in relationship_data:
+            relationship_data[key] = list(relationship_data[key]) """
         
         
         place_data = defaultdict(lambda: defaultdict(dict))
@@ -787,8 +794,9 @@ class DocumentoDetailView(DetailView):
         for rel in personalugarrel:
             category = "Anteriores" if rel.ordinal < 1 else "Posteriores"
             place_name = rel.lugar.nombre_lugar
+            id_relacion = rel.persona_x_lugares
             if place_name not in place_data[category]:
-                place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal}
+                place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal, 'rel_id': id_relacion}
             for persona in rel.personas.all():
                 place_data[category][place_name]['personas'].append(persona.persona_idno)
         
@@ -944,7 +952,7 @@ class PersonaNoEsclavizadaUpdateView(UpdateView):
         return kwargs
 
 
-# Delete views    
+# Delete views  
 
 class ArchivoDeleteView(DeleteView):
     model = Archivo
@@ -990,3 +998,28 @@ class PersonaNoEsclavizadaDeleteView(DeleteView):
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'borrar'
         return context  
+    
+# Delete Vocabs
+class PersonaLugarRelDeleteView(DeleteView):
+    model = PersonaLugarRel
+    template_name = 'dbgestor/Base/personalugar_rel_confirm_delete.html'
+    success_url = reverse_lazy('documentos-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'borrar'
+        return context  
+    
+
+
+
+class DeletePersonaRelacionesView(DeleteView):
+    model = PersonaRelaciones
+    template_name = 'dbgestor/Base/confirm_delete.html'
+    success_url = reverse_lazy('documento-browse')
+    
+class DeletePersonaLugarRelView(DeleteView):
+    model = PersonaLugarRel
+    template_name = 'dbgestor/Base/confirm_delete.html'
+    success_url = reverse_lazy('documento-browse')

@@ -17,7 +17,8 @@ from .views import (PersonaNoEsclavizadaAutocomplete, DocumentoAutocomplete, Lug
                     PersonaEsclavizadaBrowse, PersonaEsclavizadaDeleteView, PersonaEsclavizadaDetailView,
                     PersonaEsclavizadaUpdateView, RolesCreateView,
                     PersonaLugarRelCreateView, PersonaPersonaRelCreateView, PersonaAutocomplete,
-                    SituacionLugarCreateView)
+                    SituacionLugarCreateView,
+                    DeletePersonaRelacionesView, DeletePersonaLugarRelView)
 
 
 urlpatterns = [
@@ -77,4 +78,7 @@ urlpatterns = [
     path('tipodocumental-autocomplete', TipoDocumentalAutocomplete.as_view(), name='tiposdocumentales-autocomplete'),
     path('tipolugar-autocomplete', TipoLugarAutocomplete.as_view(), name='tiposlugar-autocomplete'),
     path('rolesevento-autocomplete', RolEventoAutocomplete.as_view(), name='rolesevento-autocomplete'),
+    # testing
+    path('personarel/delete/<int:pk>/', DeletePersonaRelacionesView.as_view(), name='delete-personarel'),
+    path('personalugar/delete/<int:pk>/', DeletePersonaLugarRelView.as_view(), name='delete-personalugarrel'),
 ]
