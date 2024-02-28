@@ -460,7 +460,22 @@ class CalidadesForm(forms.ModelForm):
     class Meta:
         model = Calidades
         fields = ['calidad']
+    
+    def save(self, commit=True):
+        calidades = super().save(commit=False)
         
+        calidad = self.cleaned_data.get('calidad')
+        calidad = calidad.title()
+        
+        calidades, created = Calidades.objects.update_or_create(
+        calidad=calidad
+        )
+        logger.debug(f"Calidad created: {created}, Calidad ID: {calidades.calidad_id}")
+        
+        if commit:
+            calidades.save()
+        return calidades
+    
     def __init__(self, *args, **kwargs):
         super(CalidadesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():

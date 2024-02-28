@@ -55,7 +55,7 @@ PLACE_TYPE_CHOICES = (
 
 class SituacionLugar(models.Model):
     situacion_id = models.AutoField(primary_key=True)
-    situacion = models.CharField(max_length=150)
+    situacion = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -63,7 +63,7 @@ class SituacionLugar(models.Model):
 
 class TipoDocumental(models.Model):
     
-    tipo_documental = models.CharField(max_length=70)
+    tipo_documental = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -71,7 +71,7 @@ class TipoDocumental(models.Model):
 
 class RolEvento(models.Model):
     
-    rol_evento = models.CharField(max_length=70)
+    rol_evento = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -79,7 +79,7 @@ class RolEvento(models.Model):
 
 class TipoLugar(models.Model):
     
-    tipo_lugar = models.CharField(max_length=70)
+    tipo_lugar = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
     def __str__(self) -> str:
@@ -175,7 +175,7 @@ class Documento(models.Model):
     tipo_documento =  models.ForeignKey(TipoDocumental, on_delete=models.SET_NULL, default=1, null=True, related_name='tipo_documento')
     sigla_documento = models.CharField(max_length=100, null=True, blank=True)
     
-    titulo = models.CharField(max_length=200)
+    titulo = models.CharField(max_length=200, unique=True)
     descripcion = models.TextField(blank=True, null=True)
     
     fecha_inicial = models.DateField(null=True, blank=True)
