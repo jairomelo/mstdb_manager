@@ -790,8 +790,12 @@ class DocumentoDetailView(DetailView):
             if place_name not in place_data[category]:
                 place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal}
             for persona in rel.personas.all():
-                place_data[category][place_name]['personas'].append(persona.nombre_normalizado)
-            
+                place_data[category][place_name]['personas'].append(persona.persona_idno)
+        
+        for category in place_data:
+            sorted_places = sorted(place_data[category].items(), key=lambda x: x[1]['ordinal'])
+            place_data[category] = dict(sorted_places)
+        
         place_data_standard = {category: dict(places) for category, places in place_data.items()}
         
         context['peresclavizadas'] = peresclavizadas

@@ -70,7 +70,7 @@
                                             <strong>{{ category }}</strong>
                                             <ul class="fa-ul">
                                                 {% for place, details in places.items %}
-                                                    {% if peresclavizada.nombre_normalizado in details.personas %}
+                                                    {% if peresclavizada.persona_idno in details.personas %}
                                                     <li><span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}</li>
                                                     {% endif %}
                                                 {% endfor %}
@@ -116,7 +116,7 @@
                                             <strong>{{ category }}</strong>
                                             <ul class="fa-ul">
                                                 {% for place, details in places.items %}
-                                                    {% if pernoesclavizada.nombre_normalizado in details.personas %}
+                                                    {% if pernoesclavizada.persona_idno in details.personas %}
                                                     <li><span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}</li>
                                                     {% endif %}
                                                 {% endfor %}
