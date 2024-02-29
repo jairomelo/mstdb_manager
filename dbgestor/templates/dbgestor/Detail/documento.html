@@ -5,7 +5,7 @@
 {% csrf_token %}
 
 <div class="container mt-4">
-    <!-- Document Details -->
+    <!-- Documento Details -->
     <div class="card mb-4">
         <div class="card-body">
             <h1 class="card-title">{{ documento.titulo }}</h1>
@@ -30,12 +30,13 @@
             </div>
         </div>
     </div>
+    <!-- End of Documento Details -->
 
-    <!-- Main Document Card -->
+    <!-- Main Documento Card -->
     <div class="card mb-3">
         <div class="card-body">
 
-
+                <!-- Control buttons -->
                 <div id="warningAlert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
                     Seleccione al menos dos personas para crear una relación.
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -51,11 +52,15 @@
                     <button id="createRelationLugar" class="btn btn-success mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar anterior o posterior a una o más personas"><i class="fas fa-shoe-prints"></i> Añadir lugares a personas</button>
                     <button id="createRelation" class="btn btn-success mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir relación entre dos o más personas"><i class="fas fa-people-arrows"></i> Añadir relaciones entre personas</button>
                 {% endif %}
+
+                <!-- End Control buttons -->
+                <!-- Select buttons -->
                 <div class="row" style="padding:15px;">
                     <div class="selectall">
                         <button id="selectAllBtn" class="btn btn-light toggle-button"><i class="far fa-check-square"></i> Seleccionar todas</button>
                         <button id="deselectAllBtn" class="btn btn-light toggle-button hidden"><i class="far fa-square"></i> Deseleccionar todas</button>
                     </div>
+                    <!-- Personas Esclavizadas Card -->
                     <h3>Personas esclavizadas asociadas al documento</h3>
                     {% for peresclavizada in peresclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
@@ -69,6 +74,7 @@
                                 <a href='{% url 'personaesclavizada-detail' peresclavizada.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
                                 {% endif %}
                             </div>
+                            <!-- Persona Esclavizada Lugares -->
                             <div class="card-body">
                                 <h5 class="card-title text-primary">Lugares</h5>
                                 <p class="card-text">
@@ -80,7 +86,8 @@
                                         <li class="my-3">
                                             <span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}
                                             <div class="btn-group float-end">
-                                                {% comment %} <a href="#" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a> {% endcomment %}
+                                                <a href="{% url 'persona_x_lugar-update' details.rel_id %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
+                                                
                                                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
                                             </div>
                                         </li>
@@ -89,6 +96,9 @@
                                     </ul>
                                     {% endfor %}
                                 </p>
+                                <!-- End of Persona Esclavizada Lugares -->
+                                <hr>
+                                <!-- Persona Esclavizada Relaciones -->
                                 <h5 class="card-title text-primary">Relaciones</h5>
                                 <p class="card-text">
 
@@ -102,6 +112,7 @@
                                                         <li class="my-3">
                                                             <span class="fa-li"><i class="fas fa-user-friends"></i></span> {{ persona.nombre }}
                                                             <div class="btn-group float-end">
+                                                            <a href="{% url 'persona_x_persona-update' persona.id_rel %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
                                                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personarel' persona.id_rel %}');"><i class="fas fa-trash-alt"></i></button>
                                                             </div>
                                                         </li>
@@ -111,11 +122,13 @@
                                         {% endif %}
                                     {% endfor %}
                                 </p>
+                                <!-- End of Persona Esclavizada Relaciones -->
                             </div>
                         </div>
                     </div>
-                    
                     {% endfor %}
+                    <!-- End of Personas Esclavizadas Card -->
+                    <!-- Personas no Esclavizadas Card -->
                     <h3>Personas no esclavizadas asociadas al documento</h3>
                     {% for pernoesclavizada in pernoesclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
@@ -129,6 +142,7 @@
                                 <a href='{% url 'personanoesclavizada-detail' pernoesclavizada.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
                                 {% endif %}
                             </div>
+                            <!-- Persona no esclavizada Lugares-->
                             <div class="card-body">
                                 <h5 class="card-title text-primary">Lugares</h5>
                                 <p class="card-text">
@@ -140,7 +154,7 @@
                                         <li class="my-3">
                                             <span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}
                                             <div class="btn-group float-end">
-                                                {% comment %} <a href="#" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a> {% endcomment %}
+                                                <a href="{% url 'persona_x_lugar-update' details.rel_id %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
                                                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
                                             </div>
                                         </li>
@@ -149,6 +163,9 @@
                                     </ul>
                                     {% endfor %}
                                 </p>
+                                <!-- End of Persona No Esclavizada Lugares -->
+                                <hr>
+                                <!-- Persona no Esclavizada Relaciones -->
                                 <h5 class="card-title text-primary">Relaciones</h5>
                                 <p class="card-text">
 
@@ -162,6 +179,7 @@
                                                         <li class="my-3">
                                                             <span class="fa-li"><i class="fas fa-user-friends"></i></span> {{ persona.nombre }}
                                                             <div class="btn-group float-end">
+                                                            <a href="{% url 'persona_x_persona-update' persona.id_rel %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
                                                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personarel' persona.id_rel %}');"><i class="fas fa-trash-alt"></i></button>
                                                             </div>
                                                         </li>
@@ -171,18 +189,22 @@
                                         {% endif %}
                                     {% endfor %}
                                 </p>
+                                <!-- End of Persona no esclavizada relaciones -->
                             </div>
                         </div>
                     </div>
                     
                     {% endfor %}
+                    <!-- End of Personas no Esclavizadas Card -->
+
                 </div>
         </div>
     </div>
-
+    <!-- End of Main Documento Card -->
+    <!-- Historial -->
     <div class="card mb-3">
         <div class="card-header" data-bs-toggle="collapse" href="#changeHistory" role="button" aria-expanded="false" aria-controls="changeHistory">
-            <i class="fas fa-history"></i> Historial de cambios:
+            <i class="fas fa-history"></i> Historial de cambios del Documento:
         </div>
         <div class="collapse" id="changeHistory">
             <ul class="list-group list-group-flush">
@@ -197,6 +219,7 @@
             </ul>
         </div>
     </div>
+    <!-- End of historial -->
     
     
 
@@ -327,7 +350,6 @@
         $('#deleteConfirmationModal').modal('show');
     
         document.getElementById('deleteConfirmBtn').onclick = function() {
-            // Retrieve CSRF token from meta tag
             const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             console.log("csrf_token");
             console.log(csrftoken);
@@ -339,19 +361,15 @@
                 },
                 success: function(result) {
                     $('#deleteConfirmationModal').modal('hide');
-                    // Handle the visual removal or refresh
-                    location.reload(); // Simple page reload
+                    location.reload(); 
                 },
                 error: function(xhr, status, error) {
-                    // Handle errors
                     console.error(error);
                 }
             });
         };
     }
     
-    
-
 </script>
 
 {% endblock content %}

@@ -1,24 +1,22 @@
 # pages/urls.py
 from django.urls import path
-from .views import home, LugarCreateView, LugarAutocomplete, PersonaEsclavizadaAutocomplete
-from .views import (PersonaNoEsclavizadaAutocomplete, DocumentoAutocomplete, LugarEventoAutocomplete, 
-                    CalidadesPersonaEsclavizadaAutocomplete, CalidadesPersonasNoEsclavizadasAutocomplete,
-                    ArchivoAutocomplete, SituacionLugarAutocomplete, TipoDocumentalAutocomplete,
-                    TipoLugarAutocomplete, RolEventoAutocomplete,
-                    DocumentoCreateView, ArchivoCreateView, DocumentoBrowse,
-                    DocumentoDetailView, DocumentoUpdateView, DocumentoDeleteView, ArchivoBrowse,
-                    TotalBrowseView,
-                    ArchivoDetailView, ArchivoUpdateView, ArchivoDeleteView, PersonaEsclavizadaCreateView,
-                    PersonaNoEsclavizadaCreateView, PersonaNoEsclavizadaBrowse, PersonaNoEsclavizadaDeleteView,
-                    PersonaNoEsclavizadaDetailView, PersonaNoEsclavizadaUpdateView,
-                    CalidadesAutocomplete, HispanizacionesAutocomplete, EtnonimosAutocomplete,
-                    EtnonimosCreateView, HispanizacionesCreateView, CalidadesCreateView,
-                    OcupacionesCreateView, OcupacionesAutocomplete,
-                    PersonaEsclavizadaBrowse, PersonaEsclavizadaDeleteView, PersonaEsclavizadaDetailView,
-                    PersonaEsclavizadaUpdateView, RolesCreateView,
-                    PersonaLugarRelCreateView, PersonaPersonaRelCreateView, PersonaAutocomplete,
-                    SituacionLugarCreateView,
-                    DeletePersonaRelacionesView, DeletePersonaLugarRelView)
+from .views import home
+from .views import (
+    ArchivoAutocomplete, ArchivoBrowse, ArchivoCreateView, ArchivoDeleteView, ArchivoDetailView,
+    ArchivoUpdateView, CalidadesAutocomplete, CalidadesCreateView, CalidadesPersonaEsclavizadaAutocomplete,
+    CalidadesPersonasNoEsclavizadasAutocomplete, DeletePersonaLugarRelView, DeletePersonaRelacionesView,
+    DocumentoAutocomplete, DocumentoBrowse, DocumentoCreateView, DocumentoDeleteView, DocumentoDetailView,
+    DocumentoUpdateView, EtnonimosAutocomplete, EtnonimosCreateView, HispanizacionesAutocomplete,
+    HispanizacionesCreateView, LugarAutocomplete, LugarCreateView, LugarEventoAutocomplete, OcupacionesAutocomplete, 
+    OcupacionesCreateView, PersonaAutocomplete, PersonaEsclavizadaBrowse, PersonaEsclavizadaCreateView, PersonaEsclavizadaDeleteView,
+    PersonaEsclavizadaAutocomplete, PersonaEsclavizadaDetailView, PersonaEsclavizadaUpdateView, PersonaLugarRelCreateView, PersonaLugarRelUpdateView,
+    PersonaNoEsclavizadaAutocomplete, PersonaNoEsclavizadaBrowse, PersonaNoEsclavizadaCreateView,
+    PersonaNoEsclavizadaDeleteView, PersonaNoEsclavizadaDetailView, PersonaNoEsclavizadaUpdateView,
+    PersonaPersonaRelCreateView, PersonaRelacionesUpdateView, RolesCreateView, RolEventoAutocomplete,
+    SituacionLugarAutocomplete, SituacionLugarCreateView, TipoDocumentalAutocomplete, TipoLugarAutocomplete,
+    TotalBrowseView,
+)
+
 
 
 urlpatterns = [
@@ -56,6 +54,8 @@ urlpatterns = [
     path('Update/documento/<int:pk>', DocumentoUpdateView.as_view(), name='documento-update'),
     path('Update/personaesclavizada/<int:pk>', PersonaEsclavizadaUpdateView.as_view(), name='personaesclavizada-update'),
     path('Update/personanoesclavizada/<int:pk>', PersonaNoEsclavizadaUpdateView.as_view(), name='personanoesclavizada-update'),
+    path('Update/persona_x_lugar/<int:pk>', PersonaLugarRelUpdateView.as_view(), name='persona_x_lugar-update'),
+    path('Update/persona_x_persona/<int:pk>', PersonaRelacionesUpdateView.as_view(), name='persona_x_persona-update'),
     # delete views
     path('archivo/<int:pk>/delete/', ArchivoDeleteView.as_view(), name='archivo-delete'),
     path('documento/<int:pk>/delete/', DocumentoDeleteView.as_view(), name='documento-delete'),

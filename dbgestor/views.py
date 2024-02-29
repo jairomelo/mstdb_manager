@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect, get_list_or_404
+from django.shortcuts import render, redirect
 from django.urls import reverse_lazy, reverse
-from django.db import transaction, models
+from django.db import models
 from django.db.models import Q
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.views.generic import (ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView)
 
 from collections import defaultdict
@@ -35,24 +35,45 @@ class LugarAutocomplete(autocomplete.Select2QuerySetView):
 
 class PersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
+        """ Search both in nombre_normalizado and in persona_idno
+        """
+        if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_personaesclavizada')):
+            return PersonaEsclavizada.objects.none()
         qs = PersonaEsclavizada.objects.all()
         if self.q:
-            qs = qs.filter(nombre_normalizado__icontains=self.q)
+            qs = qs.filter(
+                Q(nombre_normalizado__icontains=self.q) |
+                Q(persona_idno__icontains=self.q)
+                )
             
         return qs
 
 class PersonaNoEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
+        
+        if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_personanoesclavizada')):
+            return PersonaNoEsclavizada.objects.none()
+        
         qs = PersonaNoEsclavizada.objects.all()
         if self.q:
-            qs = qs.filter(nombre_normalizado__icontains=self.q)
+            qs = qs.filter(
+                Q(nombre_normalizado__icontains=self.q) |
+                Q(persona_idno__icontains=self.q)
+                )
         return qs
     
 class PersonaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
+        
+        if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_persona')):
+            return Persona.objects.none()
+        
         qs = Persona.objects.all()
         if self.q:
-            qs = qs.filter(nombre_normalizado__icontains=self.q)
+            qs = qs.filter(
+                Q(nombre_normalizado__icontains=self.q) |
+                Q(persona_idno__icontains=self.q)
+                )
         return qs
     
 class LugarEventoAutocomplete(autocomplete.Select2QuerySetView):
@@ -94,9 +115,6 @@ class CalidadesAutocomplete(autocomplete.Select2QuerySetView):
     
 class CalidadesPersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        # Fetch all Calidades IDs that are linked to a PersonaEsclavizada.
-        # This requires a query across the relation to filter Calidades based on their association.
-        # Note: Adjust the query if Calidades are linked through a different pattern or specific conditions.
         calidades_ids = Calidades.objects.filter(
             persona__personaesclavizada__isnull=False
         ).values_list('calidad_id', flat=True).distinct()
@@ -777,17 +795,12 @@ class DocumentoDetailView(DetailView):
             if relacion.documento == documento:
                 naturaleza_rel = relacion.get_naturaleza_relacion_display()
                 for persona in relacion.personas.all():
-                    # This should correctly append a tuple to the list
                     relationship_data[naturaleza_rel]['personas'].append({
                         'nombre': persona.nombre_normalizado,
                         'idno': persona.persona_idno,
                         'id_rel': relacion.persona_relacion_id,
                     })
                     relationship_data[naturaleza_rel]['associated_ids'].add(persona.persona_idno)
-        
-        """ for key in relationship_data:
-            relationship_data[key] = list(relationship_data[key]) """
-        
         
         place_data = defaultdict(lambda: defaultdict(dict))
 
@@ -951,6 +964,45 @@ class PersonaNoEsclavizadaUpdateView(UpdateView):
         
         return kwargs
 
+class PersonaLugarRelUpdateView(UpdateView):
+    model = PersonaLugarRel
+    form_class = PersonaLugarRelForm
+    template_name = 'dbgestor/Relaciones/persona_x_lugar.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'editar'
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super(PersonaLugarRelUpdateView, self).get_form_kwargs()
+        return kwargs
+    
+    def form_valid(self, form):
+        self.object = form.save()
+        documento_id = self.request.POST.get('documento')
+        return redirect('documento-detail', pk=documento_id)
+
+class PersonaRelacionesUpdateView(UpdateView):
+    model = PersonaRelaciones
+    form_class = PersonaRelacionesForm
+    template_name = 'dbgestor/Relaciones/persona_x_persona.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'editar'
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super(PersonaRelacionesUpdateView, self).get_form_kwargs()
+        return kwargs
+    
+    def form_valid(self, form):
+        self.object = form.save()
+        documento_id = self.request.POST.get('documento')
+        return redirect('documento-detail', pk=documento_id)
 
 # Delete views  
 
@@ -1011,8 +1063,6 @@ class PersonaLugarRelDeleteView(DeleteView):
         context['action'] = 'borrar'
         return context  
     
-
-
 
 class DeletePersonaRelacionesView(DeleteView):
     model = PersonaRelaciones

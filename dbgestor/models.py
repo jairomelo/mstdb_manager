@@ -1,7 +1,6 @@
 import re
 from django.db import models
 from simple_history.models import HistoricalRecords
-from datetime import datetime
 from polymorphic.models import PolymorphicModel
 
 import logging
