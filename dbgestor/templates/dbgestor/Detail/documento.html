@@ -76,7 +76,7 @@
                     <h3>Personas esclavizadas asociadas al documento</h3>
                     {% for peresclavizada in peresclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card">
+                        <div class="card border-dark">
                             {% include 'dbgestor/Detail/persona_card.html' with person=peresclavizada %}
                         </div>
                     </div>
@@ -86,7 +86,7 @@
                     <h3>Personas no esclavizadas asociadas al documento</h3>
                     {% for pernoesclavizada in pernoesclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card">
+                        <div class="card border-dark">
                             {% include 'dbgestor/Detail/persona_card.html' with person=pernoesclavizada %}
                         </div>
                     </div>

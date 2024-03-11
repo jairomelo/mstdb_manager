@@ -2,7 +2,7 @@
 {% load custom_filters %}
 
 <!-- inicio de la tarjeta -->
-<div class="card-header d-flex justify-content-between align-items-center">
+<div class="card-header d-flex justify-content-between align-items-center border-dark">
     <div>
         <input type="checkbox" class="form-check-input" name="selected_personas" value="{{ person.pk }}">
         {{ person.nombre_normalizado }} (ID: {{ person.persona_idno }})
@@ -15,7 +15,7 @@
                Lugares is not the same as Relaciones. See DocumentoDetailView in views. 
 {% endcomment %}
 <!-- Persona Esclavizada Lugares -->
-<div class="card-body">
+<div class="card-body border-dark">
     
     <h5 class="card-title text-primary"><i class="fas fa-globe-americas"></i> Lugares</h5>
     <p class="card-text">
@@ -71,6 +71,8 @@
         {% endfor %}
     </p>
     <!-- End of Persona Esclavizada Relaciones -->
+</div>
+<div class="card-footer bg-transparent border-dark">
     {% if perms.dbgraphic.add_documento %}
         <a href="{% url 'remove_persona_documento' persona_id=person.pk documento_id=documento.pk %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la persona del documento">Remover</a>
     {% endif %}
