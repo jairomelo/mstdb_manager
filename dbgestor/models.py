@@ -352,7 +352,7 @@ class Persona(PolymorphicModel):
     def __str__(self) -> str:
         dates = " - ".join(filter(None, [str(self.fecha_nacimiento) if self.fecha_nacimiento else None, 
                                             str(self.fecha_defuncion) if self.fecha_defuncion else None]))
-        return f'{self.nombre_normalizado} ({dates})' if dates else f'{self.nombre_normalizado}'
+        return f'{self.nombre_normalizado} ({self.persona_idno})'
     
 
 class PersonaEsclavizada(Persona):
