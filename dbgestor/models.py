@@ -371,7 +371,7 @@ class PersonaEsclavizada(Persona):
     
     marcas_corporales = models.TextField(null=True, blank=True)
     conducta = models.TextField(null=True, blank=True)
-    
+    salud = models.TextField(null=True, blank=True)
 
 class PersonaNoEsclavizada(Persona):
     

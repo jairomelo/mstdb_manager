@@ -323,6 +323,8 @@ class PersonaEsclavizadaForm(forms.ModelForm):
     
     conducta = forms.CharField(required=False, label="Registros de conducta")
     
+    salud = forms.CharField(required=False, label="Salud", help_text="Anotaciones relacionadas con la salud o e estado físico de la persona.")
+    
     def save(self, commit=True):
         instance = super().save(commit=False)
         
