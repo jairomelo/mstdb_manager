@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.db import models
 from django.db.models import Q
@@ -17,13 +17,66 @@ from .models import (Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento,
 from .forms import (LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
-                    PersonaLugarRelForm, PersonaRelacionesForm, RolesForm, SituacionLugarForm)
+                    PersonaLugarRelForm, PersonaRelacionesForm, RolesForm, SituacionLugarForm,
+                    PersonaDocumentoForm)
 
-# Create your views here.
+# Custom views
 
 def home(request):
     return render(request, 'dbgestor/home.html')
 
+def associate_persona_documento(request):
+    if request.method == 'POST':
+        form = PersonaDocumentoForm(request.POST)
+        if form.is_valid():
+            persona = form.cleaned_data['persona']
+            documento = form.cleaned_data['documento']
+            documento_id = documento.documento_id
+            persona.documentos.add(documento)
+            return redirect('documento-detail', pk=documento_id)
+    else:
+        documento_initial = request.GET.get('documento_initial')
+        form = PersonaDocumentoForm(initial={'documento': documento_initial})
+    return render(request, 'dbgestor/Relaciones/persona_x_documentos.html', {'form': form})
+
+
+## Template views
+
+class TotalBrowseView(TemplateView):
+    """
+    Mostrar todo a modo de Excel :p
+    """
+    template_name = 'dbgestor/Browse/todo.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['Documentos'] = Documento.objects.all()
+        context['PersonasEsclavizadas'] = PersonaEsclavizada.objects.all()
+        context['PersonasNoEsclavizadas'] = PersonaNoEsclavizada.objects.all()
+        
+        return context
+
+class ConfirmRemovePersonaDocumento(TemplateView):
+    template_name = 'dbgestor/Base/confirm_remove_persona_documento.html'
+    
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(request, self.template_name, context)
+    
+    def post(self, request, *args, **kwargs):
+        persona = get_object_or_404(Persona, pk=kwargs['persona_id'])
+        documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
+        persona.documentos.remove(documento)
+        return redirect('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['persona'] = get_object_or_404(Persona, pk=self.kwargs['persona_id'])
+        context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
+        return context
+
+
+## Generic Views
 
 class LugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -370,7 +423,6 @@ class PersonaNoEsclavizadaCreateView(CreateView):
         return initial
 
 
-
 # create views for RElations
 
 class PersonaLugarRelCreateView(CreateView):
@@ -711,22 +763,7 @@ class PersonaNoEsclavizadaBrowse(ListView):
         
         return queryset.order_by(sort)
 
-# Consolidated view
-
-class TotalBrowseView(TemplateView):
-    """
-    Mostrar todo a modo de Excel :p
-    """
-    template_name = 'dbgestor/Browse/todo.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['Documentos'] = Documento.objects.all()
-        context['PersonasEsclavizadas'] = PersonaEsclavizada.objects.all()
-        context['PersonasNoEsclavizadas'] = PersonaNoEsclavizada.objects.all()
-        
-        return context
-    
+   
 
 # Detail views
 
@@ -1005,6 +1042,9 @@ class PersonaRelacionesUpdateView(UpdateView):
         documento_id = self.request.POST.get('documento')
         return redirect('documento-detail', pk=documento_id)
 
+
+
+
 # Delete views  
 
 class ArchivoDeleteView(DeleteView):
@@ -1029,6 +1069,17 @@ class DocumentoDeleteView(DeleteView):
         context['action'] = 'borrar'
         return context
     
+
+class PersonaDeleteView(DeleteView):
+    model = Persona
+    template_name = 'dbgestor/Base/confirm_delete.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'borrar'
+        return context
 
 class PersonaEsclavizadaDeleteView(DeleteView):
     model = PersonaEsclavizada

@@ -1,6 +1,6 @@
 # pages/urls.py
 from django.urls import path
-from .views import home
+from .views import home, associate_persona_documento
 from .views import (
     ArchivoAutocomplete, ArchivoBrowse, ArchivoCreateView, ArchivoDeleteView, ArchivoDetailView,
     ArchivoUpdateView, CalidadesAutocomplete, CalidadesCreateView, CalidadesPersonaEsclavizadaAutocomplete,
@@ -14,13 +14,14 @@ from .views import (
     PersonaNoEsclavizadaDeleteView, PersonaNoEsclavizadaDetailView, PersonaNoEsclavizadaUpdateView,
     PersonaPersonaRelCreateView, PersonaRelacionesUpdateView, RolesCreateView, RolEventoAutocomplete,
     SituacionLugarAutocomplete, SituacionLugarCreateView, TipoDocumentalAutocomplete, TipoLugarAutocomplete,
-    TotalBrowseView,
+    TotalBrowseView,PersonaDeleteView,ConfirmRemovePersonaDocumento,
 )
 
 
 
 urlpatterns = [
     path("", home, name="home"),
+    path('remove_persona_documento/<int:persona_id>/<int:documento_id>/', ConfirmRemovePersonaDocumento.as_view(), name='remove_persona_documento'),
     path('Add/lugar/', LugarCreateView.as_view(), name='lugar-new'),
     path('Add/documento/', DocumentoCreateView.as_view(), name='documento-new'),
     path('Add/archivo/', ArchivoCreateView.as_view(), name='archivo-new'),
@@ -55,9 +56,11 @@ urlpatterns = [
     path('Update/personanoesclavizada/<int:pk>', PersonaNoEsclavizadaUpdateView.as_view(), name='personanoesclavizada-update'),
     path('Update/persona_x_lugar/<int:pk>', PersonaLugarRelUpdateView.as_view(), name='persona_x_lugar-update'),
     path('Update/persona_x_persona/<int:pk>', PersonaRelacionesUpdateView.as_view(), name='persona_x_persona-update'),
+    path('Update/persona_x_documentos/', associate_persona_documento, name='persona_x_documentos'),
     # delete views
     path('archivo/<int:pk>/delete/', ArchivoDeleteView.as_view(), name='archivo-delete'),
     path('documento/<int:pk>/delete/', DocumentoDeleteView.as_view(), name='documento-delete'),
+    path('persona/<int:pk>/delete/', PersonaDeleteView.as_view(), name='persona-delete'),
     path('personaesclavizada/<int:pk>/delete/', PersonaEsclavizadaDeleteView.as_view(), name='personaesclavizada-delete'),
     path('personanoesclavizada/<int:pk>/delete/', PersonaNoEsclavizadaDeleteView.as_view(), name='personanoesclavizada-delete'),
     # autocompleters

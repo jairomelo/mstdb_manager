@@ -1,0 +1,32 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+{% load i18n %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Agregar relación Persona a Persona</h2>
+    <form method="post" class="form" id="newArchivoForm">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+        {{ form.as_p }}
+
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% url 'documento-browse' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+        </div>
+
+    </form>
+        </div>
+    </div>
+</div>
+
+{% include '_cancel_warning.html' %}
+
+
+{{ form.media }}
+
+
+{% endblock content %}

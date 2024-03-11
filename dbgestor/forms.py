@@ -620,3 +620,24 @@ class RolesForm(forms.ModelForm):
         super(RolesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
+            
+            
+class PersonaDocumentoForm(forms.Form):
+    
+    documento = forms.ModelChoiceField(
+        queryset=Documento.objects.all(),
+        label='Documento',
+        required=True
+    )
+
+    persona = forms.ModelChoiceField(
+        queryset=Persona.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2(url='personas-autocomplete'),
+        label='Seleccionar la persona a añadir al documento'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super(PersonaDocumentoForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
