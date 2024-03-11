@@ -312,7 +312,7 @@ class PersonaEsclavizadaForm(forms.ModelForm):
         label='Lugar de procedencia'
     )
     
-    actividad = forms.ModelChoiceField(
+    ocupacion = forms.ModelChoiceField(
         queryset=Actividades.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
@@ -372,7 +372,7 @@ class PersonaNoEsclavizadaForm(forms.ModelForm):
         label='Calidades'
     )
     
-    actividad = forms.ModelChoiceField(
+    ocupacion = forms.ModelChoiceField(
         queryset=Actividades.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
