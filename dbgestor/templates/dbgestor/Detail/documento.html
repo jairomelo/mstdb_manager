@@ -2,6 +2,7 @@
 {% load django_bootstrap5 django_bootstrap_input_group static %}
 {% block content %}
 {% load i18n %}
+{% load custom_filters %}
 {% csrf_token %}
 
 <div class="container mt-4">
@@ -65,65 +66,7 @@
                     {% for peresclavizada in peresclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <div>
-                                    <input type="checkbox" class="form-check-input" name="selected_personas" value="{{ peresclavizada.pk }}">
-                                    {{ peresclavizada.nombre_normalizado }} (ID: {{ peresclavizada.persona_idno }})
-                                </div>
-                                {% if perms.dbgestor.add_personaesclavizada %}
-                                <a href='{% url 'personaesclavizada-detail' peresclavizada.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
-                                {% endif %}
-                            </div>
-                            <!-- Persona Esclavizada Lugares -->
-                            <div class="card-body">
-                                <h5 class="card-title text-primary">Lugares</h5>
-                                <p class="card-text">
-                                    {% for category, places in place_data.items %}
-                                    <strong class="d-block my-2">{{ category }}</strong>
-                                    <ul class="fa-ul">
-                                        {% for place, details in places.items %}
-                                        {% if peresclavizada.persona_idno in details.personas %}
-                                        <li class="my-3">
-                                            <span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}
-                                            <div class="btn-group float-end">
-                                                <a href="{% url 'persona_x_lugar-update' details.rel_id %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
-                                                
-                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
-                                            </div>
-                                        </li>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </ul>
-                                    {% endfor %}
-                                </p>
-                                <!-- End of Persona Esclavizada Lugares -->
-                                <hr>
-                                <!-- Persona Esclavizada Relaciones -->
-                                <h5 class="card-title text-primary">Relaciones</h5>
-                                <p class="card-text">
-
-                                    {% for relation_type, data in relationshipdata.items %}
-                                        {% if peresclavizada.persona_idno in data.associated_ids %}
-                                            <strong class="d-block my-2">{{ relation_type }}</strong>
-                                            <ul class="fa-ul">
-                                                {% for persona in data.personas %}
-                                                    
-                                                    {% if peresclavizada.persona_idno != persona.idno %}
-                                                        <li class="my-3">
-                                                            <span class="fa-li"><i class="fas fa-user-friends"></i></span> {{ persona.nombre }}
-                                                            <div class="btn-group float-end">
-                                                            <a href="{% url 'persona_x_persona-update' persona.id_rel %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
-                                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personarel' persona.id_rel %}');"><i class="fas fa-trash-alt"></i></button>
-                                                            </div>
-                                                        </li>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </ul>
-                                        {% endif %}
-                                    {% endfor %}
-                                </p>
-                                <!-- End of Persona Esclavizada Relaciones -->
-                            </div>
+                            {% include 'dbgestor/Detail/persona_card.html' with person=peresclavizada %}
                         </div>
                     </div>
                     {% endfor %}
@@ -133,64 +76,7 @@
                     {% for pernoesclavizada in pernoesclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <div>
-                                    <input type="checkbox" class="form-check-input" name="selected_personas" value="{{ pernoesclavizada.pk }}">
-                                    {{ pernoesclavizada.nombre_normalizado }} (ID: {{ pernoesclavizada.persona_idno }})
-                                </div>
-                                {% if perms.dbgestor.add_personanoesclavizada %}
-                                <a href='{% url 'personanoesclavizada-detail' pernoesclavizada.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
-                                {% endif %}
-                            </div>
-                            <!-- Persona no esclavizada Lugares-->
-                            <div class="card-body">
-                                <h5 class="card-title text-primary">Lugares</h5>
-                                <p class="card-text">
-                                    {% for category, places in place_data.items %}
-                                    <strong class="d-block my-2">{{ category }}</strong>
-                                    <ul class="fa-ul">
-                                        {% for place, details in places.items %}
-                                        {% if pernoesclavizada.persona_idno in details.personas %}
-                                        <li class="my-3">
-                                            <span class="fa-li"><i class="fas fa-map-marker-alt"></i></span>{{ details.ordinal }}: {{ place }}
-                                            <div class="btn-group float-end">
-                                                <a href="{% url 'persona_x_lugar-update' details.rel_id %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
-                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
-                                            </div>
-                                        </li>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </ul>
-                                    {% endfor %}
-                                </p>
-                                <!-- End of Persona No Esclavizada Lugares -->
-                                <hr>
-                                <!-- Persona no Esclavizada Relaciones -->
-                                <h5 class="card-title text-primary">Relaciones</h5>
-                                <p class="card-text">
-
-                                    {% for relation_type, data in relationshipdata.items %}
-                                        {% if pernoesclavizada.persona_idno in data.associated_ids %}
-                                            <strong class="d-block my-2">{{ relation_type }}</strong>
-                                            <ul class="fa-ul">
-                                                {% for persona in data.personas %}
-                                                    
-                                                    {% if pernoesclavizada.persona_idno != persona.idno %}
-                                                        <li class="my-3">
-                                                            <span class="fa-li"><i class="fas fa-user-friends"></i></span> {{ persona.nombre }}
-                                                            <div class="btn-group float-end">
-                                                            <a href="{% url 'persona_x_persona-update' persona.id_rel %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
-                                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personarel' persona.id_rel %}');"><i class="fas fa-trash-alt"></i></button>
-                                                            </div>
-                                                        </li>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </ul>
-                                        {% endif %}
-                                    {% endfor %}
-                                </p>
-                                <!-- End of Persona no esclavizada relaciones -->
-                            </div>
+                            {% include 'dbgestor/Detail/persona_card.html' with person=pernoesclavizada %}
                         </div>
                     </div>
                     

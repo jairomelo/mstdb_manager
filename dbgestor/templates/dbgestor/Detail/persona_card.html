@@ -1,0 +1,74 @@
+<!-- persona_card.html -->
+{% load custom_filters %}
+
+<!-- inicio de la tarjeta -->
+<div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+        <input type="checkbox" class="form-check-input" name="selected_personas" value="{{ person.pk }}">
+        {{ person.nombre_normalizado }} (ID: {{ person.persona_idno }})
+    </div>
+    {% if perms.dbgestor.add_personaesclavizada %}
+    <a href='{% url 'personaesclavizada-detail' person.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
+    {% endif %}
+</div>
+{% comment %} Two different logics apply here. That's why the loop for
+               Lugares is not the same as Relaciones. See DocumentoDetailView in views. 
+{% endcomment %}
+<!-- Persona Esclavizada Lugares -->
+<div class="card-body">
+    
+    <h5 class="card-title text-primary"><i class="fas fa-globe-americas"></i> Lugares</h5>
+    <p class="card-text">
+        {% for category, places in place_data.items %}
+            {% with filtered_places=places|filter_person:person.persona_idno %}
+                {% if filtered_places %}
+                    <strong class="d-block my-2"><i class="fas fa-map-signs"></i> {{ category }}</strong>
+                    <ul class="list-group">
+                        {% for place, details in filtered_places.items %}
+                            <li class="my-3 list-group-item">
+                                {{ details.ordinal }}: {{ place }}
+                                <div class="btn-group float-end">
+                                    <a href="{% url 'persona_x_lugar-update' details.rel_id %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+        {% endfor %}
+    </p>
+    <!-- End of Persona Esclavizada Lugares -->
+    <hr>
+    <!-- Persona Esclavizada Relaciones -->
+    <h5 class="card-title text-primary"><i class="fas fa-users"></i> Relaciones</h5>
+    <p class="card-text">
+
+        {% for relation_type, relations in relationshipdata.items %}
+        {% with filtered_relations=relations|filter_relation:person.persona_idno %}
+        {% if filtered_relations %}
+            <strong class="d-block my-2"><i class="fas fa-people-arrows"></i> {{ relation_type }}</strong>
+            {% for relation in relations %}
+            {% if person.persona_idno in relation.personas|map_attribute:'idno' %}
+            <ul class="list-group">
+            {% for persona in relation.personas %}
+                {% if person.persona_idno != persona.idno %}
+                
+                <li class="my-3 list-group-item">
+                    <a href="{% url 'personaesclavizada-detail' persona.id %}" data-bs-toggle="tooltip" data-bs-placement="top" title={{persona.idno}}> {{ persona.nombre }}</a>
+                                <div class="btn-group float-end">
+                                <a href="{% url 'persona_x_persona-update' relation.id_rel %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt" aria-label="Edit"></i></a>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personarel' relation.id_rel %}');"><i class="fas fa-trash-alt" aria-label="Delete"></i></button>
+                                </div>
+                </li>
+                {% endif %}
+            {% endfor %}
+            </ul>
+            {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% endfor %}
+    </p>
+    <!-- End of Persona Esclavizada Relaciones -->
+</div>

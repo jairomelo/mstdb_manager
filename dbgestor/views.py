@@ -786,27 +786,31 @@ class DocumentoDetailView(DetailView):
             )
         )
         
-        relationship_data = defaultdict(lambda: {'personas': [], 'associated_ids': set()})
+        relationship_data = defaultdict(list)
         
         for relacion in personapersonarel:
-            if relacion.documento == documento:
-                naturaleza_rel = relacion.get_naturaleza_relacion_display()
-                for persona in relacion.personas.all():
-                    relationship_data[naturaleza_rel]['personas'].append({
-                        'nombre': persona.nombre_normalizado,
-                        'idno': persona.persona_idno,
-                        'id_rel': relacion.persona_relacion_id,
-                    })
-                    relationship_data[naturaleza_rel]['associated_ids'].add(persona.persona_idno)
+            naturaleza_rel = relacion.get_naturaleza_relacion_display()
+            relacion_data = {
+                'id_rel': relacion.persona_relacion_id,
+                'personas': [],
+            }
+            for persona in relacion.personas.all():
+                relacion_data['personas'].append({
+                    'nombre': persona.nombre_normalizado,
+                    'idno': persona.persona_idno,
+                    'id': persona.persona_id,
+                })
+            relationship_data[naturaleza_rel].append(relacion_data)
         
         place_data = defaultdict(lambda: defaultdict(dict))
 
         for rel in personalugarrel:
             category = "Anteriores" if rel.ordinal < 1 else "Posteriores"
             place_name = rel.lugar.nombre_lugar
+            place_id = rel.lugar.lugar_id
             id_relacion = rel.persona_x_lugares
             if place_name not in place_data[category]:
-                place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal, 'rel_id': id_relacion}
+                place_data[category][place_name] = {'personas': [], 'ordinal': rel.ordinal, 'rel_id': id_relacion, 'place_id': place_id}
             for persona in rel.personas.all():
                 place_data[category][place_name]['personas'].append(persona.persona_idno)
         
