@@ -27,9 +27,9 @@ def home(request):
 
 class LugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Lugar.objects.all().order_by('nombre')
+        qs = Lugar.objects.all().order_by('nombre_lugar')
         if self.q:
-            qs = qs.filter(nombre__icontains=self.q)
+            qs = qs.filter(nombre_lugar__icontains=self.q)
             
         return qs
 
@@ -74,13 +74,6 @@ class PersonaAutocomplete(autocomplete.Select2QuerySetView):
                 Q(nombre_normalizado__icontains=self.q) |
                 Q(persona_idno__icontains=self.q)
                 )
-        return qs
-    
-class LugarEventoAutocomplete(autocomplete.Select2QuerySetView):
-    def get_queryset(self):
-        qs = Lugar.objects.all().order_by('nombre_lugar')
-        if self.q:
-            qs = qs.filter(nombre_lugar__icontains=self.q)
         return qs
     
 
