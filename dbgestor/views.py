@@ -27,7 +27,7 @@ def home(request):
 
 class LugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Lugar.objects.all()
+        qs = Lugar.objects.all().order_by('nombre')
         if self.q:
             qs = qs.filter(nombre__icontains=self.q)
             
@@ -39,7 +39,7 @@ class PersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
         """
         if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_personaesclavizada')):
             return PersonaEsclavizada.objects.none()
-        qs = PersonaEsclavizada.objects.all()
+        qs = PersonaEsclavizada.objects.all().order_by('nombre_normalizado')
         if self.q:
             qs = qs.filter(
                 Q(nombre_normalizado__icontains=self.q) |
@@ -54,7 +54,7 @@ class PersonaNoEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
         if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_personanoesclavizada')):
             return PersonaNoEsclavizada.objects.none()
         
-        qs = PersonaNoEsclavizada.objects.all()
+        qs = PersonaNoEsclavizada.objects.all().order_by('nombre_normalizado')
         if self.q:
             qs = qs.filter(
                 Q(nombre_normalizado__icontains=self.q) |
@@ -68,7 +68,7 @@ class PersonaAutocomplete(autocomplete.Select2QuerySetView):
         if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_persona')):
             return Persona.objects.none()
         
-        qs = Persona.objects.all()
+        qs = Persona.objects.all().order_by('nombre_normalizado')
         if self.q:
             qs = qs.filter(
                 Q(nombre_normalizado__icontains=self.q) |
@@ -78,7 +78,7 @@ class PersonaAutocomplete(autocomplete.Select2QuerySetView):
     
 class LugarEventoAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Lugar.objects.all()
+        qs = Lugar.objects.all().order_by('nombre_lugar')
         if self.q:
             qs = qs.filter(nombre_lugar__icontains=self.q)
         return qs
@@ -86,7 +86,7 @@ class LugarEventoAutocomplete(autocomplete.Select2QuerySetView):
 
 class DocumentoAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Documento.objects.all()
+        qs = Documento.objects.all().order_by('titulo')
         if self.q:
             qs = qs.filter(titulo__icontains=self.q)
         return qs
@@ -94,11 +94,14 @@ class DocumentoAutocomplete(autocomplete.Select2QuerySetView):
 
 class ArchivoAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Archivo.objects.all()
+        qs = Archivo.objects.all().order_by('nombre')
         if self.q:
-            qs = qs.filter(nombre__icontains=self.q)
+            qs = qs.filter(
+                Q(nombre__icontains=self.q) |
+                Q(nombre_abreviado__icontains=self.q)
+            )
         return qs
-
+    
 
 class FondoAutocomplete(autocomplete.Select2QuerySetView):
     def get_context_data(self, **kwargs):
@@ -106,7 +109,7 @@ class FondoAutocomplete(autocomplete.Select2QuerySetView):
     
 class CalidadesAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Calidades.objects.all()
+        qs = Calidades.objects.all().order_by('calidad')
 
         if self.q:
             qs = qs.filter(calidad__icontains=self.q)
@@ -119,7 +122,7 @@ class CalidadesPersonaEsclavizadaAutocomplete(autocomplete.Select2QuerySetView):
             persona__personaesclavizada__isnull=False
         ).values_list('calidad_id', flat=True).distinct()
 
-        qs = Calidades.objects.filter(calidad_id__in=calidades_ids)
+        qs = Calidades.objects.filter(calidad_id__in=calidades_ids).order_by('calidad')
 
         if self.q:
             qs = qs.filter(calidad__icontains=self.q)
@@ -132,7 +135,7 @@ class CalidadesPersonasNoEsclavizadasAutocomplete(autocomplete.Select2QuerySetVi
             persona__personanoesclavizada__isnull=False
             ).values_list('calidad_id', flat=True).distinct()
         
-        qs = Calidades.objects.filter(calidad_id__in=calidades_ids)
+        qs = Calidades.objects.filter(calidad_id__in=calidades_ids).order_by('calidad')
         
         if self.q:
             qs = qs.filter(calidad__icontains=self.q)
@@ -141,50 +144,51 @@ class CalidadesPersonasNoEsclavizadasAutocomplete(autocomplete.Select2QuerySetVi
 
 class HispanizacionesAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Hispanizaciones.objects.all()
+        qs = Hispanizaciones.objects.all().order_by('hispanizacion')
         if self.q:
-            qs = qs.filter(nombre__icontains=self.q)
+            qs = qs.filter(hispanizacion__icontains=self.q)
         return qs
 
 class EtnonimosAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Etonimos.objects.all()
+        qs = Etonimos.objects.all().order_by('etonimo')
         if self.q:
-            qs = qs.filter(nombre__icontains=self.q)
+            qs = qs.filter(etonimo__icontains=self.q)
         return qs
 
 class OcupacionesAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = Actividades.objects.all()
+        qs = Actividades.objects.all().order_by('actividad')
+
         if self.q:
-            qs = qs.filter(nombre__icontains=self.q)
+            qs = qs.filter(actividad__icontains=self.q)
         return qs
 
 
 class SituacionLugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = SituacionLugar.objects.all()
+        qs = SituacionLugar.objects.all().order_by('situacion')
         if self.q:
             qs = qs.filter(situacion__icontains=self.q)
         return qs
 
 class TipoDocumentalAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = TipoDocumental.objects.all()
+        qs = TipoDocumental.objects.all().order_by('tipo_documental')
         if self.q:
             qs = qs.filter(tipo_documental__icontains=self.q)
         return qs
 
 class RolEventoAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = RolEvento.objects.all()
+        qs = RolEvento.objects.all().order_by('rol_evento')
         if self.q:
             qs = qs.filter(rol_evento__icontains=self.q)
         return qs
 
 class TipoLugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        qs = TipoLugar.objects.all()
+        qs = TipoLugar.objects.all().order_by('tipo_lugar')
         if self.q:
             qs = qs.filter(tipo_lugar__icontains=self.q)
         return qs
