@@ -51,6 +51,13 @@
             {{ form.titulo }}
         </div>
 
+        <div class="mb-3">
+            <div class="input-group-text">
+                <input class="form-check-input mt-0" type="checkbox" name="deteriorado" id="deteriorado" aria-label="{% trans 'El documento está deteriorado' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="{% trans 'Seleccionar si el documento está deteriorado y no es posible identificar su folio.' %}">
+                <label for="{{ form.deteriorado.id_for_label }}" class="ms-2">{% trans 'Documento deteriorado'%}</label>
+            </div>
+        </div>
+
         <div class="input-group mb-3">
             <span class="input-group-text" id="basic-addon1">{% trans "Folios inicial y final" %}</span>
             {{ form.folio_inicial }} 

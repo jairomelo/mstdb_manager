@@ -177,6 +177,8 @@ class Documento(models.Model):
     titulo = models.CharField(max_length=200, unique=True)
     descripcion = models.TextField(blank=True, null=True)
     
+    deteriorado = models.BooleanField(default=False)
+    
     fecha_inicial = models.DateField(null=True, blank=True)
     fecha_inicial_aproximada = models.BooleanField(null=True, blank=True)
     fecha_final = models.DateField(null=True, blank=True)
@@ -184,7 +186,7 @@ class Documento(models.Model):
     
     lugar_de_produccion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_doc')
     
-    folio_inicial = models.CharField(max_length=50, default="None")
+    folio_inicial = models.CharField(max_length=50)
     folio_final = models.CharField(max_length=50, null=True, blank=True)
     
     evento_valor_sp = models.CharField(max_length=50, null=True, blank=True)

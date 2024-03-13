@@ -24,10 +24,16 @@ class CustomValidators:
         if not isinstance(date_text, str):
             return date_text
         date_text = date_text.strip()
+        date_text = date_text.replace("/", "-")
+        
+        try:
+            parsed_date = datetime.strptime(date_text, '%Y-%m-%d')
+            return parsed_date.date()
+        except ValueError:
+            pass
+        
         if len(date_text) > 10:
             raise forms.ValidationError(f"El formato de la fecha {date_text} es incorrecto. Use DD-MM-AAAA, MM-AAAA, o AAAA.")
-        
-        date_text = date_text.replace("/", "-")
         
         try:
             parsed_date = datetime.strptime(date_text, '%d-%m-%Y')
@@ -48,6 +54,12 @@ class CustomValidators:
             raise forms.ValidationError(f"La fecha final {date_final} no puede estar en el pasado de la fecha inicial {date_inicial}")
 
     def validate_folios(self, folio_inicial, folio_final):
+        
+        if folio_inicial == "None":
+            return True
+        
+        if not folio_final:
+            return True
         
         folio_inicial = str(folio_inicial)
         folio_final = str(folio_final) if folio_final else folio_inicial
@@ -161,7 +173,8 @@ class DocumentoForm(forms.ModelForm):
     
     titulo = forms.CharField(label= _('Título/resumen del documento'))
     
-    folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('incluir número y \'r\' o \'v\'')}))
+    folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('incluir número y \'r\' o \'v\'')}),
+                                    required=False)
     folio_final = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('folio final opcional')}), required=False)
     
     fecha_inicial = forms.CharField(
@@ -207,6 +220,11 @@ class DocumentoForm(forms.ModelForm):
     
     def clean_folio_inicial(self):
         folio_inicial = self.cleaned_data.get('folio_inicial')
+        deteriorado = self.cleaned_data.get('deteriorado')
+        
+        if deteriorado and not folio_inicial:
+            return "None"
+        
         if not folio_inicial or folio_inicial == "":
             raise forms.ValidationError(f"El valor del folio inicial no puede estar vacío.")
             
@@ -219,6 +237,10 @@ class DocumentoForm(forms.ModelForm):
 
     def clean_folio_final(self):
         folio_final = self.cleaned_data.get('folio_final')
+        deteriorado = self.cleaned_data.get('deteriorado')
+        
+        if deteriorado:
+            return folio_final
 
         # If folio_final is empty, use folio_inicial as folio_final
         if not folio_final:
@@ -236,6 +258,10 @@ class DocumentoForm(forms.ModelForm):
         cleaned_data = super().clean()
         folio_inicial = cleaned_data.get('folio_inicial')
         folio_final = cleaned_data.get('folio_final')
+        deteriorado = cleaned_data.get('deteriorado')
+
+        if deteriorado and not folio_inicial:
+            cleaned_data['folio_inicial'] = "[ilegible]"
 
         try:
             CustomValidators().validate_folios(folio_inicial, folio_final)
