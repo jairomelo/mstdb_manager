@@ -77,7 +77,7 @@
                     {% for peresclavizada in peresclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card border-dark">
-                            {% include 'dbgestor/Detail/persona_card.html' with person=peresclavizada %}
+                            {% include 'dbgestor/Detail/persona_card.html' with person=peresclavizada detail_url=personaesclavizada_detail %}
                         </div>
                     </div>
                     {% endfor %}
@@ -87,7 +87,7 @@
                     {% for pernoesclavizada in pernoesclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card border-dark">
-                            {% include 'dbgestor/Detail/persona_card.html' with person=pernoesclavizada %}
+                            {% include 'dbgestor/Detail/persona_card.html' with person=pernoesclavizada detail_url="personanoesclavizada_detail" %}
                         </div>
                     </div>
                     {% endfor %}
