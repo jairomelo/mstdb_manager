@@ -13,7 +13,7 @@
                     <p class="card-text"><small class="text-muted">{{ personaesclavizada.nombre_normalizado }}</small></p>
 
                     {% if personaesclavizada.fecha_nacimiento %}
-                        <p class="card-text"><i class="fas fa-birthday-cake me-2"></i>{{ personaesclavizada.fecha_nacimiento }} {% if personaesclavizada.lugar_nacimiento %} - {{ personaesclavizada.lugar_nacimiento }} {% endif %}</p>
+                        <p class="card-text"><strong>Fecha de nacimiento aproximada:</strong> {{ personaesclavizada.fecha_nacimiento }} {% if personaesclavizada.lugar_nacimiento %} - {{ personaesclavizada.lugar_nacimiento }} {% endif %}</p>
                     {% endif %}
 
                     {% if personaesclavizada.fecha_defuncion %}
