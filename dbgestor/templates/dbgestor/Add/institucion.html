@@ -1,0 +1,157 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+{% load i18n %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Agregar institución/corporación</h2>
+
+    {% if perms.dbgestor.add_corporacion %}
+
+    <form method="post" class="form" id="newCorporacionForm">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+
+        <div class="mb-3">
+            <label for="{{ form.documentos.id_for_label }}" class="form-label">documentos</label>
+            {{ form.documentos }}
+            <a href="{% url 'documento-new' %}" id="adddocumentosBtn" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir documentos" aria-label="Añadir documentos"><i class="fas fa-file-medical" aria-hidden="true"></i></a>
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.tipo_institucion.id_for_label }}" class="form-label">Tipo de institución</label>
+            {{ form.tipo_institucion }}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.nombre_institucion.id_for_label }}" class="form-label">Nombre de la institución</label>
+            {{ form.nombre_institucion }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.nombres_alternativos.id_for_label }}" class="form-label">Nombres alternativos</label>
+            {{ form.nombres_alternativos }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.personas_asociadas.id_for_label }}" class="form-label">{{ form.personas_asociadas.label }}</label>
+            {{ form.personas_asociadas }}
+
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.notas.id_for_label }}" class="form-label">{{ form.notas.label }}</label>
+            {{ form.notas }}
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% url 'documento-browse' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+        </div>
+    </form>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="addDocumentoModal" tabindex="-1" aria-labelledby="addDocumentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="addPersonaModal" tabindex="-1" aria-labelledby="addPersonaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addLugarModal" tabindex="-1" aria-labelledby="addLugarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addCalidadModal" tabindex="-1" aria-labelledby="addCalidadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addHispanizacionModal" tabindex="-1" aria-labelledby="addHispanizacionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addEtnonimoModal" tabindex="-1" aria-labelledby="addEtnonimoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addOcupacionModal" tabindex="-1" aria-labelledby="addOcupacionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+{% include '_cancel_warning.html' %}
+
+
+{{ form.media }}
+
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        bindEventToButton('add_documento', '#addDocumentoModal .modal-content', "{% url 'documento-new' %}", "#newDocumentoForm", "{% url 'documento-new' %}", 'id_documento', '#addDocumentoModal');
+        bindEventToButton('add_procedencia', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", "{% url 'lugar-new' %}", 'id_procedencia', '#addLugarModal');
+        bindEventToButton('add_calidad', '#addCalidadModal .modal-content', "{% url 'calidad-new' %}", "#newCalidadForm", "{% url 'calidad-new' %}", 'id_calidades', '#addCalidadModal');
+        bindEventToButton('add_hispanizacion', '#addHispanizacionModal .modal-content', "{% url 'hispanizacion-new' %}", "#newHispanizacionForm", "{% url 'hispanizacion-new' %}", 'id_hispanizacion', '#addHispanizacionModal');
+        bindEventToButton('add_etnonimo', '#addEtnonimoModal .modal-content', "{% url 'etnonimo-new' %}", "#newEtnonimoForm", "{% url 'etnonimo-new' %}", 'id_etnonimos', '#addEtnonimoModal');
+        bindEventToButton('add_ocupacion', '#addOcupacionModal .modal-content', "{% url 'ocupacion-new' %}", "#newOcupacionForm", "{% url 'ocupacion-new' %}", 'id_ocupacion', '#addOcupacionModal');
+    });
+    
+</script>
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+    
+
+{% else %}
+    
+        {% if user.is_authenticated %}
+            {% include '_no_permission.html' %}
+        {% else %}
+        {% include '_no_registered.html' %}
+        {% endif %}
+        {% endif %}
+
+{% endblock content %}

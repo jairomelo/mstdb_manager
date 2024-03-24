@@ -9,7 +9,8 @@ from .models import (Lugar, PersonaEsclavizada,
                      PersonaNoEsclavizada, Persona, Documento, Archivo,
                      Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, PersonaRelaciones, TipoLugar,
-                     SituacionLugar, TipoDocumental, RolEvento)
+                     SituacionLugar, TipoDocumental, RolEvento,
+                     TiposInstitucion, Corporacion)
 
 from .widgets import (PersonaEsclavizadaAutocomplete, PersonaNoEsclavizadaAutocomplete, 
                       LugarEventoAutocomplete, DocumentoAutocomplete, ArchivoAutocomplete, CalidadesAutocomplete)
@@ -667,3 +668,67 @@ class PersonaDocumentoForm(forms.Form):
         super(PersonaDocumentoForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
+            
+            
+## Corporaciones
+
+class TiposInstitucionForm(forms.ModelForm):
+    
+    class Meta:
+        model = TiposInstitucion
+        fields = ['tipo']
+    
+    def save(self, commit=True):
+        tipos = super().save(commit=False)
+        
+        tipo = self.cleaned_data.get('tipo')
+        tipo = tipo.title()
+        
+        tipos, created = tipos.objects.update_or_create(
+        tipo=tipo
+        )
+        logger.debug(f"tipo created: {created}, tipo ID: {tipos.tipo_id}")
+        
+        if commit:
+            tipos.save()
+        return tipos
+    
+    def __init__(self, *args, **kwargs):
+        super(TiposInstitucionForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+            
+            
+class CorporacionForm(forms.ModelForm):
+    
+    class Meta:
+        model = Corporacion
+        fields = '__all__'
+        
+    documentos = forms.ModelMultipleChoiceField(
+        queryset=Documento.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='documento-autocomplete'),
+        label='Documentos'
+    )
+    
+    tipo_institucion = forms.ModelChoiceField(
+        queryset=TiposInstitucion.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2(url='tiposintitucion-autocomplete'),
+        label='Tipo de institución/corporación'
+    )
+    
+    personas_asociadas = forms.ModelMultipleChoiceField(
+        queryset=Persona.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
+        label='Personas relacionadas'
+    )
+    
+    
+    def __init__(self, *args, **kwargs):
+        super(CorporacionForm, self).__init__(*args, **kwargs)
+        for fields_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+            

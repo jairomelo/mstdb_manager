@@ -9,12 +9,12 @@ from collections import defaultdict
 
 from dal import autocomplete
 
-from .models import (Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
+from .models import (Corporacion, Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
                      Archivo, Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, Persona, PersonaRelaciones, SituacionLugar,
-                     TipoDocumental, RolEvento, TipoLugar)
+                     TipoDocumental, RolEvento, TipoLugar, TiposInstitucion)
 
-from .forms import (LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
+from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
                     PersonaLugarRelForm, PersonaRelacionesForm, RolesForm, SituacionLugarForm,
@@ -239,6 +239,13 @@ class TipoLugarAutocomplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(tipo_lugar__icontains=self.q)
         return qs
 
+class TiposInstitucionAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = TiposInstitucion.objects.all().order_by('tipo')
+        if self.q:
+            qs = qs.filter(tipo__icontains=self.q)
+        return qs
+
 # Create Views
 
 class ArchivoCreateView(CreateView):
@@ -422,6 +429,28 @@ class PersonaNoEsclavizadaCreateView(CreateView):
         
         return initial
 
+
+class CoporacionCreateView(CreateView):
+    model = Corporacion
+    form_class = CorporacionForm
+    template_name = 'dbgestor/Add/institucion.html'
+    success_url = reverse_lazy('corporaciones-browse')
+    
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            initial['documentos'] = documento_initial
+        
+        return initial
 
 # create views for RElations
 
@@ -763,7 +792,24 @@ class PersonaNoEsclavizadaBrowse(ListView):
         
         return queryset.order_by(sort)
 
-   
+class CorporacionBrowse(ListView):
+    model = Corporacion
+    template_name = 'dbgestor/Browse/corporaciones.html'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        sort = self.request.GET.get('sort', 'updated_at')
+        if sort not in ['tipo_institucion', 'created_at', 'nombre_institucion']:
+            sort = '-updated_at'
+        
+        search_query = self.request.GET.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(tipo_institucion__icontains=search_query) |
+                Q(nombre_institucion__icontains=search_query)
+            )
+        
+        return queryset.order_by(sort)
 
 # Detail views
 
@@ -931,6 +977,21 @@ class PersonaNoEsclavizadaDetailView(DetailView):
         
         return context
 
+class CorporacionDetailView(DetailView):
+    model = Corporacion
+    template_name = "dbgestor/Detail/institucion.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        last_history = self.object.history.first()
+        history_records = self.object.history.all()
+        context['history_records'] = history_records
+        
+        corporacion = self.get_object()
+    
+        return context
+    
+
 # Update views
 
 class ArchivoUpdateView(UpdateView):
@@ -1000,6 +1061,23 @@ class PersonaNoEsclavizadaUpdateView(UpdateView):
     def get_form_kwargs(self):
         kwargs = super(PersonaNoEsclavizadaUpdateView, self).get_form_kwargs()
         
+        return kwargs
+
+
+class CorporacionUpdateView(UpdateView):
+    model = Corporacion
+    form_class = CorporacionForm
+    template_name = 'dbgestor/Add/institucion.html'
+    success_url = reverse_lazy('instituciones_browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'editar'
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super(CorporacionUpdateView, self).get_form_kwargs()
         return kwargs
 
 class PersonaLugarRelUpdateView(UpdateView):
@@ -1103,6 +1181,18 @@ class PersonaNoEsclavizadaDeleteView(DeleteView):
         context['action'] = 'borrar'
         return context  
     
+
+class CorporacionDeleteView(DeleteView):
+    model = Corporacion
+    template_name = "dbgestor/Base/confirm_delete.html"
+    success_url = reverse_lazy('instituciones_browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'borrar'
+        return context
+
 # Delete Vocabs
 class PersonaLugarRelDeleteView(DeleteView):
     model = PersonaLugarRel

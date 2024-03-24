@@ -1,0 +1,48 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container mt-4">
+    {% if perms.dbgestor.add_corporacion %}
+        <h2>Crea o selecciona una institución/corporación</h2>
+
+        <!-- Search Form -->
+        <form action="" method="get" class="input-group mb-3">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nombre de la institución...">
+            <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+        </form>
+
+        <!-- Create New Object Button -->
+        <div class="mb-3">
+            <a href="{% url 'institucion_new' %}" class="btn btn-info"><i class="fas fa-plus-circle"></i> Crear un registro de institución/corporación</a>
+        </div>
+    {% endif %}
+
+    <!-- Sorting Links -->
+    <div class="d-flex mb-4">
+        <a href="?sort=created_at" class="me-2 btn btn-outline-info">Ordenar por fecha de creación</a>
+        <a href="?sort=nombre_institucion" class="btn btn-outline-info">Ordenar por nombre de institución</a>
+        <!-- Add other sorting links as needed -->
+    </div>
+
+    <!-- Grid Layout for Objects -->
+    <div class="list-group">
+        {% for object in object_list %}
+        <a href="{% url 'institucion_detail' object.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1">{{ object.nombre_institucion }}</h5>
+                <p class="mb-1">ID Institución: {{ object.corporacion_idno }}</p>
+            </div>
+            <span class="badge bg-secondary">Seleccionar institución/corporación</span>
+        </a>
+        {% empty %}
+            <div class="col">
+                <div class="text-center">
+                    <p>No hay instituciones/corporaciones registradas aún.</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock content %}

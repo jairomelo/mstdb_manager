@@ -10,8 +10,8 @@ from .resources import SituacionLugarResource
 from .models import Lugar
 from .models import Archivo, Documento
 from .models import Calidades, Actividades, Hispanizaciones, Etonimos
-from .models import SituacionLugar, TipoDocumental, TipoLugar
-from .models import PersonaEsclavizada, PersonaNoEsclavizada
+from .models import SituacionLugar, TipoDocumental, TipoLugar, TiposInstitucion
+from .models import PersonaEsclavizada, PersonaNoEsclavizada, Corporacion
 from .models import PersonaRelaciones, PersonaLugarRel, RolEvento
     
 
@@ -33,4 +33,6 @@ admin.site.register(SituacionLugar, SituacionLugarAdmin)
 admin.site.register(TipoDocumental, ImportExportModelAdmin)
 admin.site.register(TipoLugar, ImportExportModelAdmin)
 admin.site.register(RolEvento, ImportExportModelAdmin)
+admin.site.register(TiposInstitucion, ImportExportModelAdmin)
+admin.site.register(Corporacion, ImportExportModelAdmin)
 

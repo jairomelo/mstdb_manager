@@ -1,0 +1,50 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Detalle de la Corporación/Institución</h1>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">{{ corporacion.nombre_institucion }}</h2>
+                    <p class="card-text"><small class="text-muted">{{ corporacion.tipo_institucion }}</small></p>
+
+                    <div class="mb-3">
+                        <h4>Personas asociadas a la institución</h4>
+                        <ul class="list-unstyled">
+                            {% for persona in corporacion.personas_asociadas.all %}
+                                <li><i class="me-2"></i>{{ persona.nombre_normalizado }} ({{ persona.persona_idno }}) </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <a href="{% url 'instituciones_browse' %}" class="btn btn-outline-secondary">Regresar</a>
+                <div>
+                    {% if perms.dbgestor.add_corporacion %}
+                        <a href="{% url 'institucion_update' corporacion.pk %}" class="btn btn-outline-primary me-2">Editar</a>
+                    {% endif %}
+                    {% if perms.dbgraphic.delete_corporacion %}
+                        <a href="{% url 'institucion_delete' corporacion.pk %}" class="btn btn-outline-danger">Borrar</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+{% endblock content %}

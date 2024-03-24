@@ -2,6 +2,7 @@ import re
 from django.db import models
 from simple_history.models import HistoricalRecords
 from polymorphic.models import PolymorphicModel
+from datetime import timezone
 
 import logging
 
@@ -288,7 +289,9 @@ class Persona(PolymorphicModel):
     apellidos = models.CharField(max_length=150, blank=True, null=True)
     nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
     
-    entidad_asociada = models.CharField(max_length=300, help_text="Asociación de la persona con una institución", null=True, blank=True)
+    #entidad_asociada = models.CharField(max_length=300, help_text="Asociación de la persona con una institución", null=True, blank=True)
+    
+    entidades_asociadas = models.ManyToManyField('Corporacion', blank=True)
     
     calidades = models.ManyToManyField(Calidades)
     
@@ -339,6 +342,9 @@ class Persona(PolymorphicModel):
         
         if self.apellidos:
             self.apellidos = self.capitalize_name(self.apellidos)
+        elif not self.apellidos:
+            self.apellidos = ""
+            
         
         if not self.nombre_normalizado:
             nombre_normalizado = f"{self.nombres} {self.apellidos}"
@@ -444,3 +450,54 @@ class PersonaRelaciones(models.Model):
     def __str__(self) -> str:
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - {self.get_naturaleza_relacion_display()}"
 
+
+class TiposInstitucion(models.Model):
+    
+    tipo_id = models.AutoField(primary_key=True)
+    tipo = models.CharField(max_length=50, unique=True)
+    descripcion = models.TextField(null=True, blank=True)
+    
+    def __str__(self) -> str:
+        return f'{self.tipo}'
+    
+
+class Corporacion(PolymorphicModel):
+    
+    corporacion_id = models.AutoField(primary_key=True)
+    
+    corporacion_idno = models.CharField(max_length=50, null=True, blank=True)
+    
+    documentos = models.ManyToManyField(Documento)
+    
+    tipo_institucion = models.ForeignKey(TiposInstitucion, on_delete=models.CASCADE)
+    
+    nombre_institucion = models.CharField(max_length=100, unique=True)
+    
+    nombres_alternativos = models.TextField(blank=True, null=True)
+    
+    personas_asociadas = models.ManyToManyField(Persona, blank=True) #! optional
+    
+    notas = models.TextField(max_length=500, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    history = HistoricalRecords()
+    
+    def save(self, *args, **kwargs):
+        
+        if not self.pk:
+            super(Corporacion, self).save(*args, **kwargs)
+            
+        self.corporacion_idno = f"mx-sv-cor-{str(self.corporacion_id).zfill(6)}"
+
+        super(Corporacion, self).save(*args, **kwargs)
+    
+    def __str__(self) -> str:
+        return f"{self.nombre_institucion}"
+    
+    
+    
+    
+    
+    
