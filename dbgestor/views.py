@@ -393,10 +393,20 @@ class PersonaEsclavizadaCreateView(CreateView):
     
     def get_success_url(self):
         documento_initial = self.request.GET.get('documento_initial')
+        next_url = self.request.POST.get('next')
         if documento_initial:
             return reverse('documento-detail', kwargs={'pk': documento_initial})
+        elif next_url:
+            return reverse(next_url)
         else:
             return reverse('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        next_url = self.request.GET.get('next')
+        if next_url:
+            context['next'] = next_url
+        return context
     
     def get_initial(self):
         initial = super().get_initial()
@@ -869,6 +879,12 @@ class DocumentoDetailView(DetailView):
             )
         )
         
+        corporacionrel = Corporacion.objects.filter(
+            models.Q(
+                documentos=documento
+            )
+        )
+        
         relationship_data = defaultdict(list)
         
         for relacion in personapersonarel:
@@ -906,6 +922,7 @@ class DocumentoDetailView(DetailView):
         context['peresclavizadas'] = peresclavizadas
         context['personalugarrel'] = personalugarrel
         context['pernoesclavizadas'] = pernoesclavizadas
+        context['corporacionrel'] = corporacionrel
         context['personapersonarel'] = personapersonarel
         context['relationshipdata'] = dict(relationship_data)
         context['place_data'] = place_data_standard

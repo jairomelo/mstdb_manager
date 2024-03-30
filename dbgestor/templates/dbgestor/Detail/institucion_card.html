@@ -1,0 +1,26 @@
+<!-- persona_card.html -->
+{% load custom_filters %}
+
+<!-- inicio de la tarjeta -->
+<div class="card-header d-flex justify-content-between align-items-center border-dark">
+    <div>
+        <input type="checkbox" class="form-check-input" name="selected_corporaciones" value="{{ corporacion.pk }}">
+        {{ corporacion.nombre_institucion }} (ID: {{ corporacion.corporacion_idno }})
+    </div>
+    {% if perms.dbgestor.add_corporacion %}
+    <a href='{% url detail_url corporacion.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
+    {% endif %}
+</div>
+
+<div class="card-body border-dark">
+    
+</div>
+<div class="card-footer bg-transparent border-dark">
+    {% if perms.dbgraphic.add_documento %}
+        <a href="{% url 'remove_persona_documento' persona_id=corporacion.pk documento_id=documento.pk %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la persona del documento">Remover</a>
+    {% endif %}
+    {% if perms.dbgraphic.delete_persona %}
+        <a href="{% url 'persona-delete' corporacion.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Eliminar a la persona [!]">Eliminar</a>
+    {% endif %}
+
+</div>

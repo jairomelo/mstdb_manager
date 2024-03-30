@@ -77,7 +77,7 @@
                     {% for peresclavizada in peresclavizadas %}
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card border-dark">
-                            {% include 'dbgestor/Detail/persona_card.html' with person=peresclavizada detail_url=personaesclavizada_detail %}
+                            {% include 'dbgestor/Detail/persona_card.html' with person=peresclavizada detail_url="personaesclavizada_detail" %}
                         </div>
                     </div>
                     {% endfor %}
@@ -93,6 +93,14 @@
                     {% endfor %}
                     <!-- End of Personas no Esclavizadas Card -->
 
+                    <h3>Instituciones asociadas al documento</h3>
+                    {% for corporacion in corporacionrel %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card border-dark">
+                            {% include 'dbgestor/Detail/institucion_card.html' with corporacion=corporacion detail_url="institucion_detail" %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
         </div>
     </div>
