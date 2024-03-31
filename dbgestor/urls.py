@@ -1,6 +1,6 @@
 # pages/urls.py
 from django.urls import path
-from .views import CoporacionCreateView, CorporacionBrowse, CorporacionDeleteView, CorporacionDetailView, CorporacionUpdateView, home, associate_persona_documento
+from .views import CoporacionCreateView, CorporacionBrowse, CorporacionDeleteView, CorporacionDetailView, CorporacionUpdateView, home, associate_persona_documento, associate_institucion_documento, InstitucionAutocomplete
 from .views import (
     ArchivoAutocomplete, ArchivoBrowse, ArchivoCreateView, ArchivoDeleteView, ArchivoDetailView,
     ArchivoUpdateView, CalidadesAutocomplete, CalidadesCreateView, CalidadesPersonaEsclavizadaAutocomplete,
@@ -61,6 +61,7 @@ urlpatterns = [
     path('Update/persona_x_lugar/<int:pk>', PersonaLugarRelUpdateView.as_view(), name='persona_x_lugar-update'),
     path('Update/persona_x_persona/<int:pk>', PersonaRelacionesUpdateView.as_view(), name='persona_x_persona-update'),
     path('Update/persona_x_documentos/', associate_persona_documento, name='persona_x_documentos'),
+    path('Update/institucion_x_documentos/', associate_institucion_documento, name='institucion_x_documentos'),
     # delete views
     path('archivo/<int:pk>/delete/', ArchivoDeleteView.as_view(), name='archivo-delete'),
     path('documento/<int:pk>/delete/', DocumentoDeleteView.as_view(), name='documento-delete'),
@@ -73,6 +74,7 @@ urlpatterns = [
     path('persona-esclavizada-autocomplete/', PersonaEsclavizadaAutocomplete.as_view(), name='personaesclavizada-autocomplete'),
     path('persona-no-esclavizada-autocomplete/', PersonaNoEsclavizadaAutocomplete.as_view(), name='persona-no-esclavizada-autocomplete'),
     path('persona-autocomplete/', PersonaAutocomplete.as_view(), name='personas-autocomplete'),
+    path('institucion_autocomplete/', InstitucionAutocomplete.as_view(), name='institucion-autocomplete'),
     path('documento-autocomplete/', DocumentoAutocomplete.as_view(), name='documento-autocomplete'),
     path('archivo-autocomplete/', ArchivoAutocomplete.as_view(), name='archivo-autocomplete'),
     path('calidad-autocomplete/', CalidadesAutocomplete.as_view(), name='calidades-autocomplete'),

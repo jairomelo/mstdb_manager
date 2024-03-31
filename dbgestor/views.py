@@ -18,7 +18,7 @@ from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, Pers
                     PersonaNoEsclavizadaForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
                     PersonaLugarRelForm, PersonaRelacionesForm, RolesForm, SituacionLugarForm,
-                    PersonaDocumentoForm)
+                    PersonaDocumentoForm, CorporacionDocumentoForm)
 
 # Custom views
 
@@ -39,6 +39,19 @@ def associate_persona_documento(request):
         form = PersonaDocumentoForm(initial={'documento': documento_initial})
     return render(request, 'dbgestor/Relaciones/persona_x_documentos.html', {'form': form})
 
+def associate_institucion_documento(request):
+    if request.method == 'POST':
+        form = CorporacionDocumentoForm(request.POST)
+        if form.is_valid():
+            institucion = form.cleaned_data['institucion']
+            documento = form.cleaned_data['documento']
+            documento_id = documento.documento_id
+            institucion.documentos.add(documento)
+            return redirect('documento-detail', pk=documento_id)
+    else:
+        documento_initial = request.GET.get('documento_initial')
+        form = CorporacionDocumentoForm(initial={'documento': documento_initial})
+    return render(request, 'dbgestor/Relaciones/institucion_x_documentos.html', {'form': form})
 
 ## Template views
 
@@ -128,7 +141,19 @@ class PersonaAutocomplete(autocomplete.Select2QuerySetView):
                 Q(persona_idno__icontains=self.q)
                 )
         return qs
-    
+
+class InstitucionAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not (self.request.user.is_authenticated and self.request.user.has_perm('dbgestor.view_corporacion')):
+            return Corporacion.objects.none()
+        
+        qs = Corporacion.objects.all().order_by('nombre_institucion')
+        if self.q:
+            qs = qs.filter(
+                Q(nombre_institucion__icontains=self.q) |
+                Q(corporacion_idno__icontains=self.q)
+            )
+        return qs
 
 class DocumentoAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -849,7 +874,6 @@ class DocumentoDetailView(DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        last_history = self.object.history.first()
         history_records = self.object.history.all()
         context['history_records'] = history_records
         
@@ -927,12 +951,6 @@ class DocumentoDetailView(DetailView):
         context['relationshipdata'] = dict(relationship_data)
         context['place_data'] = place_data_standard
         
-        last_updated_user = None
-        if last_history:
-            last_updated_user = last_history.history_user
-        
-        context['last_updated_user'] = last_updated_user
-        
         return context
 
 class PersonaEsclavizadaDetailView(DetailView):
@@ -941,7 +959,6 @@ class PersonaEsclavizadaDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        last_history = self.object.history.first()
         history_records = self.object.history.all()
         context['history_records'] = history_records
         
@@ -951,16 +968,31 @@ class PersonaEsclavizadaDetailView(DetailView):
             models.Q(
                 personas=personaesclavizada
             )
-        )
+        ).order_by('documento__fecha_inicial')
+        
+        ordered_places = []
+        for rel in personalugarrel:
+            ordered_places.append((rel.documento.fecha_inicial, rel.ordinal, rel.lugar, rel.documento))
+            
+        ordered_places.sort(key=lambda x: (x[0], x[1]))
+        ordered_places_list = [(place[2], place[3]) for place in ordered_places]
         
         personapersonarel = PersonaRelaciones.objects.filter(
             models.Q(
                 personas=personaesclavizada
             )
+        ).order_by('naturaleza_relacion')
+        
+        corporacionrel = Corporacion.objects.filter(
+            models.Q(
+                personas_asociadas=personaesclavizada
+            )
         )
         
         context['personalugarrel'] = personalugarrel
+        context['ordered_places'] = ordered_places_list
         context['personapersonarel'] = personapersonarel
+        context['corporaciones'] = corporacionrel
         
         return context
         
@@ -981,7 +1013,14 @@ class PersonaNoEsclavizadaDetailView(DetailView):
             models.Q(
                 personas=personanoesclavizada
             )
-        )
+        ).order_by('documento__fecha_inicial')
+        
+        ordered_places = []
+        for rel in personalugarrel:
+            ordered_places.append((rel.documento.fecha_inicial, rel.ordinal, rel.lugar, rel.documento))
+            
+        ordered_places.sort(key=lambda x: (x[0], x[1]))
+        ordered_places_list = [(place[2], place[3]) for place in ordered_places]
         
         personapersonarel = PersonaRelaciones.objects.filter(
             models.Q(
@@ -989,8 +1028,16 @@ class PersonaNoEsclavizadaDetailView(DetailView):
             )
         )
         
+        corporacionrel = Corporacion.objects.filter(
+            models.Q(
+                personas_asociadas=personanoesclavizada
+            )
+        )
+        
         context['personalugarrel'] = personalugarrel
         context['personapersonarel'] = personapersonarel
+        context['ordered_places'] = ordered_places_list
+        context['corporaciones'] = corporacionrel
         
         return context
 

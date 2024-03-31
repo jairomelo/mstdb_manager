@@ -365,7 +365,7 @@ class PersonaEsclavizadaForm(forms.ModelForm):
                 if documento and documento.fecha_inicial:
                     calculated_date = CustomBuilders().nacimiento_x_edad(instance.edad, documento.fecha_inicial)
                     instance.fecha_nacimiento = calculated_date
-                    instance.fecha_nacimiento_factual = False
+                    instance.fecha_nacimiento_factual = True
                     instance.save()
         
         return instance
@@ -669,7 +669,7 @@ class PersonaDocumentoForm(forms.Form):
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
             
-            
+
 ## Corporaciones
 
 class TiposInstitucionForm(forms.ModelForm):
@@ -721,7 +721,7 @@ class CorporacionForm(forms.ModelForm):
     
     personas_asociadas = forms.ModelMultipleChoiceField(
         queryset=Persona.objects.all(),
-        required=True,
+        required=False,
         widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
         label='Personas relacionadas'
     )
@@ -732,3 +732,23 @@ class CorporacionForm(forms.ModelForm):
         for fields_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
             
+
+class CorporacionDocumentoForm(forms.Form):
+    
+    documento = forms.ModelChoiceField(
+        queryset=Documento.objects.all(),
+        label='Documento',
+        required=True
+    )
+
+    institucion = forms.ModelChoiceField(
+        queryset=Corporacion.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2(url='institucion-autocomplete'),
+        label='Seleccionar la institución a añadir al documento'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super(CorporacionDocumentoForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'

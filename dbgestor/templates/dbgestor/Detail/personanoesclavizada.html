@@ -1,44 +1,180 @@
 {% extends 'main.html' %}
 {% load django_bootstrap5 django_bootstrap_input_group static %}
+
 {% block content %}
+{% load i18n %}
+{% load custom_filters %}
 
 <div class="container mt-5">
     <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <h1 class="mb-4">Detalle de la Persona No Esclavizada</h1>
+        <div class="col-12 mx-auto">
+            <div class="text-center mb-4">
+                <h1>Detalle de la Persona No Esclavizada: {% if personanoesclavizada.honorifico and personanoesclavizada.honorifico != 'nan' %}{{ personanoesclavizada.honorifico}}{%endif%} {{ personanoesclavizada.nombre_normalizado }}</h1>
+            </div>
 
-            <div class="card shadow-sm">
+            <!-- Basic Information -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Información Básica</h2>
+                </div>
                 <div class="card-body">
-                    <h2 class="card-title">{{ personanoesclavizada.nombres }} {{ personanoesclavizada.apellidos }}</h2>
-                    <p class="card-text"><small class="text-muted">{{ personanoesclavizada.nombre_normalizado }}</small></p>
-
+                    <p><strong>ID Normalizado:</strong> {{ personanoesclavizada.persona_idno }}</p>
+                    <p><strong>Nombres:</strong> {{ personanoesclavizada.nombres }}</p>
+                    <p><strong>Apellidos:</strong> 
+                        {% if personanoesclavizada.apellidos %}
+                            {{ personanoesclavizada.apellidos }}</p>
+                        {% else %}
+                            &nbsp;
+                        {% endif %}
                     {% if personanoesclavizada.fecha_nacimiento %}
-                        <p class="card-text"><strong>Fecha de nacimiento aproximada:</strong> {{ personanoesclavizada.fecha_nacimiento }} {% if personanoesclavizada.lugar_nacimiento %} - {{ personanoesclavizada.lugar_nacimiento }} {% endif %}</p>
+                    <p><strong>Fecha de Nacimiento:</strong> {{ personanoesclavizada.fecha_nacimiento }}{% if personanoesclavizada.fecha_nacimiento_factual %} <i>aprox.</i> {% endif %} {% if personanoesclavizada.lugar_nacimiento %}({{ personanoesclavizada.lugar_nacimiento }}){% endif %}</p>
                     {% endif %}
-
                     {% if personanoesclavizada.fecha_defuncion %}
-                        <p class="card-text"><i class="fas fa-cross me-2"></i>{{ personanoesclavizada.fecha_defuncion }} {% if personanoesclavizada.lugar_defuncion %} - {{ personanoesclavizada.lugar_defuncion }} {% endif %} </p>
+                    <p><strong>Fecha de Defunción:</strong> {{ personanoesclavizada.fecha_defuncion }} {% if personanoesclavizada.fecha_defuncion_factual %} <i>aprox.</i> {% endif %} {% if personanoesclavizada.lugar_defuncion %}({{ personanoesclavizada.lugar_defuncion }}){% endif %}</p>
                     {% endif %}
-
-                    <div class="mb-3">
-                        <h4>Lugares</h4>
-                        <ul class="list-unstyled">
-                            {% for place in personalugarrel %}
-                                <li><i class="fas fa-map-marker-alt me-2"></i>{{ place.lugar }} {% if place.fecha_inicial_lugar %} ({{ place.fecha_inicial_lugar }} {% endif %} {% if place.fecha_final_lugar %} - {{ place.fecha_final_lugar }}) {% endif %} </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4>Relaciones</h4>
-                        <ul class="list-unstyled">
-                            {% for relacion in personapersonarel %}
-                                <li><i class="fas fa-user-friends me-2"></i>{{ relacion }} {% if relacion.fecha_inicial_relacion %} ({{ relacion.fecha_inicial_relacion }} {% endif %} {% if relacion.fecha_final_relacion %}- {{ relacion.fecha_final_relacion }}) {% endif %} </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
                 </div>
             </div>
+
+            <!-- Biographical Details -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>{% trans 'Detalles Biográficos'%}</h2>
+                </div>
+                <div class="card-body">
+                    <p><strong>Sexo:</strong> {{ personanoesclavizada.get_sexo_display }}</p>
+                    {% display_field personanoesclavizada "edad" "Edad" %}
+                    {% display_field personanoesclavizada "ocupacion" "Actividad" %}
+                    {% if personanoesclavizada.calidades %}
+                    <p><strong>Calidades:</strong>
+                    {% for calidad in personanoesclavizada.calidades.all %}
+                    {{ calidad.calidad }}
+                    {% endfor %}
+                    </p>
+                    {% endif %}
+
+                    
+                </div>
+            </div>
+            {% if personanoesclavizada.notas %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Notas a la persona</h2>
+                </div>
+                <div class="card-body">
+                    <p>{{ personanoesclavizada.notas }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+
+            {% if personanoesclavizada.rol_evento %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Roles en los eventos</h2>
+                </div>
+                <div class='card-body'>
+                    {% for evento in personanoesclavizada.rol_evento.all %}
+                     <p>{{ evento }}</p>
+                     {% empty %}
+                     <p>No hay roles registrados.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Associated Documents -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Documentos Asociados</h2>
+                </div>
+                <div class="card-body">
+                    {% for documento in personanoesclavizada.documentos.all %}
+                        <p><a href={% url 'documento-detail' documento.pk %}>{{ documento }}</a></p>
+                    {% empty %}
+                        <p>No hay documentos asociados.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Places -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Lugares de la persona</h2>
+                </div>
+                <div class="card-body">
+                    <p>En este espacio se listan los lugares por lo cuales esta persona transitó.</p>
+                    
+                    {% for lugar, documento in ordered_places %}
+                        <p>{{ lugar.nombre_lugar }} ({{ lugar.tipo }}) <a href="{% url 'documento-detail' documento.pk %}" class="btn btn-sm me-2"><i class="far fa-file-alt"></i></a> </p>
+                    {% empty %}
+                        <p>No hay lugares asociados.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Relations -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Personas relacionadas</h2>
+                </div>
+                <div class="card-body">
+                    
+                    {% for persona in personapersonarel %}
+                        {% for personar in persona.personas.all %}
+                            {% if personaesclavizada.persona_idno != personar.persona_idno %}
+                                {% with personar.persona_type as type %}
+                                    {% if type == 'esclavizada' %}
+                                        <p><a href="{% url 'personaesclavizada_detail' personar.pk %}">
+                                    {% elif type == 'noesclavizada' %}
+                                        <p><a href="{% url 'personanoesclavizada_detail' personar.pk %}">
+                                    {% endif %}
+                                    {{ personar.nombre_normalizado }}</a> ({{ personar.persona_idno }}) [{{ persona.get_naturaleza_relacion_display }}]
+                                    </p>
+                                {% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                    {% empty %}
+                        <p>No hay personas relacionadas.</p>
+                    {% endfor %}
+
+
+                </div>
+            </div>
+
+            <!-- Corporaciones asociadas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h2>Instituciones Asociadas</h2>
+                </div>
+                <div class="card-body">
+                    {% for entidad in corporaciones %}
+                        <p><a href={% url 'institucion_detail' entidad.pk %}>{{ entidad }}</a></p>
+                    {% empty %}
+                        <p>No hay entidades asociadas.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            
+
+            <!-- Historial -->
+            <div class="card mb-3">
+                <div class="card-header" data-bs-toggle="collapse" href="#changeHistory" role="button" aria-expanded="false" aria-controls="changeHistory">
+                    <i class="fas fa-history"></i> Historial de cambios:
+                </div>
+                <div class="collapse" id="changeHistory">
+                    <ul class="list-group list-group-flush">
+                        {% for record in history_records %}
+                            <li class="list-group-item">
+                                <i class="far fa-user"></i> {{ record.history_user }} 
+                                <span class="text-muted" style="float:right;">
+                                    <i class="far fa-calendar-alt"></i> {{ record.history_date|date:"d M Y H:i:s" }}
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <!-- End of historial -->
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between align-items-center mt-4">

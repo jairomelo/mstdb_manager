@@ -289,8 +289,6 @@ class Persona(PolymorphicModel):
     apellidos = models.CharField(max_length=150, blank=True, null=True)
     nombre_normalizado = models.CharField(max_length=300, null=True, blank=True)
     
-    #entidad_asociada = models.CharField(max_length=300, help_text="Asociación de la persona con una institución", null=True, blank=True)
-    
     entidades_asociadas = models.ManyToManyField('Corporacion', blank=True)
     
     calidades = models.ManyToManyField(Calidades)
@@ -335,6 +333,13 @@ class Persona(PolymorphicModel):
                 
         return nombre_capitalizado
     
+    def persona_type(self):
+        if isinstance(self, PersonaEsclavizada):
+            return 'esclavizada'
+        elif isinstance(self, PersonaNoEsclavizada):
+            return 'noesclavizada'
+        return None
+    
     def save(self, *args, **kwargs):
         
         if self.nombres:
@@ -344,7 +349,6 @@ class Persona(PolymorphicModel):
             self.apellidos = self.capitalize_name(self.apellidos)
         elif not self.apellidos:
             self.apellidos = ""
-            
         
         if not self.nombre_normalizado:
             nombre_normalizado = f"{self.nombres} {self.apellidos}"

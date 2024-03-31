@@ -43,7 +43,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                   </div>
                   <div id="warningAlertLugares" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
-                    Seleccione al una personas para asignar un lugar.
+                    Seleccione una persona para asignar un lugar.
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                   </div>
                 
@@ -55,6 +55,10 @@
                             <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info" data-bs-toggle="tooltip" data-bs-placement="top" title="Incluir persona esclavizada"><i class="fas fa-user-plus"></i> Esclavizada</a>
                             <a href="{% url 'personanoesclavizada-new' %}?documento_initial={{ documento.pk }}" class="btn btn-info" data-bs-toggle="tooltip" data-bs-placement="top" title="Incluir persona no esclavizada"><i class="fas fa-user-plus"></i> No Esclavizada</a>
                             <a href="{% url 'persona_x_documentos' %}?documento_initial={{ documento.pk }}" class="btn btn-info" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir persona ya existente al documento"><i class="fas fa-user-check"></i> Existente</a>
+                        </div>
+                        <div class="btn-group me-2" role="group" aria-label="Add Institucion">
+                            <a href="{% url 'institucion_new' %}?documento_initial={{ documento.pk }}" class="btn btn-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Incluir institución/corporación"><i class="fas fa-place-of-worship"></i> Institución</a>
+                            <a href="{% url 'institucion_x_documentos' %}?documento_initial={{ documento.pk }}" class="btn btn-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir institución ya existente al documento"><i class="fas fa-place-of-worship"></i><i class="fas fa-check"></i>  Inst. Existente</a>
                         </div>
                         <div class="btn-group" role="group" aria-label="Relations">
                             <button id="createRelationLugar" class="btn btn-success" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar anterior o posterior a una o más personas"><i class="fas fa-shoe-prints"></i> Lugares</button>
@@ -108,7 +112,7 @@
     <!-- Historial -->
     <div class="card mb-3">
         <div class="card-header" data-bs-toggle="collapse" href="#changeHistory" role="button" aria-expanded="false" aria-controls="changeHistory">
-            <i class="fas fa-history"></i> Historial de cambios del Documento:
+            <i class="fas fa-history"></i> Historial de cambios:
         </div>
         <div class="collapse" id="changeHistory">
             <ul class="list-group list-group-flush">
@@ -116,7 +120,7 @@
                     <li class="list-group-item">
                         <i class="far fa-user"></i> {{ record.history_user }} 
                         <span class="text-muted" style="float:right;">
-                            <i class="far fa-calendar-alt"></i> {{ record.history_date|date:"d M Y H:i" }}
+                            <i class="far fa-calendar-alt"></i> {{ record.history_date|date:"d M Y H:i:s" }}
                         </span>
                     </li>
                 {% endfor %}
