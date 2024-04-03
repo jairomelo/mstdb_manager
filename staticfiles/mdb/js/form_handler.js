@@ -26,17 +26,15 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
             method: 'POST',
             data: formData,
             success: function(response) {
-                var selectElement = document.getElementById(selectElementId);
-                if (selectElement) {
-                    var newOption = document.createElement("option");
+                var selectElement = $(`#${selectElementId}`);
+                if (selectElement.length > 0) {
                     var value, text;
-                    
-                    // A way to deal with multiple modal forms.
-
+            
+                    // Determine the type of response and assign value and text accordingly
                     if (modalId.includes("Documento")){
                         value = response.documento_id;  
                         text = response.documento_name;
-                    } else if(modalId.includes("Persona")) {
+                    } else if (modalId.includes("Persona")) {
                         value = response.persona_id;
                         text = response.persona_name;
                     } else if(modalId.includes("Lugar")) {
@@ -65,15 +63,18 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                         value = response.ocupacion_id;
                         text = response.ocupacion_name;
                     }
-                    
-                    newOption.value = value;
-                    newOption.text = text;
-
-                    selectElement.appendChild(newOption);
-                    selectElement.value = value;
+            
+                    var newOption = new Option(text, value, true, true);
+                    selectElement.append(newOption).trigger('change');
+            
+                    var currentValues = selectElement.val() || []; 
+                    currentValues.push(value); 
+                    selectElement.val(currentValues).trigger('change'); 
+            
+                    $(modalId).modal('hide');
                 }
-                $(modalId).modal('hide');
             },
+            
             error: function(xhr, status, error) {
                 console.error("Error: ", status, error);
             }
