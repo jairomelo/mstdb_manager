@@ -7,7 +7,7 @@ from import_export.admin import ImportExportModelAdmin
 from .resources import SituacionLugarResource, TipoInstitucionResource
 
 # Register your models here.
-from .models import Lugar
+from .models import Lugar, PersonaRolEvento
 from .models import Archivo, Documento
 from .models import Calidades, Actividades, Hispanizaciones, Etonimos
 from .models import SituacionLugar, TipoDocumental, TipoLugar, TiposInstitucion
@@ -38,4 +38,5 @@ admin.site.register(TipoLugar, ImportExportModelAdmin)
 admin.site.register(RolEvento, ImportExportModelAdmin)
 admin.site.register(TiposInstitucion, TipoInstitucionAdmin)
 admin.site.register(Corporacion, ImportExportModelAdmin)
+admin.site.register(PersonaRolEvento, ImportExportModelAdmin)
 

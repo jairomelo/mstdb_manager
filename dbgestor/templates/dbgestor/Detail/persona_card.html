@@ -70,6 +70,27 @@
         {% endwith %}
         {% endfor %}
     </p>
+    <hr>
+    {% if personarolrel %}
+    
+        {% for person_id, details in personarolrel.items %}
+            {% if person_id == person.pk %}
+            <h5 class="card-title text-primary"><i class="fas fa-users"></i> Rol en el evento</h5>
+                <p class="card-text">
+                    <ul class="list-group">
+                {% for detail in details %}
+                <li class="my-3 list-group-item">    
+                {{ detail.rol_evento }}
+                <div class="btn-group float-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'rol_delete' detail.id_relacion %}');"><i class="fas fa-trash-alt" aria-label="Delete"></i></button>
+                </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+        
     <!-- End of Persona Esclavizada Relaciones -->
 </div>
 <div class="card-footer bg-transparent border-dark">

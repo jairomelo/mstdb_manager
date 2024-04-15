@@ -390,7 +390,6 @@ class PersonaNoEsclavizada(Persona):
     
     entidad_asociada = models.CharField(max_length=100, blank=True)
     honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
-    rol_evento = models.ManyToManyField(RolEvento)
 
 
 class PersonaLugarRel(models.Model):
@@ -455,6 +454,22 @@ class PersonaRelaciones(models.Model):
     def __str__(self) -> str:
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - {self.get_naturaleza_relacion_display()}"
 
+
+class PersonaRolEvento(models.Model):
+    
+    documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='rol_evento_documento', blank=True)
+    
+    personas = models.ManyToManyField(
+        Persona, 
+        related_name='p_roles_evento'
+    )
+    
+    rol_evento = models.ForeignKey(RolEvento, on_delete=models.CASCADE,
+                                   related_name="rol_evento_personas")
+    
+    def __str__(self) -> str:
+        return ', '.join([persona.nombre_normalizado for persona in self.personas.all()])
+    
 
 class TiposInstitucion(models.Model):
     

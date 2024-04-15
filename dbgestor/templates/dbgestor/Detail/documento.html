@@ -58,6 +58,12 @@
                     <i class="fas fa-shoe-prints"></i><span class="visually-hidden">Lugares</span>
                 </button>
             </li>
+            
+            <li>
+                <button id="createRolEvento" class="btn py-3 w-100" title="Asignar Rol en el Evento a Persona No Esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="far fa-handshake"></i><span class="visually-hidden">Rol Evento</span>
+                </button>
+            </li>
         </ul>
     </div>
 </div>
@@ -255,6 +261,21 @@
         });
         if(ids.length >= 1) { 
             window.location.href = `{% url 'persona_x_lugar-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
+        } else {
+            showWarningAlertLugar();
+        }
+    });
+
+    
+
+    document.getElementById('createRolEvento').addEventListener('click', function() {
+        const selectedPersonas = document.querySelectorAll('input[name="selected_personas"]:checked');
+        let ids = [];
+        selectedPersonas.forEach((persona) => {
+            ids.push(persona.value);
+        });
+        if(ids.length >= 1) { 
+            window.location.href = `{% url 'rol_evento_new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
         } else {
             showWarningAlertLugar();
         }

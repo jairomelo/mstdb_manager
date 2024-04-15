@@ -1,0 +1,71 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+{% load i18n %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Rol en el evento</h2>
+    <form method="post" class="form" id="newArchivoForm">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+        
+        <div class="mb-3">
+            <label for="{{ form.documento.id_for_label }}" class="form-label">Documento</label>
+            {{ form.documento }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.personas.id_for_label }}" class="form-label">Personas</label>
+            {{ form.personas }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.rol_evento.id_for_label }}" class="form-label">{{ form.rol_evento.label }}</label>
+            {{ form.rol_evento }}
+            <button type="button" id="add_rol_evento" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir un rol"><i class="fas fa-portrait"></i></button>
+        </div>
+
+
+
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% url 'documento-browse' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+        </div>
+
+    </form>
+        </div>
+    </div>
+</div>
+
+{% include '_cancel_warning.html' %}
+
+<div class="modal fade" id="addRolModal" tabindex="-1" aria-labelledby="addRolModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Dynamic form content will be loaded here -->
+
+        </div>
+    </div>
+</div>
+
+
+{{ form.media }}
+
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        bindEventToButton('add_rol_evento', '#addRolModal .modal-content', "{% url 'rol-new' %}", "#newRolForm", "{% url 'rol-new' %}", 'id_rol_evento', '#addRolModal');
+    });
+    
+</script>
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+{% endblock content %}

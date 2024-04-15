@@ -52,12 +52,6 @@
         {% bootstrap_field form.ocupacion_categoria %}
 
         <div class="mb-3">
-            <label for="{{ form.rol_evento.id_for_label }}" class="form-label">{{ form.rol_evento.label }}</label>
-            {{ form.rol_evento }}
-            <button type="button" id="add_rol_evento" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir un rol"><i class="fas fa-portrait"></i></button>
-        </div>
-
-        <div class="mb-3">
             <label for="{{ form.notas.id_for_label }}" class="form-label">{% trans 'Notas al registro de persona no esclavizada' %}</label>
             <textarea name="{{ form.notas.html_name }}" id="{{ form.notas.id_for_label }}" rows="3" cols="40" class="form-control">{{ form.notas.value|default_if_none:'' }}</textarea>
         </div>
@@ -135,14 +129,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="addRolModal" tabindex="-1" aria-labelledby="addRolModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <!-- Dynamic form content will be loaded here -->
-
-        </div>
-    </div>
-</div>
 
 {% include '_cancel_warning.html' %}
 
@@ -157,7 +143,6 @@
         bindEventToButton('add_hispanizacion', '#addHispanizacionModal .modal-content', "{% url 'hispanizacion-new' %}", "#newHispanizacionForm", "{% url 'hispanizacion-new' %}", 'id_hispanizacion', '#addHispanizacionModal');
         bindEventToButton('add_etnonimo', '#addEtnonimoModal .modal-content', "{% url 'etnonimo-new' %}", "#newEtnonimoForm", "{% url 'etnonimo-new' %}", 'id_etnonimo', '#addEtnonimoModal');
         bindEventToButton('add_ocupacion', '#addOcupacionModal .modal-content', "{% url 'ocupacion-new' %}", "#newOcupacionForm", "{% url 'ocupacion-new' %}", 'id_ocupacion', '#addOcupacionModal');
-        bindEventToButton('add_rol_evento', '#addRolModal .modal-content', "{% url 'rol-new' %}", "#newRolForm", "{% url 'rol-new' %}", 'id_rol_evento', '#addRolModal');
     });
     
 </script>

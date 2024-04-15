@@ -11,13 +11,13 @@ from dal import autocomplete
 
 from .models import (Corporacion, Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
                      Archivo, Calidades, Hispanizaciones, Etonimos, Actividades,
-                     PersonaLugarRel, Persona, PersonaRelaciones, SituacionLugar,
+                     PersonaLugarRel, Persona, PersonaRelaciones, PersonaRolEvento, SituacionLugar,
                      TipoDocumental, RolEvento, TipoLugar, TiposInstitucion)
 
 from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
-                    PersonaLugarRelForm, PersonaRelacionesForm, RolesForm, SituacionLugarForm,
+                    PersonaLugarRelForm, PersonaRelacionesForm, PersonaRolEventoForm, RolesForm, SituacionLugarForm,
                     PersonaDocumentoForm, CorporacionDocumentoForm)
 
 # Custom views
@@ -556,6 +556,38 @@ class PersonaPersonaRelCreateView(CreateView):
         response = super().form_valid(form) 
         return response
 
+class PersonaRolEventoCreateView(CreateView):
+    model = PersonaRolEvento
+    form_class = PersonaRolEventoForm
+    template_name = 'dbgestor/Relaciones/rol_evento.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
+        
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        personas_initial = self.request.GET.get('ids')
+        if personas_initial:
+            personas_ids = personas_initial.split(',')
+            selected_personas = Persona.objects.filter(persona_id__in=personas_ids)
+            form.fields['personas'].initial = selected_personas
+        return form
+        
+    def get_initial(self):
+        initial = super().get_initial()
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            initial['documento'] = documento_initial
+        return initial
+
+    def form_valid(self, form):
+        response = super().form_valid(form) 
+        return response
 
 # Create views for  Vocabs
 class CalidadesCreateView(CreateView):
@@ -909,6 +941,12 @@ class DocumentoDetailView(DetailView):
             )
         )
         
+        personarolrel = PersonaRolEvento.objects.filter(
+            models.Q(
+                documento=documento
+            )
+        )
+        
         relationship_data = defaultdict(list)
         
         for relacion in personapersonarel:
@@ -943,6 +981,20 @@ class DocumentoDetailView(DetailView):
         
         place_data_standard = {category: dict(places) for category, places in place_data.items()}
         
+        rol_data = defaultdict(list)
+        
+        for rol in personarolrel:
+            rol_evento = rol.rol_evento
+            id_rol = rol.id
+            for persona in rol.personas.all():
+                rol_data[persona.persona_id].append({
+                    'nombre': persona.nombre_normalizado,
+                    'idno': persona.persona_idno,
+                    'rol_evento': str(rol_evento),
+                    'id_relacion': id_rol
+                })
+                    
+        
         context['peresclavizadas'] = peresclavizadas
         context['personalugarrel'] = personalugarrel
         context['pernoesclavizadas'] = pernoesclavizadas
@@ -950,6 +1002,7 @@ class DocumentoDetailView(DetailView):
         context['personapersonarel'] = personapersonarel
         context['relationshipdata'] = dict(relationship_data)
         context['place_data'] = place_data_standard
+        context['personarolrel'] = dict(rol_data)
         
         return context
 
@@ -1277,5 +1330,10 @@ class DeletePersonaRelacionesView(DeleteView):
     
 class DeletePersonaLugarRelView(DeleteView):
     model = PersonaLugarRel
+    template_name = 'dbgestor/Base/confirm_delete.html'
+    success_url = reverse_lazy('documento-browse')
+    
+class DeleteRolEventoView(DeleteView):
+    model = PersonaRolEvento
     template_name = 'dbgestor/Base/confirm_delete.html'
     success_url = reverse_lazy('documento-browse')

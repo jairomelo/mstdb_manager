@@ -8,7 +8,7 @@ import re
 from .models import (Lugar, PersonaEsclavizada, 
                      PersonaNoEsclavizada, Persona, Documento, Archivo,
                      Calidades, Hispanizaciones, Etonimos, Actividades,
-                     PersonaLugarRel, PersonaRelaciones, TipoLugar,
+                     PersonaLugarRel, PersonaRelaciones, PersonaRolEvento, TipoLugar,
                      SituacionLugar, TipoDocumental, RolEvento,
                      TiposInstitucion, Corporacion)
 
@@ -408,13 +408,6 @@ class PersonaNoEsclavizadaForm(forms.ModelForm):
     
     ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
     
-    rol_evento = forms.ModelMultipleChoiceField(
-        queryset=RolEvento.objects.all(),
-        required=False,
-        widget=autocomplete.ModelSelect2Multiple(url='rolesevento-autocomplete'),
-        label='Rol en el evento'
-    )
-    
     def __init__(self, *args, **kwargs):
         super(PersonaNoEsclavizadaForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -487,6 +480,33 @@ class PersonaRelacionesForm(forms.ModelForm):
         label='Personas relacionadas'
     )
     
+
+class PersonaRolEventoForm(forms.ModelForm):
+    class Meta:
+        model = PersonaRolEvento
+        fields = '__all__'
+    
+    
+    documento = forms.ModelChoiceField(
+        queryset=Documento.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2(url='documento-autocomplete'),
+        label='Documento'
+    )
+    
+    personas = forms.ModelMultipleChoiceField(
+        queryset=Persona.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
+        label='Personas relacionadas'
+    )
+        
+    rol_evento = forms.ModelChoiceField(
+        queryset=RolEvento.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(url='rolesevento-autocomplete'),
+        label='Rol en el evento'
+    )
 
 # Vocabs Forms
 
