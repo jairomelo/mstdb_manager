@@ -55,7 +55,7 @@
                 {% if person.persona_idno != persona.idno %}
                 
                 <li class="my-3 list-group-item">
-                    <a href="{% url 'personaesclavizada_detail' persona.id %}" data-bs-toggle="tooltip" data-bs-placement="top" title={{persona.idno}}> {{ persona.nombre }}</a>
+                    <a href="{% url detail_url persona.id %}" data-bs-toggle="tooltip" data-bs-placement="top" title={{persona.idno}}> {{ persona.nombre }}</a>
                                 <div class="btn-group float-end">
                                 <a href="{% url 'persona_x_persona-update' relation.id_rel %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt" aria-label="Edit"></i></a>
                                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personarel' relation.id_rel %}');"><i class="fas fa-trash-alt" aria-label="Delete"></i></button>

@@ -45,3 +45,24 @@ body {
 footer {
     flex-shrink: 0;
 }
+
+.action-buttons {
+    width: 60px; 
+    height: calc(100vh - 60px); 
+    position: fixed; 
+    top: 60px; 
+    left: 0;
+    padding-left: 10px;
+}
+
+.document-detail-container {
+    padding-left: 70px;
+}
+
+.sidebar-group {
+    margin-top: 5px !important;
+}
+
+.sidebar-group a {
+    color: black;
+}
