@@ -388,8 +388,8 @@ class PersonaEsclavizada(Persona):
 
 class PersonaNoEsclavizada(Persona):
     
+    entidad_asociada = models.CharField(max_length=100, blank=True)
     honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
-    
     rol_evento = models.ManyToManyField(RolEvento)
 
 
