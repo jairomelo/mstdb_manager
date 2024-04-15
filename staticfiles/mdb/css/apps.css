@@ -1,3 +1,17 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    flex: 1 0 auto;
+}
+
 .select2-autocomplete .select2-container {
     width: 100% !important; /* Adjust the width as needed */
 }
@@ -26,4 +40,8 @@
 
 .hidden {
     display: none;
+}
+
+footer {
+    flex-shrink: 0;
 }
