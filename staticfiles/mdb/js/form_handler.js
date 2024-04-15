@@ -38,9 +38,11 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                         value = response.persona_id;
                         text = response.persona_name;
                     } else if(modalId.includes("Lugar")) {
+                        console.log(response);
                         value = response.lugar_id;
                         text = response.lugar_name;
                     } else if(modalId.includes("Archivo")) {
+                        console.log(response);
                         value = response.archivo_id;
                         text = response.archivo_name;
                     } else if(modalId.includes("Rol")) {
@@ -67,8 +69,11 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                     var newOption = new Option(text, value, true, true);
                     selectElement.append(newOption).trigger('change');
             
-                    var currentValues = selectElement.val() || []; 
-                    currentValues.push(value); 
+                    var currentValues = selectElement.val() || [];
+                    if (Array.isArray(currentValues)){
+                        currentValues.push(value);
+                    }
+                    
                     selectElement.val(currentValues).trigger('change'); 
             
                     $(modalId).modal('hide');
