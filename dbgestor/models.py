@@ -42,6 +42,7 @@ PLACE_TYPE_CHOICES = (
         ('parroquia', 'Parroquia'),
         ('fuerte', 'Fuerte'),
         ('puerto', 'Puerto'),
+        ('isla', 'Isla'),
         ('region', 'Región'),
         ('diocesis', 'Diócesis')
     )
