@@ -36,7 +36,10 @@
         <label for="exampleInputPassword1" class="form-label">Contraseña</label>
         <input type="password" class="form-control" name="password" required>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <div class="mb-3">
+            <a href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button type="submit" class="btn btn-primary">Entrar</button>
     </form>
 </div>
 </div>
