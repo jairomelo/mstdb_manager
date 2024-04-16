@@ -63,10 +63,10 @@ def register_user(request):
             return redirect('login')
         else:
             messages.error(request, "Corrige los siguientes errores.")
-            return render(request, 'authusers/register.html', {'form': form})
+            return render(request, 'cataloguers/register.html', {'form': form})
     else:
         form = RegisterUserForm()
-        return render(request, 'authusers/register.html', {'form': form})
+        return render(request, 'cataloguers/register.html', {'form': form})
     
 
 def activate_account(request, uidb64, token):
