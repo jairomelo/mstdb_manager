@@ -12,7 +12,7 @@ DB_NAME=$DATABASE_NAME
 BACKUP_DIR="/home/backups/apps/msdb/"
 
 # use a secure options file
-MYSQL_CNF = "~/.my.cnf"
+MYSQL_CNF="~/.my.cnf"
 
 # Create a backup
 if ! mysqldump --defaults-file=$MYSQL_CNF $DB_NAME | gzip > "$BACKUP_DIR/$DB_NAME-$DATE.sql.gz"; then
