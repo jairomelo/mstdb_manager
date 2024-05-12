@@ -19,7 +19,8 @@ UDC = (
 
 SEXOS = (
         ('v', 'Varón'), 
-        ('m', 'Mujer')
+        ('m', 'Mujer'),
+        ('i', 'Desconocido')
     )
 
 HONORIFICOS = (
@@ -176,7 +177,7 @@ class Documento(models.Model):
     tipo_documento =  models.ForeignKey(TipoDocumental, on_delete=models.SET_NULL, default=1, null=True, related_name='tipo_documento')
     sigla_documento = models.CharField(max_length=100, null=True, blank=True)
     
-    titulo = models.CharField(max_length=200, unique=True)
+    titulo = models.CharField(max_length=300)
     descripcion = models.TextField(blank=True, null=True)
     
     deteriorado = models.BooleanField(default=False)
