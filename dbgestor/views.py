@@ -15,7 +15,7 @@ from .models import (Corporacion, Lugar, PersonaEsclavizada, PersonaNoEsclavizad
                      TipoDocumental, RolEvento, TipoLugar, TiposInstitucion)
 
 from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
-                    PersonaNoEsclavizadaForm,
+                    PersonaNoEsclavizadaForm, TipoDocumentalForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
                     PersonaLugarRelForm, PersonaRelacionesForm, PersonaRolEventoForm, RolesForm, SituacionLugarForm,
                     PersonaDocumentoForm, CorporacionDocumentoForm)
@@ -651,6 +651,38 @@ class HispanizacionesCreateView(CreateView):
 
         # For non-AJAX requests, redirect as usual
         return super().form_valid(form)
+
+class TipoDocumentalsCreateView(CreateView):
+    model = TipoDocumental
+    form_class = TipoDocumentalForm
+    template_name = 'dbgestor/Vocab/tipo_documento.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['create_tipo_documento'] = context['form']
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'añadir'
+        return context
+    
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return ['dbgestor/Modals/tipo_documento.html']
+        return ['dbgestor/Vocab/tipo_documento.html']
+    
+    def form_valid(self, form):
+        self.object = form.save()
+
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = {
+                'id': self.object.id,
+                'tipo_documental_name': str(self.object) 
+            }
+            return JsonResponse(data)
+
+        # For non-AJAX requests, redirect as usual
+        return super().form_valid(form)
+
 
 class EtnonimosCreateView(CreateView):
     model = Etonimos

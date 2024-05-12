@@ -29,7 +29,7 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                 var selectElement = $(`#${selectElementId}`);
                 if (selectElement.length > 0) {
                     var value, text;
-            
+                    
                     // Determine the type of response and assign value and text accordingly
                     if (modalId.includes("Documento")){
                         value = response.documento_id;  
@@ -38,13 +38,14 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                         value = response.persona_id;
                         text = response.persona_name;
                     } else if(modalId.includes("Lugar")) {
-                        console.log(response);
                         value = response.lugar_id;
                         text = response.lugar_name;
                     } else if(modalId.includes("Archivo")) {
-                        console.log(response);
                         value = response.archivo_id;
                         text = response.archivo_name;
+                    } else if(modalId.includes("TipoDocumental")) {
+                        value = response.id;
+                        text = response.tipo_documental_name;
                     } else if(modalId.includes("Rol")) {
                         value = response.id;
                         text = response.rol_evento_name;
@@ -61,9 +62,10 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                         value = response.hispanizacion_id;
                         text = response.hispanizacion_name;
                     } else if(modalId.includes("Ocupacion")) {
-                        console.log(response);
                         value = response.ocupacion_id;
                         text = response.ocupacion_name;
+                    } else {
+                        console.log(response);
                     }
             
                     var newOption = new Option(text, value, true, true);

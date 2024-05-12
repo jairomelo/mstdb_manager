@@ -1,6 +1,6 @@
 # pages/urls.py
 from django.urls import path
-from .views import CoporacionCreateView, CorporacionBrowse, CorporacionDeleteView, CorporacionDetailView, CorporacionUpdateView, DeleteRolEventoView, PersonaRolEventoCreateView, home, associate_persona_documento, associate_institucion_documento, InstitucionAutocomplete
+from .views import CoporacionCreateView, CorporacionBrowse, CorporacionDeleteView, CorporacionDetailView, CorporacionUpdateView, DeleteRolEventoView, PersonaRolEventoCreateView, TipoDocumentalsCreateView, home, associate_persona_documento, associate_institucion_documento, InstitucionAutocomplete
 from .views import (
     ArchivoAutocomplete, ArchivoBrowse, ArchivoCreateView, ArchivoDeleteView, ArchivoDetailView,
     ArchivoUpdateView, CalidadesAutocomplete, CalidadesCreateView, CalidadesPersonaEsclavizadaAutocomplete,
@@ -33,6 +33,7 @@ urlpatterns = [
     path('Add/persona_x_persona/', PersonaPersonaRelCreateView.as_view(), name='persona_x_persona-new'),
     path('Add/rol_evento/', PersonaRolEventoCreateView.as_view(), name='rol_evento_new'),
     # vocabs create
+    path('Add/voc/tipo_documento/', TipoDocumentalsCreateView.as_view(), name='tipo_documento-new'),
     path('Add/voc/calidad/', CalidadesCreateView.as_view(), name='calidad-new'),
     path('Add/voc/hispanizacion/', HispanizacionesCreateView.as_view(), name='hispanizacion-new'),
     path('Add/voc/etnonimo/', EtnonimosCreateView.as_view(), name='etnonimo-new'),

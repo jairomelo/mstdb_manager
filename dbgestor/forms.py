@@ -510,6 +510,35 @@ class PersonaRolEventoForm(forms.ModelForm):
 
 # Vocabs Forms
 
+class TipoDocumentalForm(forms.ModelForm):
+    
+    class Meta:
+        model = TipoDocumental
+        fields = ['tipo_documental']
+        
+    tipo_documental = forms.CharField(required=True, label='Tipo documental')
+    
+    def save(self, commit=True):
+        tipo_documental_object = super().save(commit=False)
+        
+        tipo_documental = self.cleaned_data.get('tipo_documental')
+        tipo_documental = tipo_documental.title()
+        
+        tipo_documental_object, created = TipoDocumental.objects.update_or_create(
+        tipo_documental=tipo_documental
+        )
+        logger.debug(f"Tipo documental created: {created}, Tipo Documental ID: {tipo_documental_object.id}")
+        
+        if commit:
+            tipo_documental_object.save()
+        return tipo_documental_object
+    
+    def __init__(self, *args, **kwargs):
+        super(TipoDocumentalForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+
+
 class CalidadesForm(forms.ModelForm):
     
     class Meta:
