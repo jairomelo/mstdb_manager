@@ -31,6 +31,16 @@
         </div>
 
         <div class="mb-3">
+            <label for="{{ form.serie.id_for_label }}" class="form-label">{{ form.serie.label }}</label>
+            {{ form.serie }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.subserie.id_for_label }}" class="form-label">{{ form.subserie.label }}</label>
+            {{ form.subserie }}
+        </div>
+
+        <div class="mb-3">
             <label for="{{ form.sigla_documento.id_for_label }}" class="form-label">{% trans 'Sigla completa' %}</label>
             {{ form.sigla_documento }}
         </div>
