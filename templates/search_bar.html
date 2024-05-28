@@ -1,0 +1,30 @@
+<!-- templates/search_bar.html -->
+<form action="" method="get" class="input-group mb-3" id="search-form">
+    <input type="text" name="q" class="form-control" placeholder="Buscar..." id="search-input" value="{{ request.GET.q }}">
+    <button type="button" class="btn btn-outline-secondary" id="reset-button" style="display: {% if request.GET.q %}inline{% else %}none{% endif %};">X</button>
+    <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+</form>
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById("search-input");
+        const resetButton = document.getElementById("reset-button");
+    
+        searchInput.addEventListener("input", function() {
+            if (searchInput.value.length > 0) {
+                resetButton.style.display = "inline";
+            } else {
+                resetButton.style.display = "none";
+            }
+        });
+    
+        resetButton.addEventListener("click", function() {
+            searchInput.value = "";
+            resetButton.style.display = "none";
+            // Optionally, submit the form here if you want to trigger the reset immediately
+            document.getElementById("search-form").submit();
+        });
+    });
+    
+</script>

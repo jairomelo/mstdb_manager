@@ -7,10 +7,7 @@
         <h2>Crea o selecciona una persona para agregar lugares o relaciones</h2>
 
         <!-- Search Form -->
-        <form action="" method="get" class="input-group mb-3">
-            <input type="text" name="q" class="form-control" placeholder="Buscar por nombre...">
-            <button type="submit" class="btn btn-outline-secondary">Buscar</button>
-        </form>
+        {% include 'search_bar.html' %}
 
         <!-- Create New Object Button -->
         <div class="mb-3">
@@ -24,6 +21,8 @@
         <a href="?sort=nombre_normalizado" class="btn btn-outline-info">Ordenar por nombres</a>
         <!-- Add other sorting links as needed -->
     </div>
+
+    {% include 'paginator.html' %}
 
     <!-- Grid Layout for Objects -->
     <div class="list-group">

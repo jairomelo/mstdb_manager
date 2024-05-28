@@ -6,10 +6,7 @@
     {% if perms.dbgestor.add_documento %}
         <h2>Crea o selecciona un documento para agregar eventos</h2>
 
-        <form action="" method="get" class="input-group mb-3">
-            <input type="text" name="q" class="form-control" placeholder="Buscar en el título...">
-            <button type="submit" class="btn btn-outline-secondary">Buscar</button>
-        </form>
+        {% include 'search_bar.html' %}
 
         <!-- Create New Object Button -->
         <div class="mb-3">
@@ -22,6 +19,8 @@
         <a href="?sort=created_at" class="me-2 btn btn-outline-info">Ordenar por Fecha de creación</a>
         <a href="?sort=title" class="btn btn-outline-info">Ordenar por Título</a>
     </div>
+
+    {% include 'paginator.html' %}
 
     <!-- Row Layout for Objects -->
     <div class="list-group">
@@ -42,5 +41,7 @@
         {% endfor %}
     </div>
 </div>
+
+
 
 {% endblock content %}

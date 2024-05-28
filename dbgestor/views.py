@@ -844,6 +844,7 @@ class RolesCreateView(CreateView):
 # Browse Views
 
 class ArchivoBrowse(ListView):
+    paginate_by=50
     model = Archivo
     template_name = 'dbgestor/Browse/archivos.html'
 
@@ -856,13 +857,15 @@ class ArchivoBrowse(ListView):
         search_query = self.request.GET.get('q', None)
         if search_query:
             queryset = queryset.filter(
-                Q(titulo__icontains=search_query) | 
-                Q(fondo__icontains=search_query)
+                Q(nombre__icontains=search_query) | 
+                Q(nombre_abreviado__icontains=search_query) |
+                Q(archivo_idno__icontains=search_query)
             )
         
         return queryset.order_by(sort)
 
 class DocumentoBrowse(ListView):
+    paginate_by=50
     model = Documento
     template_name = 'dbgestor/Browse/documentos.html'
     
@@ -876,12 +879,14 @@ class DocumentoBrowse(ListView):
         if search_query:
             queryset = queryset.filter(
                 Q(titulo__icontains=search_query) | 
-                Q(fondo__icontains=search_query)
+                Q(fondo__icontains=search_query) |
+                Q(documento_idno__icontains=search_query)
             )
         
         return queryset.order_by(sort)
 
 class PersonaEsclavizadaBrowse(ListView):
+    paginate_by=50
     model = PersonaEsclavizada
     template_name = 'dbgestor/Browse/personasesclavizadas.html'
     
@@ -896,13 +901,15 @@ class PersonaEsclavizadaBrowse(ListView):
             queryset = queryset.filter(
                 Q(nombres__icontains=search_query) | 
                 Q(apellidos__icontains=search_query) |
-                Q(nombre_normalizado__icontains=search_query)
+                Q(nombre_normalizado__icontains=search_query) |
+                Q(persona_idno__icontains=search_query)
             )
         
         return queryset.order_by(sort)
 
 
 class PersonaNoEsclavizadaBrowse(ListView):
+    paginate_by=50
     model = PersonaNoEsclavizada
     template_name = 'dbgestor/Browse/personasnoesclavizadas.html'
     
@@ -917,12 +924,14 @@ class PersonaNoEsclavizadaBrowse(ListView):
             queryset = queryset.filter(
                 Q(nombres__icontains=search_query) | 
                 Q(apellidos__icontains=search_query) |
-                Q(nombre_normalizado__icontains=search_query)
+                Q(nombre_normalizado__icontains=search_query) |
+                Q(persona_idno__icontains=search_query)
             )
         
         return queryset.order_by(sort)
 
 class CorporacionBrowse(ListView):
+    paginate_by=50
     model = Corporacion
     template_name = 'dbgestor/Browse/corporaciones.html'
     
@@ -936,7 +945,8 @@ class CorporacionBrowse(ListView):
         if search_query:
             queryset = queryset.filter(
                 Q(tipo_institucion__icontains=search_query) |
-                Q(nombre_institucion__icontains=search_query)
+                Q(nombre_institucion__icontains=search_query) |
+                Q(corporacion_idno__icontains=search_query)
             )
         
         return queryset.order_by(sort)
