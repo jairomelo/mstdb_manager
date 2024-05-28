@@ -733,7 +733,7 @@ class TiposInstitucionForm(forms.ModelForm):
         tipo = self.cleaned_data.get('tipo')
         tipo = tipo.title()
         
-        tipos, created = tipos.objects.update_or_create(
+        tipos, created = TiposInstitucion.objects.update_or_create(
         tipo=tipo
         )
         logger.debug(f"tipo created: {created}, tipo ID: {tipos.tipo_id}")

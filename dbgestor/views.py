@@ -18,7 +18,7 @@ from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, Pers
                     PersonaNoEsclavizadaForm, TipoDocumentalForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
                     PersonaLugarRelForm, PersonaRelacionesForm, PersonaRolEventoForm, RolesForm, SituacionLugarForm,
-                    PersonaDocumentoForm, CorporacionDocumentoForm)
+                    PersonaDocumentoForm, CorporacionDocumentoForm, TiposInstitucionForm)
 
 # Custom views
 
@@ -683,6 +683,37 @@ class TipoDocumentalsCreateView(CreateView):
         # For non-AJAX requests, redirect as usual
         return super().form_valid(form)
 
+
+class TipoInstitucionCreateView(CreateView):
+    model = TiposInstitucion
+    form_class = TiposInstitucionForm
+    template_name = 'dbgestor/Vocab/tipo_institucion.html'
+    success_url = reverse_lazy('institucion-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['create_tipo_institucion'] = context['form']
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'añadir'
+        return context
+    
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return ['dbgestor/Modals/tipo_institucion.html']
+        return ['dbgestor/Vocab/tipo_institucion.html']
+    
+    def form_valid(self, form):
+        self.object = form.save()
+
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = {
+                'id': self.object.tipo_id,
+                'tipo_name': str(self.object) # !!!
+            } 
+            return JsonResponse(data)
+
+        # For non-AJAX requests, redirect as usual
+        return super().form_valid(form)
 
 class EtnonimosCreateView(CreateView):
     model = Etonimos

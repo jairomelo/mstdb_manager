@@ -64,6 +64,9 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                     } else if(modalId.includes("Ocupacion")) {
                         value = response.ocupacion_id;
                         text = response.ocupacion_name;
+                    } else if(modalId.includes("TipoInstitucion")) {
+                        value = response.tipo_id;
+                        text = response.tipo_name;
                     } else {
                         console.log(response);
                     }
