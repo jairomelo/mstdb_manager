@@ -21,7 +21,7 @@ from .views import (
 
 
 urlpatterns = [
-    path("", home, name="home"),
+    path("", TotalBrowseView.as_view(), name="home"),
     path('remove_persona_documento/<int:persona_id>/<int:documento_id>/', ConfirmRemovePersonaDocumento.as_view(), name='remove_persona_documento'),
     path('Add/lugar/', LugarCreateView.as_view(), name='lugar-new'),
     path('Add/documento/', DocumentoCreateView.as_view(), name='documento-new'),

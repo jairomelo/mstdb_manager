@@ -16,6 +16,44 @@
         <a class="btn btn-primary btn-lg" href="{% url 'entierro-browse' %}" role="button">Explorar Entierros</a> {% endcomment %}
     </div>
 
+    <div class="container mt-5">
+        <h2 class="mb-4">Overview</h2>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-header">Total Documents</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ document_count }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-secondary mb-3">
+                    <div class="card-header">Personas Esclavizadas</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ personas_esclavizadas_count }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-header">Personas No Esclavizadas</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ personas_no_esclavizadas_count }}</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-danger mb-3">
+                    <div class="card-header">Instituciones</div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ instituciones_count }}</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 {% endblock content %}

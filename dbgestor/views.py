@@ -59,13 +59,20 @@ class TotalBrowseView(TemplateView):
     """
     Mostrar todo a modo de Excel :p
     """
-    template_name = 'dbgestor/Browse/todo.html'
+    template_name = 'dbgestor/home.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['Archivos'] = Archivo.objects.all()
         context['Documentos'] = Documento.objects.all()
         context['PersonasEsclavizadas'] = PersonaEsclavizada.objects.all()
         context['PersonasNoEsclavizadas'] = PersonaNoEsclavizada.objects.all()
+        context['Instituciones'] = Corporacion.objects.all()
+        
+        context['document_count'] = Documento.objects.count()
+        context['personas_esclavizadas_count'] = PersonaEsclavizada.objects.count()
+        context['personas_no_esclavizadas_count'] = PersonaNoEsclavizada.objects.count()
+        context['instituciones_count'] = Corporacion.objects.count()
         
         return context
 
