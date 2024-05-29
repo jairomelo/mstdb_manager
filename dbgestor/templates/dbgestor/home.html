@@ -1,5 +1,6 @@
 {% extends 'main.html' %}
 {% load django_bootstrap5 django_bootstrap_input_group static %}
+{% load i18n %}
 {% block content %}
 
 <div class="container mt-4">
@@ -11,6 +12,7 @@
         <p></p>
         {% if user.is_authenticated %}
         <a class="btn btn-primary btn-lg" href="{% url 'documento-browse' %}" role="button">Iniciar</a>
+        <hr class="my-4">    
         {% endif %}
     </div>
 
@@ -19,39 +21,50 @@
         <div class="row">
             <div class="col-md-3">
                 <div class="card text-white bg-primary mb-3">
-                    <div class="card-header">Total Documents</div>
+                    <div class="card-header">{% trans 'Total Documentos' %}</div>
                     <div class="card-body">
                         <h5 class="card-title">{{ document_count }}</h5>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'documento-browse' %}" class="stretched-link"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card text-white bg-secondary mb-3">
-                    <div class="card-header">Personas Esclavizadas</div>
+                    <div class="card-header">{% trans 'Personas Esclavizadas'%}</div>
                     <div class="card-body">
                         <h5 class="card-title">{{ personas_esclavizadas_count }}</h5>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'personasesclavizadas-browse' %}" class="stretched-link"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card text-white bg-success mb-3">
-                    <div class="card-header">Personas No Esclavizadas</div>
+                    <div class="card-header">{% trans 'Personas No Esclavizadas'%}</div>
                     <div class="card-body">
                         <h5 class="card-title">{{ personas_no_esclavizadas_count }}</h5>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'personasnoesclavizadas-browse' %}" class="stretched-link"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card text-white bg-danger mb-3">
-                    <div class="card-header">Instituciones</div>
+                    <div class="card-header">{% trans 'Instituciones'%}</div>
                     <div class="card-body">
                         <h5 class="card-title">{{ instituciones_count }}</h5>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'instituciones_browse' %}" class="stretched-link"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 
 {% endblock content %}
