@@ -7,11 +7,11 @@
     <div class="row justify-content-center">
         <div class="col-md-6 shadow auth-forms-container">
           {% if perms.dbgestor.delete_documento %}
-          <h2>{% trans '¿Quiere eliminar esta relación?'%}</h2>
-            <p>Persona: {{ persona }}</p>
+            <h2>{% trans '¿Quiere eliminar esta relación?'%}</h2>
+            <p>Institucion: {{ corporacion }}</p>
             <p>Documento: {{ documento }}</p>
              
-             <form action="{% url 'remove_persona_documento' persona_id=persona.pk documento_id=documento.pk %}" method="post">
+             <form action="{% url 'remover_institucion_documento' corporacion_id=corporacion.pk documento_id=documento.pk %}" method="post">
                  {% csrf_token %}
                  <input type="submit" value="Confirmar" class="btn btn-danger me-2">
                  <a href="{% url 'documento-browse' %}" class="btn btn-secondary">Cancelar</a>

@@ -1,0 +1,66 @@
+<div class="d-flex flex-column flex-shrink-0 action-buttons">
+    <!-- Group 1: People, bg-info -->
+    <div class="bg-info sidebar-group">
+        <ul class="nav nav-pills nav-flush flex-column mb-auto text-center">
+            <li class="nav-item">
+                <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir persona esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-user-tag"></i><span class="visually-hidden">Esclavizada</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'personanoesclavizada-new' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir persona no esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-user-friends"></i><span class="visually-hidden">No Esclavizada</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'persona_x_documentos' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir persona ya existente al documento" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-user"></i><i class="fas fa-plus-circle"></i><span class="visually-hidden">Existente</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Group 2: Institutions, bg-warning -->
+    <div class="bg-warning sidebar-group">
+        <ul class="nav nav-pills nav-flush flex-column mb-auto text-center">
+            <li>
+                <a href="{% url 'institucion_new' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Incluir institución/corporación" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-place-of-worship"></i><span class="visually-hidden">Institución</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'institucion_x_documentos' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir institución ya existente al documento" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-place-of-worship"></i><i class="fas fa-plus-circle"></i><span class="visually-hidden">Inst. Existente</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Group 3: Relationships and Places, bg-success -->
+    <div class="bg-success sidebar-group">
+        <ul class="nav nav-pills nav-flush flex-column mb-auto text-center">
+            <li>
+                <button id="createRelation" class="btn py-3 w-100" title="Añadir relación entre dos o más personas" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-people-arrows"></i><span class="visually-hidden">Relaciones</span>
+                </button>
+            </li>
+            <li>
+                <button id="createRelationLugar" class="btn py-3 w-100" title="Añadir lugar anterior o posterior a una o más personas" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-shoe-prints"></i><span class="visually-hidden">Lugares</span>
+                </button>
+            </li>
+            
+            <li>
+                <button id="createRolEvento" class="btn py-3 w-100" title="Asignar Rol en el Evento a Persona No Esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="far fa-handshake"></i><span class="visually-hidden">Rol Evento</span>
+                </button>
+            </li>
+
+            <li>
+                <button id="createRolEventoInst" class="btn py-3 w-100" title="Asignar Rol en el Evento a Institución" data-bs-toggle="tooltip" data-bs-placement="right">
+                    <i class="fas fa-landmark"></i><span class="visually-hidden">Rol Evento Institución</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>

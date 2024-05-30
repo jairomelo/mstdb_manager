@@ -517,7 +517,19 @@ class Corporacion(PolymorphicModel):
         return f"{self.nombre_institucion}"
     
     
+class InstitucionRolEvento(models.Model):
     
+    documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='institucion_rol_evento_documento', blank=True)
     
+    corporaciones = models.ManyToManyField(
+        Corporacion, 
+        related_name='p_roles_evento'
+    )
+    
+    rol_evento = models.ForeignKey(RolEvento, on_delete=models.CASCADE,
+                                   related_name="rol_evento_institucion")
+    
+    def __str__(self) -> str:
+        return ', '.join([corporaciones.nombre_institucion for corporaciones in self.corporaciones.all()])
     
     

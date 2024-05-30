@@ -13,14 +13,33 @@
 </div>
 
 <div class="card-body border-dark">
+
+    {% if corporacionrolrel %}
     
+        {% for corporacion_id, details in corporacionrolrel.items %}
+            {% if corporacion_id == corporacion.pk %}
+            <h5 class="card-title text-primary"><i class="fas fa-users"></i> Rol en el evento</h5>
+                <p class="card-text">
+                    <ul class="list-group">
+                {% for detail in details %}
+                <li class="my-3 list-group-item">    
+                {{ detail.rol_evento }}
+                <div class="btn-group float-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'rol_delete_institucion' detail.id_relacion %}');"><i class="fas fa-trash-alt" aria-label="Delete"></i></button>
+                </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 </div>
 <div class="card-footer bg-transparent border-dark">
     {% if perms.dbgraphic.add_documento %}
-        <a href="{% url 'remove_persona_documento' persona_id=corporacion.pk documento_id=documento.pk %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la persona del documento">Remover</a>
+        <a href="{% url 'remover_institucion_documento' corporacion_id=corporacion.pk documento_id=documento.pk %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la institución del documento">Remover</a>
     {% endif %}
     {% if perms.dbgraphic.delete_persona %}
-        <a href="{% url 'persona-delete' corporacion.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Eliminar a la persona [!]">Eliminar</a>
+        <a href="{% url 'institucion_delete' corporacion.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Eliminar a la institución [!]">Eliminar</a>
     {% endif %}
 
 </div>

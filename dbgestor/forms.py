@@ -5,7 +5,7 @@ from datetime import datetime
 from dal import autocomplete
 import re
 
-from .models import (Lugar, PersonaEsclavizada, 
+from .models import (InstitucionRolEvento, Lugar, PersonaEsclavizada, 
                      PersonaNoEsclavizada, Persona, Documento, Archivo,
                      Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, PersonaRelaciones, PersonaRolEvento, TipoLugar,
@@ -499,6 +499,34 @@ class PersonaRolEventoForm(forms.ModelForm):
         required=True,
         widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
         label='Personas relacionadas'
+    )
+        
+    rol_evento = forms.ModelChoiceField(
+        queryset=RolEvento.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(url='rolesevento-autocomplete'),
+        label='Rol en el evento'
+    )
+
+
+class InstitucionRolEventoForm(forms.ModelForm):
+    class Meta:
+        model = InstitucionRolEvento
+        fields = '__all__'
+    
+    
+    documento = forms.ModelChoiceField(
+        queryset=Documento.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2(url='documento-autocomplete'),
+        label='Documento'
+    )
+    
+    corporaciones = forms.ModelMultipleChoiceField(
+        queryset=Corporacion.objects.all(),
+        required=True,
+        widget=autocomplete.ModelSelect2Multiple(url='institucion-autocomplete'),
+        label='Instituciones relacionadas'
     )
         
     rol_evento = forms.ModelChoiceField(

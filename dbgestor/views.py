@@ -12,13 +12,13 @@ from dal import autocomplete
 from .models import (Corporacion, Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
                      Archivo, Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, Persona, PersonaRelaciones, PersonaRolEvento, SituacionLugar,
-                     TipoDocumental, RolEvento, TipoLugar, TiposInstitucion)
+                     TipoDocumental, RolEvento, TipoLugar, TiposInstitucion, InstitucionRolEvento)
 
 from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm, TipoDocumentalForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
                     PersonaLugarRelForm, PersonaRelacionesForm, PersonaRolEventoForm, RolesForm, SituacionLugarForm,
-                    PersonaDocumentoForm, CorporacionDocumentoForm, TiposInstitucionForm)
+                    PersonaDocumentoForm, CorporacionDocumentoForm, TiposInstitucionForm, InstitucionRolEventoForm)
 
 # Custom views
 
@@ -95,6 +95,25 @@ class ConfirmRemovePersonaDocumento(TemplateView):
         context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
         return context
 
+
+class ConfirmRemoveInstitucionDocumento(TemplateView):
+    template_name = 'dbgestor/Base/confirm_remove_institucion_documento.html'
+    
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(request, self.template_name, context)
+    
+    def post(self, request, *args, **kwargs):
+        corporacion = get_object_or_404(Corporacion, pk=kwargs['corporacion_id'])
+        documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
+        corporacion.documentos.remove(documento)
+        return redirect('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['corporacion'] = get_object_or_404(Corporacion, pk=self.kwargs['corporacion_id'])
+        context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
+        return context
 
 ## Generic Views
 
@@ -596,6 +615,41 @@ class PersonaRolEventoCreateView(CreateView):
         response = super().form_valid(form) 
         return response
 
+
+class InstitucionRolEventoCreateView(CreateView):
+    model = InstitucionRolEvento
+    form_class = InstitucionRolEventoForm
+    template_name = 'dbgestor/Relaciones/rol_evento_institucion.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_success_url(self):
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            return reverse('documento-detail', kwargs={'pk': documento_initial})
+        else:
+            return reverse('documento-browse')
+        
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        instituciones_initial = self.request.GET.get('ids')
+        if instituciones_initial:
+            corporaciones_ids = instituciones_initial.split(',')
+            selected_corporaciones = Corporacion.objects.filter(corporacion_id__in=corporaciones_ids)
+            form.fields['corporaciones'].initial = selected_corporaciones
+        return form
+        
+    def get_initial(self):
+        initial = super().get_initial()
+        documento_initial = self.request.GET.get('documento_initial')
+        if documento_initial:
+            initial['documento'] = documento_initial
+        return initial
+
+    def form_valid(self, form):
+        response = super().form_valid(form) 
+        return response
+
+
 # Create views for  Vocabs
 class CalidadesCreateView(CreateView):
     model = Calidades
@@ -1015,13 +1069,19 @@ class DocumentoDetailView(DetailView):
             )
         )
         
+        personarolrel = PersonaRolEvento.objects.filter(
+            models.Q(
+                documento=documento
+            )
+        )
+        
         corporacionrel = Corporacion.objects.filter(
             models.Q(
                 documentos=documento
             )
         )
         
-        personarolrel = PersonaRolEvento.objects.filter(
+        corporacionrolrel = InstitucionRolEvento.objects.filter(
             models.Q(
                 documento=documento
             )
@@ -1073,6 +1133,19 @@ class DocumentoDetailView(DetailView):
                     'rol_evento': str(rol_evento),
                     'id_relacion': id_rol
                 })
+                
+        instroldata = defaultdict(list)
+        
+        for rol in corporacionrolrel:
+            rol_evento_inst = rol.rol_evento
+            id_rol = rol.id
+            for corporacion in rol.corporaciones.all():
+                instroldata[corporacion.corporacion_id].append({
+                    'nombre': corporacion.nombre_institucion,
+                    'idno': corporacion.corporacion_idno,
+                    'rol_evento': str(rol_evento_inst),
+                    'id_relacion': id_rol
+                })
                     
         
         context['peresclavizadas'] = peresclavizadas
@@ -1083,6 +1156,7 @@ class DocumentoDetailView(DetailView):
         context['relationshipdata'] = dict(relationship_data)
         context['place_data'] = place_data_standard
         context['personarolrel'] = dict(rol_data)
+        context['corporacionrolrel'] = dict(instroldata)
         
         return context
 
@@ -1415,5 +1489,10 @@ class DeletePersonaLugarRelView(DeleteView):
     
 class DeleteRolEventoView(DeleteView):
     model = PersonaRolEvento
+    template_name = 'dbgestor/Base/confirm_delete.html'
+    success_url = reverse_lazy('documento-browse')
+    
+class DeleteRolEventoInstitucionView(DeleteView):
+    model = InstitucionRolEvento
     template_name = 'dbgestor/Base/confirm_delete.html'
     success_url = reverse_lazy('documento-browse')

@@ -15,7 +15,8 @@ from .views import (
     PersonaPersonaRelCreateView, PersonaRelacionesUpdateView, RolesCreateView, RolEventoAutocomplete,
     SituacionLugarAutocomplete, SituacionLugarCreateView, TipoDocumentalAutocomplete, TipoLugarAutocomplete,
     TotalBrowseView,PersonaDeleteView,ConfirmRemovePersonaDocumento, TiposInstitucionAutocomplete,
-    TipoInstitucionCreateView
+    TipoInstitucionCreateView, InstitucionRolEventoCreateView, DeleteRolEventoInstitucionView, 
+    ConfirmRemoveInstitucionDocumento
 )
 
 
@@ -23,6 +24,7 @@ from .views import (
 urlpatterns = [
     path("", TotalBrowseView.as_view(), name="home"),
     path('remove_persona_documento/<int:persona_id>/<int:documento_id>/', ConfirmRemovePersonaDocumento.as_view(), name='remove_persona_documento'),
+    path('remove_institucion_documento/<int:corporacion_id>/<int:documento_id>/', ConfirmRemoveInstitucionDocumento.as_view(), name='remover_institucion_documento'),
     path('Add/lugar/', LugarCreateView.as_view(), name='lugar-new'),
     path('Add/documento/', DocumentoCreateView.as_view(), name='documento-new'),
     path('Add/archivo/', ArchivoCreateView.as_view(), name='archivo-new'),
@@ -33,6 +35,7 @@ urlpatterns = [
     path('Add/peresclavizada_x_lugar/', PersonaLugarRelCreateView.as_view(), name='persona_x_lugar-new'),
     path('Add/persona_x_persona/', PersonaPersonaRelCreateView.as_view(), name='persona_x_persona-new'),
     path('Add/rol_evento/', PersonaRolEventoCreateView.as_view(), name='rol_evento_new'),
+    path('Add/rol_evento_institucion/', InstitucionRolEventoCreateView.as_view(), name='rol_evento_institution_new'),
     # vocabs create
     path('Add/voc/tipo_documento/', TipoDocumentalsCreateView.as_view(), name='tipo_documento-new'),
     path('Add/voc/tipo_institucion/', TipoInstitucionCreateView.as_view(), name='tipo_institucion_new'),
@@ -74,6 +77,7 @@ urlpatterns = [
     path('personanoesclavizada/<int:pk>/delete/', PersonaNoEsclavizadaDeleteView.as_view(), name='personanoesclavizada-delete'),
     path('institucion/<int:pk>/delete/', CorporacionDeleteView.as_view(), name='institucion_delete'),
     path('rolevento/<int:pk>/delete/', DeleteRolEventoView.as_view(), name='rol_delete'),
+    path('roleventoinst/<int:pk>/delete/', DeleteRolEventoInstitucionView.as_view(), name='rol_delete_institucion'),
     # autocompleters
     path('lugar-autocomplete/', LugarAutocomplete.as_view(), name='lugar-autocomplete'),
     path('persona-esclavizada-autocomplete/', PersonaEsclavizadaAutocomplete.as_view(), name='personaesclavizada-autocomplete'),
