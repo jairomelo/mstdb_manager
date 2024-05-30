@@ -1,7 +1,7 @@
 #!/bin/bash
 
-declare -a apps=("esclavizados" "prosopographic")
-remotepath="/home/django/toolbox/"
+declare -a apps=("dbgestor" "cataloguers")
+remotepath="/home/mexico_slave_trade_db"
 remote_host="root@138.197.58.4"
 
 for app in "${apps[@]}"
