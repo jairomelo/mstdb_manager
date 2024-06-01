@@ -24,7 +24,17 @@
 
             <p class="card-text">{{ documento.get_tipo_documento_display }}</p>
             <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial }}</p>
-            <p class="card-text">Valor del evento en pesos: {{ documento.evento_valor_sp }} {{ documento.evento_forma_de_pago }}
+            {% if documento.evento_valor_sp %}
+                <p class="card-text">Valor del evento: {{ documento.evento_valor_sp }} {{ documento.evento_forma_de_pago }}
+            {% endif %}
+            {% if documento.notas %}
+            <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Notas al documento</h5>
+                  <p class="card-text">{{ documento.notas }}</p>
+                </div>
+              </div>
+            {% endif %}
         </div>
         
         <!-- Action Buttons -->
