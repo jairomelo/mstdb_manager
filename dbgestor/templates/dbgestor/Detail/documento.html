@@ -44,7 +44,8 @@
                     <a href="{% url 'documento-update' documento.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-primary">Editar</a>
                 {% endif %}
                 {% if perms.dbgestor.delete_documento %}
-                    <a href="{% url 'documento-delete' documento.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-danger">Borrar</a>
+                <!-- Next no incluido porque no puede regresar a un elemento eliminado -->
+                    <a href="{% url 'documento-delete' documento.pk %}" class="btn btn-outline-danger">Borrar</a>
                 {% endif %}
             </div>
         </div>

@@ -5,6 +5,8 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.generic import (ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView)
 
+from .view_mixin import DeleteNextUrlMixin
+
 from collections import defaultdict
 
 from dal import autocomplete
@@ -55,73 +57,7 @@ def associate_institucion_documento(request):
         form = CorporacionDocumentoForm(initial={'documento': documento_initial})
     return render(request, 'dbgestor/Relaciones/institucion_x_documentos.html', {'form': form})
 
-## Template views
-
-class TotalBrowseView(TemplateView):
-    """
-    Mostrar todo a modo de Excel :p
-    """
-    template_name = 'dbgestor/home.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['Archivos'] = Archivo.objects.all()
-        context['Documentos'] = Documento.objects.all()
-        context['PersonasEsclavizadas'] = PersonaEsclavizada.objects.all()
-        context['PersonasNoEsclavizadas'] = PersonaNoEsclavizada.objects.all()
-        context['Instituciones'] = Corporacion.objects.all()
-        
-        context['document_count'] = Documento.objects.count()
-        context['personas_esclavizadas_count'] = PersonaEsclavizada.objects.count()
-        context['personas_no_esclavizadas_count'] = PersonaNoEsclavizada.objects.count()
-        context['instituciones_count'] = Corporacion.objects.count()
-        
-        return context
-
-class ConfirmRemovePersonaDocumento(TemplateView):
-    template_name = 'dbgestor/Base/confirm_remove_persona_documento.html'
-    
-    def get(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        return render(request, self.template_name, context)
-    
-    def post(self, request, *args, **kwargs):
-        persona = get_object_or_404(Persona, pk=kwargs['persona_id'])
-        documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
-        persona.documentos.remove(documento)
-        next_url = request.POST.get('next', 'documento-browse')
-        return redirect(next_url)
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['persona'] = get_object_or_404(Persona, pk=self.kwargs['persona_id'])
-        context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
-        context['next_url'] = self.request.GET.get('next', '')
-        return context
-
-
-class ConfirmRemoveInstitucionDocumento(TemplateView):
-    template_name = 'dbgestor/Base/confirm_remove_institucion_documento.html'
-    
-    def get(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        return render(request, self.template_name, context)
-    
-    def post(self, request, *args, **kwargs):
-        corporacion = get_object_or_404(Corporacion, pk=kwargs['corporacion_id'])
-        documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
-        corporacion.documentos.remove(documento)
-        next_url = request.POST.get('next', 'documento-browse')
-        return redirect(next_url)
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['corporacion'] = get_object_or_404(Corporacion, pk=self.kwargs['corporacion_id'])
-        context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
-        context['next_url'] = self.request.GET.get('next', '')
-        return context
-
-## Generic Views
+## Autocomplete Views
 
 class LugarAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -303,6 +239,74 @@ class TiposInstitucionAutocomplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(tipo__icontains=self.q)
         return qs
 
+
+## Template views
+
+class TotalBrowseView(TemplateView):
+    """
+    Mostrar todo a modo de Excel :p
+    """
+    template_name = 'dbgestor/home.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['Archivos'] = Archivo.objects.all()
+        context['Documentos'] = Documento.objects.all()
+        context['PersonasEsclavizadas'] = PersonaEsclavizada.objects.all()
+        context['PersonasNoEsclavizadas'] = PersonaNoEsclavizada.objects.all()
+        context['Instituciones'] = Corporacion.objects.all()
+        
+        context['document_count'] = Documento.objects.count()
+        context['personas_esclavizadas_count'] = PersonaEsclavizada.objects.count()
+        context['personas_no_esclavizadas_count'] = PersonaNoEsclavizada.objects.count()
+        context['instituciones_count'] = Corporacion.objects.count()
+        
+        return context
+
+class ConfirmRemovePersonaDocumento(TemplateView):
+    template_name = 'dbgestor/Base/confirm_remove_persona_documento.html'
+    
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(request, self.template_name, context)
+    
+    def post(self, request, *args, **kwargs):
+        persona = get_object_or_404(Persona, pk=kwargs['persona_id'])
+        documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
+        persona.documentos.remove(documento)
+        next_url = request.POST.get('next', 'documento-browse')
+        return redirect(next_url)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['persona'] = get_object_or_404(Persona, pk=self.kwargs['persona_id'])
+        context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
+
+
+class ConfirmRemoveInstitucionDocumento(TemplateView):
+    template_name = 'dbgestor/Base/confirm_remove_institucion_documento.html'
+    
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(request, self.template_name, context)
+    
+    def post(self, request, *args, **kwargs):
+        corporacion = get_object_or_404(Corporacion, pk=kwargs['corporacion_id'])
+        documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
+        corporacion.documentos.remove(documento)
+        next_url = request.POST.get('next', 'documento-browse')
+        return redirect(next_url)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['corporacion'] = get_object_or_404(Corporacion, pk=self.kwargs['corporacion_id'])
+        context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
+
+
 # Create Views
 
 class ArchivoCreateView(CreateView):
@@ -316,6 +320,7 @@ class ArchivoCreateView(CreateView):
         context['create_archivo'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -334,6 +339,9 @@ class ArchivoCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
+        next_url = self.request.POST.get('next', '')
+        if next_url:
+            return redirect(next_url)
         return super().form_valid(form)
     
     def get_success_url(self):
@@ -351,6 +359,7 @@ class DocumentoCreateView(CreateView):
         context['create_documento'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -385,6 +394,9 @@ class DocumentoCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
+        next_url = self.request.POST.get('next', '')
+        if next_url:
+            return redirect(next_url)
         return super().form_valid(form)
     
     def get_success_url(self):
@@ -417,6 +429,7 @@ class LugarCreateView(CreateView):
         context['create_lugar'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -435,18 +448,32 @@ class LugarCreateView(CreateView):
             }
             return JsonResponse(data)
 
+        # for non AJAX
+        next_url = self.request.POST.get('next', '')
+        if next_url:
+            return redirect(next_url)
         return super().form_valid(form)
     
     def get_success_url(self):
-        #return reverse_lazy('lugar-detail', kwargs={'pk': self.object.pk})
-        return reverse_lazy('home')
-    
+        return reverse_lazy('lugar-detail', kwargs={'pk': self.object.pk})
 
 class PersonaEsclavizadaCreateView(CreateView):
     model = PersonaEsclavizada
     form_class = PersonaEsclavizadaForm
     template_name = 'dbgestor/Add/personaesclavizada.html'
     success_url = reverse_lazy('personasesclavizadas-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
+    
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
     
     def get_success_url(self):
         documento_initial = self.request.GET.get('documento_initial')
@@ -457,13 +484,6 @@ class PersonaEsclavizadaCreateView(CreateView):
             return reverse(next_url)
         else:
             return reverse('documento-browse')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        next_url = self.request.GET.get('next')
-        if next_url:
-            context['next'] = next_url
-        return context
     
     def get_initial(self):
         initial = super().get_initial()
@@ -495,7 +515,18 @@ class PersonaNoEsclavizadaCreateView(CreateView):
             initial['documentos'] = documento_initial
         
         return initial
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next')
+        return context
 
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class CoporacionCreateView(CreateView):
     model = Corporacion
@@ -518,6 +549,18 @@ class CoporacionCreateView(CreateView):
             initial['documentos'] = documento_initial
         
         return initial
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GEt.get('next', '')
+        return context
+    
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 # create views for RElations
 
@@ -550,9 +593,17 @@ class PersonaLugarRelCreateView(CreateView):
         if documento_initial:
             initial['documento'] = documento_initial
         return initial
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        return context    
 
     def form_valid(self, form):
-        response = super().form_valid(form) 
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
         return response
 
 class PersonaPersonaRelCreateView(CreateView):
@@ -584,8 +635,16 @@ class PersonaPersonaRelCreateView(CreateView):
             initial['documento'] = documento_initial
         return initial
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        return context    
+
     def form_valid(self, form):
-        response = super().form_valid(form) 
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
         return response
 
 class PersonaRolEventoCreateView(CreateView):
@@ -617,8 +676,16 @@ class PersonaRolEventoCreateView(CreateView):
             initial['documento'] = documento_initial
         return initial
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        return context    
+
     def form_valid(self, form):
-        response = super().form_valid(form) 
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
         return response
 
 
@@ -651,8 +718,16 @@ class InstitucionRolEventoCreateView(CreateView):
             initial['documento'] = documento_initial
         return initial
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        return context    
+
     def form_valid(self, form):
-        response = super().form_valid(form) 
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
         return response
 
 
@@ -668,6 +743,7 @@ class CalidadesCreateView(CreateView):
         context['create_calidad'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -686,7 +762,11 @@ class CalidadesCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class HispanizacionesCreateView(CreateView):
     model = Hispanizaciones
@@ -699,6 +779,7 @@ class HispanizacionesCreateView(CreateView):
         context['create_hispanizacion'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -717,7 +798,11 @@ class HispanizacionesCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class TipoDocumentalsCreateView(CreateView):
     model = TipoDocumental
@@ -730,6 +815,7 @@ class TipoDocumentalsCreateView(CreateView):
         context['create_tipo_documento'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -748,7 +834,11 @@ class TipoDocumentalsCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 
 class TipoInstitucionCreateView(CreateView):
@@ -762,6 +852,7 @@ class TipoInstitucionCreateView(CreateView):
         context['create_tipo_institucion'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -780,7 +871,11 @@ class TipoInstitucionCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class EtnonimosCreateView(CreateView):
     model = Etonimos
@@ -793,6 +888,7 @@ class EtnonimosCreateView(CreateView):
         context['create_etnonimo'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -811,7 +907,11 @@ class EtnonimosCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class OcupacionesCreateView(CreateView):
     model = Actividades
@@ -824,6 +924,7 @@ class OcupacionesCreateView(CreateView):
         context['create_ocupacion'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -842,7 +943,11 @@ class OcupacionesCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 
 class SituacionLugarCreateView(CreateView):
@@ -856,6 +961,7 @@ class SituacionLugarCreateView(CreateView):
         context['create_situacion'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -874,7 +980,11 @@ class SituacionLugarCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class RolesCreateView(CreateView):
     model = RolEvento
@@ -887,6 +997,7 @@ class RolesCreateView(CreateView):
         context['create_rol'] = context['form']
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_template_names(self):
@@ -905,7 +1016,11 @@ class RolesCreateView(CreateView):
             return JsonResponse(data)
 
         # For non-AJAX requests, redirect as usual
-        return super().form_valid(form)
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 
 # Browse Views
@@ -1281,12 +1396,19 @@ class ArchivoUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
         kwargs = super(ArchivoUpdateView, self).get_form_kwargs()
-        
         return kwargs
+    
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
     
 class DocumentoUpdateView(UpdateView):
     model = Documento
@@ -1323,12 +1445,19 @@ class PersonaEsclavizadaUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
         kwargs = super(PersonaEsclavizadaUpdateView, self).get_form_kwargs()
-        
         return kwargs
+    
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class PersonaNoEsclavizadaUpdateView(UpdateView):
     model = PersonaNoEsclavizada
@@ -1340,13 +1469,19 @@ class PersonaNoEsclavizadaUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
         kwargs = super(PersonaNoEsclavizadaUpdateView, self).get_form_kwargs()
-        
         return kwargs
 
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class CorporacionUpdateView(UpdateView):
     model = Corporacion
@@ -1358,11 +1493,19 @@ class CorporacionUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
         kwargs = super(CorporacionUpdateView, self).get_form_kwargs()
         return kwargs
+    
+    def form_valid(self, form):
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class PersonaLugarRelUpdateView(UpdateView):
     model = PersonaLugarRel
@@ -1373,6 +1516,7 @@ class PersonaLugarRelUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
@@ -1382,6 +1526,10 @@ class PersonaLugarRelUpdateView(UpdateView):
     def form_valid(self, form):
         self.object = form.save()
         documento_id = self.request.POST.get('documento')
+        next_url = self.request.POST.get('next', '')
+        if next_url:
+            logger.info(f"We are passing the next url here")
+            return redirect(next_url)
         return redirect('documento-detail', pk=documento_id)
 
 class PersonaRelacionesUpdateView(UpdateView):
@@ -1393,6 +1541,7 @@ class PersonaRelacionesUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
@@ -1402,6 +1551,10 @@ class PersonaRelacionesUpdateView(UpdateView):
     def form_valid(self, form):
         self.object = form.save()
         documento_id = self.request.POST.get('documento')
+        next_url = self.request.POST.get('next', '')
+        if next_url:
+            logger.info(f"We are passing the next url here")
+            return redirect(next_url)
         return redirect('documento-detail', pk=documento_id)
 
 
@@ -1409,101 +1562,35 @@ class PersonaRelacionesUpdateView(UpdateView):
 
 # Delete views  
 
-class ArchivoDeleteView(DeleteView):
+class ArchivoDeleteView(DeleteNextUrlMixin, DeleteView):
     model = Archivo
     template_name = 'dbgestor/Base/archivo_confirm_delete.html'
     success_url = reverse_lazy('archivo-browse')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        return context
-    
-class DocumentoDeleteView(DeleteView):
+class DocumentoDeleteView(DeleteNextUrlMixin, DeleteView):
     model = Documento
     template_name = 'dbgestor/Base/documento_confirm_delete.html'
     success_url = reverse_lazy('documento-browse')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        context['next_url'] = self.request.GET.get('next', '')
-        return context
-    
-    def delete(self, request, *args, **kwargs):
-        next_url = request.POST.get('next', 'documento-browse')
-        response = super().delete(request, *args, **kwargs)
-        if next_url:
-            return redirect(next_url)
-        return response     
 
-class PersonaDeleteView(DeleteView):
+class PersonaDeleteView(DeleteNextUrlMixin, DeleteView):
     model = Persona
     template_name = 'dbgestor/Base/confirm_delete.html'
     success_url = reverse_lazy('documento-browse')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        context['next_url'] = self.request.GET.get('next', '')
-        return context
-    
-    def post(self, request, *args, **kwargs):
-        logger.debug("POST request received")
-        return self.delete(request, *args, **kwargs)
-    
-    def delete(self, request, *args, **kwargs):
-        next_url = request.POST.get('next', '')
-        logger.debug(f"Next URL in POST: {next_url}")
-        response = super().delete(request, *args, **kwargs)
-        if next_url:
-            return redirect(next_url)
-        return response
 
-
-class CorporacionDeleteView(DeleteView):
+class CorporacionDeleteView(DeleteNextUrlMixin, DeleteView):
     model = Corporacion
     template_name = "dbgestor/Base/confirm_delete.html"
     success_url = reverse_lazy('instituciones_browse')
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        context['next_url'] = self.request.GET.get('next', '')
-        logger.debug(f"Context next_url: {context['next_url']}")
-        return context
-    
-    def post(self, request, *args, **kwargs):
-        logger.debug("POST request received")
-        return self.delete(request, *args, **kwargs)
-    
-    def delete(self, request, *args, **kwargs):
-        next_url = request.POST.get('next', '')
-        logger.debug(f"POST data: {request.POST}")
-        logger.debug(f"Delete next_url: {next_url}")
-        response = super().delete(request, *args, **kwargs)
-        if next_url:
-            return redirect(next_url)
-        return response
 
 # Delete Vocabs
-class PersonaLugarRelDeleteView(DeleteView):
+class PersonaLugarRelDeleteView(DeleteNextUrlMixin, DeleteView):
     model = PersonaLugarRel
     template_name = 'dbgestor/Base/personalugar_rel_confirm_delete.html'
     success_url = reverse_lazy('documentos-browse')
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        return context  
-    
 
-class DeletePersonaRelacionesView(DeleteView):
+class DeletePersonaRelacionesView(DeleteNextUrlMixin, DeleteView):
     model = PersonaRelaciones
     template_name = 'dbgestor/Base/confirm_delete.html'
     success_url = reverse_lazy('documento-browse')

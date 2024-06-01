@@ -28,7 +28,7 @@
                             <li class="my-3 list-group-item">
                                 {{ details.ordinal }}: {{ place }}
                                 <div class="btn-group float-end">
-                                    <a href="{% url 'persona_x_lugar-update' details.rel_id %}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
+                                    <a href="{% url 'persona_x_lugar-update' details.rel_id %}?next={{ request.get_full_path }}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
                                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
                                 </div>
                             </li>
