@@ -36,10 +36,10 @@
 </div>
 <div class="card-footer bg-transparent border-dark">
     {% if perms.dbgestor.add_documento %}
-        <a href="{% url 'remover_institucion_documento' corporacion_id=corporacion.pk documento_id=documento.pk %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la institución del documento">Remover</a>
+        <a href="{% url 'remover_institucion_documento' corporacion_id=corporacion.pk documento_id=documento.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la institución del documento">Remover</a>
     {% endif %}
-    {% if perms.dbgestor.delete_persona %}
-        <a href="{% url 'institucion_delete' corporacion.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Eliminar a la institución [!]">Eliminar</a>
+    {% if perms.dbgestor.delete_corporacion %}
+        <a href="{% url 'institucion_delete' corporacion.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Eliminar a la institución [!]">Eliminar</a>
     {% endif %}
 
 </div>

@@ -1,6 +1,5 @@
 # pages/urls.py
 from django.urls import path
-from .views import CoporacionCreateView, CorporacionBrowse, CorporacionDeleteView, CorporacionDetailView, CorporacionUpdateView, DeleteRolEventoView, PersonaRolEventoCreateView, TipoDocumentalsCreateView, home, associate_persona_documento, associate_institucion_documento, InstitucionAutocomplete
 from .views import (
     ArchivoAutocomplete, ArchivoBrowse, ArchivoCreateView, ArchivoDeleteView, ArchivoDetailView,
     ArchivoUpdateView, CalidadesAutocomplete, CalidadesCreateView, CalidadesPersonaEsclavizadaAutocomplete,
@@ -8,15 +7,20 @@ from .views import (
     DocumentoAutocomplete, DocumentoBrowse, DocumentoCreateView, DocumentoDeleteView, DocumentoDetailView,
     DocumentoUpdateView, EtnonimosAutocomplete, EtnonimosCreateView, HispanizacionesAutocomplete,
     HispanizacionesCreateView, LugarAutocomplete, LugarCreateView, OcupacionesAutocomplete, 
-    OcupacionesCreateView, PersonaAutocomplete, PersonaEsclavizadaBrowse, PersonaEsclavizadaCreateView, PersonaEsclavizadaDeleteView,
-    PersonaEsclavizadaAutocomplete, PersonaEsclavizadaDetailView, PersonaEsclavizadaUpdateView, PersonaLugarRelCreateView, PersonaLugarRelUpdateView,
+    OcupacionesCreateView, PersonaAutocomplete, PersonaEsclavizadaBrowse, PersonaEsclavizadaCreateView, 
+    PersonaEsclavizadaAutocomplete, PersonaEsclavizadaDetailView, PersonaEsclavizadaUpdateView, 
+    PersonaLugarRelCreateView, PersonaLugarRelUpdateView,
     PersonaNoEsclavizadaAutocomplete, PersonaNoEsclavizadaBrowse, PersonaNoEsclavizadaCreateView,
-    PersonaNoEsclavizadaDeleteView, PersonaNoEsclavizadaDetailView, PersonaNoEsclavizadaUpdateView,
+    PersonaNoEsclavizadaDetailView, PersonaNoEsclavizadaUpdateView,
     PersonaPersonaRelCreateView, PersonaRelacionesUpdateView, RolesCreateView, RolEventoAutocomplete,
     SituacionLugarAutocomplete, SituacionLugarCreateView, TipoDocumentalAutocomplete, TipoLugarAutocomplete,
     TotalBrowseView,PersonaDeleteView,ConfirmRemovePersonaDocumento, TiposInstitucionAutocomplete,
     TipoInstitucionCreateView, InstitucionRolEventoCreateView, DeleteRolEventoInstitucionView, 
-    ConfirmRemoveInstitucionDocumento
+    ConfirmRemoveInstitucionDocumento,CoporacionCreateView, CorporacionBrowse, CorporacionDeleteView, 
+    CorporacionDetailView, CorporacionUpdateView, DeleteRolEventoView, 
+    PersonaRolEventoCreateView, TipoDocumentalsCreateView,
+    associate_persona_documento, associate_institucion_documento, 
+    InstitucionAutocomplete
 )
 
 
@@ -73,9 +77,7 @@ urlpatterns = [
     path('archivo/<int:pk>/delete/', ArchivoDeleteView.as_view(), name='archivo-delete'),
     path('documento/<int:pk>/delete/', DocumentoDeleteView.as_view(), name='documento-delete'),
     path('persona/<int:pk>/delete/', PersonaDeleteView.as_view(), name='persona-delete'),
-    path('personaesclavizada/<int:pk>/delete/', PersonaEsclavizadaDeleteView.as_view(), name='personaesclavizada-delete'),
-    path('personanoesclavizada/<int:pk>/delete/', PersonaNoEsclavizadaDeleteView.as_view(), name='personanoesclavizada-delete'),
-    path('institucion/<int:pk>/delete/', CorporacionDeleteView.as_view(), name='institucion_delete'),
+    path('institucion/delete/<int:pk>', CorporacionDeleteView.as_view(), name='institucion_delete'),
     path('rolevento/<int:pk>/delete/', DeleteRolEventoView.as_view(), name='rol_delete'),
     path('roleventoinst/<int:pk>/delete/', DeleteRolEventoInstitucionView.as_view(), name='rol_delete_institucion'),
     # autocompleters

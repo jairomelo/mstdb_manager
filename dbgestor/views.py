@@ -27,9 +27,6 @@ logger = logging.getLogger("dbgestor")
 
 # Custom views
 
-def home(request):
-    return render(request, 'dbgestor/home.html')
-
 def associate_persona_documento(request):
     if request.method == 'POST':
         form = PersonaDocumentoForm(request.POST)
@@ -114,12 +111,14 @@ class ConfirmRemoveInstitucionDocumento(TemplateView):
         corporacion = get_object_or_404(Corporacion, pk=kwargs['corporacion_id'])
         documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
         corporacion.documentos.remove(documento)
-        return redirect('documento-browse')
+        next_url = request.POST.get('next', 'documento-browse')
+        return redirect(next_url)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['corporacion'] = get_object_or_404(Corporacion, pk=self.kwargs['corporacion_id'])
         context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
+        context['next_url'] = self.request.GET.get('next', '')
         return context
 
 ## Generic Views
@@ -1452,6 +1451,10 @@ class PersonaDeleteView(DeleteView):
         context['next_url'] = self.request.GET.get('next', '')
         return context
     
+    def post(self, request, *args, **kwargs):
+        logger.debug("POST request received")
+        return self.delete(request, *args, **kwargs)
+    
     def delete(self, request, *args, **kwargs):
         next_url = request.POST.get('next', '')
         logger.debug(f"Next URL in POST: {next_url}")
@@ -1460,28 +1463,6 @@ class PersonaDeleteView(DeleteView):
             return redirect(next_url)
         return response
 
-class PersonaEsclavizadaDeleteView(DeleteView):
-    model = PersonaEsclavizada
-    template_name = 'dbgestor/Base/personaesclavizada_confirm_delete.html'
-    success_url = reverse_lazy('personasesclavizadas-browse')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        return context
-    
-class PersonaNoEsclavizadaDeleteView(DeleteView):
-    model = PersonaNoEsclavizada
-    template_name = 'dbgestor/Base/personanoesclavizada_confirm_delete.html'
-    success_url = reverse_lazy('personasnoesclavizadas-browse')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['model_name'] = self.model._meta.model_name
-        context['action'] = 'borrar'
-        return context  
-    
 
 class CorporacionDeleteView(DeleteView):
     model = Corporacion
@@ -1492,7 +1473,22 @@ class CorporacionDeleteView(DeleteView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'borrar'
+        context['next_url'] = self.request.GET.get('next', '')
+        logger.debug(f"Context next_url: {context['next_url']}")
         return context
+    
+    def post(self, request, *args, **kwargs):
+        logger.debug("POST request received")
+        return self.delete(request, *args, **kwargs)
+    
+    def delete(self, request, *args, **kwargs):
+        next_url = request.POST.get('next', '')
+        logger.debug(f"POST data: {request.POST}")
+        logger.debug(f"Delete next_url: {next_url}")
+        response = super().delete(request, *args, **kwargs)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 # Delete Vocabs
 class PersonaLugarRelDeleteView(DeleteView):
