@@ -10,8 +10,9 @@
            
            <form method="post" class="text-center">
                {% csrf_token %}
+               <input type="hidden" name="next" value="{{ next_url }}">
                <input type="submit" value="Confirmar" class="btn btn-danger me-2">
-               <a href="{% url 'documento-browse' %}" class="btn btn-secondary">Cancelar</a>
+               <a href="{% if next_url %} {{ next_url }} {% else %} {% url 'documento-browse' %} {% endif %}" class="btn btn-secondary">Cancelar</a>
            </form>
 
         {% else %}

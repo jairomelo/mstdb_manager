@@ -41,10 +41,10 @@
         <div class="card-footer bg-transparent d-flex justify-content-between align-items-center mb-3">
             <div>
                 {% if perms.dbgestor.add_documento %}
-                    <a href="{% url 'documento-update' documento.pk %}" class="btn btn-outline-primary">Editar</a>
+                    <a href="{% url 'documento-update' documento.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-primary">Editar</a>
                 {% endif %}
-                {% if perms.dbgraphic.delete_documento %}
-                    <a href="{% url 'documento-delete' documento.pk %}" class="btn btn-outline-danger">Borrar</a>
+                {% if perms.dbgestor.delete_documento %}
+                    <a href="{% url 'documento-delete' documento.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-danger">Borrar</a>
                 {% endif %}
             </div>
         </div>
@@ -130,7 +130,7 @@
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <a href="{% url 'documento-browse' %}" class="btn btn-outline-secondary">Regresar</a>
+            <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'documento-browse' %}{% endif %}" class="btn btn-outline-secondary">Regresar</a>
         </div>
     </div>
 </div>
@@ -141,23 +141,21 @@
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="deleteConfirmationModalLabel">{% trans 'Confirmar borrado' %}</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">{% trans 'Confirmar borrado' %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% trans '¿Está seguro de querer borrar este elemento?' %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'Cancelar' %}</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">{% trans 'Borrar' %}</button>
+            </div>
         </div>
-        <div class="modal-body">
-          {% trans '¿Está seguro de querer borrar este elemento?'%}
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans 'Cancelar' %}</button>
-          <button type="button" class="btn btn-danger" id="deleteConfirmBtn">{% trans 'Borrar'%}</button>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
   
 
 <script>

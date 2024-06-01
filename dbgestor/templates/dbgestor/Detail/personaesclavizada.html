@@ -189,8 +189,8 @@
                     {% if perms.dbgestor.add_personaesclavizada %}
                         <a href="{% url 'personaesclavizada-update' personaesclavizada.pk %}" class="btn btn-outline-primary me-2">Editar</a>
                     {% endif %}
-                    {% if perms.dbgraphic.delete_personaesclavizada %}
-                        <a href="{% url 'personaesclavizada-delete' personaesclavizada.pk %}" class="btn btn-outline-danger">Borrar</a>
+                    {% if perms.dbgestor.delete_personaesclavizada %}
+                        <a href="{% url 'persona-delete' personaesclavizada.pk %}" class="btn btn-outline-danger">Borrar</a>
                     {% endif %}
                 </div>
             </div>

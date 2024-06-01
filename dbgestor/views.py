@@ -20,6 +20,11 @@ from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, Pers
                     PersonaLugarRelForm, PersonaRelacionesForm, PersonaRolEventoForm, RolesForm, SituacionLugarForm,
                     PersonaDocumentoForm, CorporacionDocumentoForm, TiposInstitucionForm, InstitucionRolEventoForm)
 
+import logging
+
+logger = logging.getLogger("dbgestor")
+
+
 # Custom views
 
 def home(request):
@@ -87,12 +92,14 @@ class ConfirmRemovePersonaDocumento(TemplateView):
         persona = get_object_or_404(Persona, pk=kwargs['persona_id'])
         documento = get_object_or_404(Documento, pk=kwargs['documento_id'])
         persona.documentos.remove(documento)
-        return redirect('documento-browse')
+        next_url = request.POST.get('next', 'documento-browse')
+        return redirect(next_url)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['persona'] = get_object_or_404(Persona, pk=self.kwargs['persona_id'])
         context['documento'] = get_object_or_404(Documento, pk=self.kwargs['documento_id'])
+        context['next_url'] = self.request.GET.get('next', '')
         return context
 
 
@@ -1292,12 +1299,19 @@ class DocumentoUpdateView(UpdateView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'editar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def get_form_kwargs(self):
         kwargs = super(DocumentoUpdateView, self).get_form_kwargs()
-        
         return kwargs
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        next_url = self.request.POST.get('next', 'documento-browse')
+        if next_url:
+            return redirect(next_url)
+        return response
 
 
 class PersonaEsclavizadaUpdateView(UpdateView):
@@ -1416,8 +1430,15 @@ class DocumentoDeleteView(DeleteView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'borrar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
+    def delete(self, request, *args, **kwargs):
+        next_url = request.POST.get('next', 'documento-browse')
+        response = super().delete(request, *args, **kwargs)
+        if next_url:
+            return redirect(next_url)
+        return response     
 
 class PersonaDeleteView(DeleteView):
     model = Persona
@@ -1428,7 +1449,16 @@ class PersonaDeleteView(DeleteView):
         context = super().get_context_data(**kwargs)
         context['model_name'] = self.model._meta.model_name
         context['action'] = 'borrar'
+        context['next_url'] = self.request.GET.get('next', '')
         return context
+    
+    def delete(self, request, *args, **kwargs):
+        next_url = request.POST.get('next', '')
+        logger.debug(f"Next URL in POST: {next_url}")
+        response = super().delete(request, *args, **kwargs)
+        if next_url:
+            return redirect(next_url)
+        return response
 
 class PersonaEsclavizadaDeleteView(DeleteView):
     model = PersonaEsclavizada

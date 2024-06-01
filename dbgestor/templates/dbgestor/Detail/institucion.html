@@ -31,7 +31,7 @@
                     {% if perms.dbgestor.add_corporacion %}
                         <a href="{% url 'institucion_update' corporacion.pk %}" class="btn btn-outline-primary me-2">Editar</a>
                     {% endif %}
-                    {% if perms.dbgraphic.delete_corporacion %}
+                    {% if perms.dbgestor.delete_corporacion %}
                         <a href="{% url 'institucion_delete' corporacion.pk %}" class="btn btn-outline-danger">Borrar</a>
                     {% endif %}
                 </div>

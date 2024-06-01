@@ -13,6 +13,7 @@
              
              <form action="{% url 'remover_institucion_documento' corporacion_id=corporacion.pk documento_id=documento.pk %}" method="post">
                  {% csrf_token %}
+                 <input type="hidden" name="next" value="{{ next_url }}">
                  <input type="submit" value="Confirmar" class="btn btn-danger me-2">
                  <a href="{% url 'documento-browse' %}" class="btn btn-secondary">Cancelar</a>
              </form>

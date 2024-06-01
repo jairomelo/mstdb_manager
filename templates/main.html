@@ -1,50 +1,49 @@
 {% load static %}
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset='utf-8'>
-    <title>MDB</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <!-- bots configuration -->
-    <meta name="robots" content="noindex, nofollow" />
-
-    <!-- jQuery (required for both Bootstrap) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
-
-    <!-- Include Select2 CSS -->
-    <link href="{% static 'vendor/select2/dist/css/select2.min.css' %}" rel="stylesheet" />
-
-    <!-- Include Select2 JavaScript -->
-    <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
-
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
-
-    <!-- Popper.js, Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- FontAwesome -->
-    <script src="https://kit.fontawesome.com/122ccc1a9c.js" crossorigin="anonymous"></script>
-
-    <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.min.css" />
-    <script src="https://cdn.datatables.net/2.0.0/js/dataTables.min.js"></script>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
-     
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""></script>
-
-    <!-- Custom CSS and JS -->
-    <link href='{% static "mdb/css/apps.css?v=20240530" %}' rel='stylesheet' />
-    <script src="{% static 'mdb/js/form_handler.js?v=20240528' %}" type="text/javascript"></script>
-
-    <meta name="csrf-token" content="{{ csrf_token }}">
-
-</head>
+    <head>
+        <meta charset='utf-8'>
+        <title>MDB</title>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        <!-- bots configuration -->
+        <meta name="robots" content="noindex, nofollow" />
+    
+        <!-- jQuery (required for both Bootstrap) -->
+        <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    
+        <!-- Include Select2 CSS -->
+        <link href="{% static 'vendor/select2/dist/css/select2.min.css' %}" rel="stylesheet" />
+    
+        <!-- Include Select2 JavaScript -->
+        <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
+    
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
+    
+        <!-- Popper.js,+ Bootstrap JS bundle -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+        <!-- FontAwesome -->
+        <script src="https://kit.fontawesome.com/122ccc1a9c.js" crossorigin="anonymous"></script>
+    
+        <!-- DataTables -->
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.min.css" />
+        <script src="https://cdn.datatables.net/2.0.0/js/dataTables.min.js"></script>
+    
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+         crossorigin=""/>
+         
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    
+        <!-- Custom CSS and JS -->
+        <link href='{% static "mdb/css/apps.css?v=20240530" %}' rel='stylesheet' />
+        <script src="{% static 'mdb/js/form_handler.js?v=20240528' %}" type="text/javascript"></script>
+    
+        <meta name="csrf-token" content="{{ csrf_token }}">
+    </head>
 <body>
     {% load i18n %}
     {% include "navbar.html" %}

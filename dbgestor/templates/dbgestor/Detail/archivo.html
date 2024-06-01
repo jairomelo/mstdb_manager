@@ -42,7 +42,7 @@
         {% if perms.dbgestor.add_archivo %}
         <a href="{% url 'archivo-update' archivo.pk %}" class="btn btn-outline-primary">Editar</a>
         {% endif %}
-        {% if perms.dbgraphic.delete_archivo %}
+        {% if perms.dbgestor.delete_archivo %}
         <a href="{% url 'archivo-delete' archivo.pk %}" class="btn btn-outline-danger">Borrar</a>
         {% endif %}
     </div>

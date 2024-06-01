@@ -120,6 +120,7 @@
         </div>
 
         <div class="text-center">
+            <input type="hidden" name="next" value="{{ next_url }}">
             <button type="submit" class="btn btn-primary me-2">{% trans 'Guardar'%}</button>
             <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">{% trans 'Cancelar' %}</a>
         </div>
