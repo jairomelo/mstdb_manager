@@ -94,10 +94,10 @@
     <!-- End of Persona Esclavizada Relaciones -->
 </div>
 <div class="card-footer bg-transparent border-dark">
-    {% if perms.dbgraphic.add_documento %}
+    {% if perms.dbgestor.change_documento %}
         <a href="{% url 'remove_persona_documento' persona_id=person.pk documento_id=documento.pk %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Remover la persona del documento">Remover</a>
     {% endif %}
-    {% if perms.dbgraphic.delete_persona %}
+    {% if perms.dbgestor.delete_persona %}
         <a href="{% url 'persona-delete' person.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Eliminar a la persona [!]">Eliminar</a>
     {% endif %}
 
