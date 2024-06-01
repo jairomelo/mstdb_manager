@@ -43,7 +43,11 @@
                 <div class="card-body">
                     <p><strong>Sexo:</strong> {{ personanoesclavizada.get_sexo_display }}</p>
                     {% display_field personanoesclavizada "edad" "Edad" %}
-                    {% display_field personanoesclavizada "ocupacion" "Actividad" %}
+                    <p><strong>Actividad:</strong> 
+                        {% for actividad in personanoesclavizada.ocupaciones.all %}
+                           {{ actividad.actividad }}
+                        {% endfor %}
+                        
                     {% if personanoesclavizada.calidades %}
                     <p><strong>Calidades:</strong>
                     {% for calidad in personanoesclavizada.calidades.all %}
@@ -178,7 +182,7 @@
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between align-items-center mt-4">
-                <a href="{% url 'personasesclavizadas-browse' %}" class="btn btn-outline-secondary">Regresar</a>
+                <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'personasesclavizadas-browse' %}{% endif %}" class="btn btn-outline-secondary">Regresar</a>
                 <div>
                     {% if perms.dbgestor.add_personanoesclavizada %}
                         <a href="{% url 'personanoesclavizada-update' personanoesclavizada.pk %}" class="btn btn-outline-primary me-2">Editar</a>

@@ -400,13 +400,7 @@ class DocumentoCreateView(CreateView):
         return super().form_valid(form)
     
     def get_success_url(self):
-        archivo_initial = self.request.GET.get('archivo_initial')
-        if archivo_initial:
-            return reverse('archivo-detail', kwargs={
-                'pk': archivo_initial
-            })
-        else:
-            return reverse_lazy('documento-detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('documento-detail', kwargs={'pk': self.object.pk})
 
     def get_initial(self):
         initial = super().get_initial()
@@ -552,7 +546,7 @@ class CoporacionCreateView(CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['next_url'] = self.request.GEt.get('next', '')
+        context['next_url'] = self.request.GET.get('next', '')
         return context
     
     def form_valid(self, form):
@@ -1287,8 +1281,11 @@ class PersonaEsclavizadaDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        
         history_records = self.object.history.all()
         context['history_records'] = history_records
+        
         
         personaesclavizada = self.get_object()
         
@@ -1331,9 +1328,11 @@ class PersonaNoEsclavizadaDetailView(DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
         last_history = self.object.history.first()
         history_records = self.object.history.all()
         context['history_records'] = history_records
+        
         
         personanoesclavizada = self.get_object()
         

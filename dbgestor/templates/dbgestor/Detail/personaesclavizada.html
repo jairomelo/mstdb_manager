@@ -184,7 +184,7 @@
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between align-items-center mt-4">
-                <a href="{% url 'personasesclavizadas-browse' %}" class="btn btn-outline-secondary">Regresar</a>
+                <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'personasesclavizadas-browse' %}{% endif %}" class="btn btn-outline-secondary">Regresar</a>
                 <div>
                     {% if perms.dbgestor.add_personaesclavizada %}
                         <a href="{% url 'personaesclavizada-update' personaesclavizada.pk %}" class="btn btn-outline-primary me-2">Editar</a>

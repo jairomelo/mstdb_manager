@@ -53,6 +53,7 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                         value = response.situacion_id;
                         text = response.situacion_lugar_name;
                     } else if(modalId.includes("Calidad")) {
+                        console.log(response);
                         value = response.calidad_id;
                         text = response.calidad_name;
                     } else if(modalId.includes("Etnonimo")) {
@@ -62,6 +63,7 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                         value = response.hispanizacion_id;
                         text = response.hispanizacion_name;
                     } else if(modalId.includes("Ocupacion")) {
+                        console.log(response);
                         value = response.ocupacion_id;
                         text = response.ocupacion_name;
                     } else if(modalId.includes("TipoInstitucion")) {

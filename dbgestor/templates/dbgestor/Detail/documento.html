@@ -210,7 +210,7 @@
             ids.push(persona.value);
         });
         if(ids.length >= 1) { 
-            window.location.href = `{% url 'persona_x_lugar-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}`;
+            window.location.href = `{% url 'persona_x_lugar-new' %}?ids=${ids.join(',')}&documento_initial={{ documento.pk }}&next={{ request.get_full_path }}`;
         } else {
             showWarningAlertLugar();
         }

@@ -306,7 +306,7 @@ class Persona(PolymorphicModel):
     
     sexo = models.CharField(max_length=50, choices=SEXOS)
 
-    ocupacion = models.ForeignKey(Actividades, null=True, blank=True, on_delete=models.CASCADE, related_name='%(class)s_ocupacion_per')
+    ocupaciones = models.ManyToManyField(Actividades, related_name='%(class)s_ocupaciones_per')
     ocupacion_categoria = models.CharField(max_length=150, null=True, blank=True)
     
     notas = models.TextField(max_length=500, null=True, blank=True)

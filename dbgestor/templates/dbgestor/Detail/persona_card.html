@@ -8,7 +8,7 @@
         {{ person.nombre_normalizado }} (ID: {{ person.persona_idno }})
     </div>
     {% if perms.dbgestor.add_personaesclavizada %}
-    <a href='{% url detail_url person.pk %}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
+    <a href='{% url detail_url person.pk %}?next={{ request.get_full_path }}' class="btn btn-outline-dark"><i class="far fa-eye"></i></a>
     {% endif %}
 </div>
 {% comment %} Two different logics apply here. That's why the loop for

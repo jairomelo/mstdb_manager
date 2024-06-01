@@ -16,8 +16,9 @@
         {% bootstrap_field form.hispanizacion %}
 
         <div class="text-center">
-            <button type="submit" class="btn btn-primary me-2">Guardar</button>
-            <a href="{% url 'home' %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+<input type="hidden" name="next" value="{{ next_url }}">
+<button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'home' %}{% endif %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
         </div>
     </form>
 </div>
