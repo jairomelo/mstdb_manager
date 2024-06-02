@@ -185,7 +185,7 @@
                 <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'personasesclavizadas-browse' %}{% endif %}" class="btn btn-outline-secondary">Regresar</a>
                 <div>
                     {% if perms.dbgestor.add_personanoesclavizada %}
-                        <a href="{% url 'personanoesclavizada-update' personanoesclavizada.pk %}" class="btn btn-outline-primary me-2">Editar</a>
+                        <a href="{% url 'personanoesclavizada-update' personanoesclavizada.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-primary me-2">Editar</a>
                     {% endif %}
                     {% if perms.dbgestor.delete_personanoesclavizada %}
                         <a href="{% url 'persona-delete' personanoesclavizada.pk %}" class="btn btn-outline-danger">Borrar</a>

@@ -397,8 +397,6 @@ class DocumentoCreateView(CreateView):
             initial['archivo'] = archivo_initial
         return initial
 
-
-
 class LugarCreateView(CreateView):
     model = Lugar
     form_class = LugarForm

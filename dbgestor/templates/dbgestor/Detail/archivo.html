@@ -38,9 +38,9 @@
 
     <!-- Action Buttons -->
     <div class="btn-group">
-        <a href="{% url 'archivo-browse' %}" class="btn btn-outline-secondary">Regresar</a>
+        <a href="{% if next_url %}{{ next_url }} {% else %} {% url 'archivo-browse' %} {% endif %}" class="btn btn-outline-secondary">Regresar</a>
         {% if perms.dbgestor.add_archivo %}
-        <a href="{% url 'archivo-update' archivo.pk %}" class="btn btn-outline-primary">Editar</a>
+        <a href="{% url 'archivo-update' archivo.pk %}?next={{ request.get_full_path }}" class="btn btn-outline-primary">Editar</a>
         {% endif %}
         {% if perms.dbgestor.delete_archivo %}
         <a href="{% url 'archivo-delete' archivo.pk %}" class="btn btn-outline-danger">Borrar</a>
