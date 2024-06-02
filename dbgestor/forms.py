@@ -179,10 +179,13 @@ class DocumentoForm(forms.ModelForm):
     
     unidad_documental_compuesta = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('Número de la unidad')}))
     titulo = forms.CharField(label=_('Título/resumen del documento'))
+    
     folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('incluir número y \'r\' o \'v\'')}), required=False)
     folio_final = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('folio final opcional')}), required=False)
+    
     fecha_inicial = forms.CharField(widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}), required=True)
     fecha_final = forms.CharField(widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}), required=False)
+    
     tipo_documento = forms.ModelChoiceField(queryset=TipoDocumental.objects.all(), required=False, widget=autocomplete.ModelSelect2(url='tiposdocumentales-autocomplete'), label='Tipo documental')
 
     def clean(self):

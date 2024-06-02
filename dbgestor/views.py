@@ -1411,12 +1411,25 @@ class DocumentoUpdateView(UpdateView):
         kwargs = super(DocumentoUpdateView, self).get_form_kwargs()
         return kwargs
     
+    def get_initial(self):
+        initial = super().get_initial()
+        documento = self.get_object()
+        initial['fecha_inicial'] = documento.fecha_inicial_raw
+        folio_inicial = documento.folio_inicial
+        if folio_inicial is None or folio_inicial == '[ilegible]':
+            initial['folio_inicial'] = ''
+            initial['deteriorado'] = True # check deteriorado box
+            
+        return initial
+    
     def form_valid(self, form):
         response = super().form_valid(form)
         next_url = self.request.POST.get('next', 'documento-browse')
         if next_url:
             return redirect(next_url)
         return response
+    
+    
 
 
 class PersonaEsclavizadaUpdateView(UpdateView):
