@@ -23,7 +23,7 @@
             {% if documento.sigla_documento %} {{ documento.sigla_documento }}, {% endif %} {{ documento.get_tipo_udc_display }} {{ documento.unidad_documental_compuesta }}, f. {{ documento.folio_inicial }}</p>
 
             <p class="card-text">{{ documento.get_tipo_documento_display }}</p>
-            <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial }}</p>
+            <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial_raw }}</p>
             {% if documento.evento_valor_sp %}
                 <p class="card-text">Valor del evento: {{ documento.evento_valor_sp }} {{ documento.evento_forma_de_pago }}
             {% endif %}

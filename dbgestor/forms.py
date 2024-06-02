@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
-from datetime import datetime
+from datetime import datetime, timedelta
 from dal import autocomplete
 import re
 
@@ -83,14 +83,21 @@ class CustomValidators:
 
 
 class CustomBuilders:
-    def nacimiento_x_edad(self, edad, fecha_referencia):
+    def nacimiento_x_edad(self, edad, unidad_temporal_edad, fecha_referencia):
+        if not edad or edad == "":
+            return None
         
-        if edad and edad != "":
-            anio = fecha_referencia.year
-            fecha_nacimiento = anio - int(edad)
-            return CustomValidators().validate_date(str(fecha_nacimiento))
+        if unidad_temporal_edad == 'a':
+            anio = fecha_referencia.year - int(edad)
+            fecha_nacimiento = fecha_referencia.replace(year=anio)
+        elif unidad_temporal_edad == 'm':
+            fecha_nacimiento = fecha_referencia - timedelta(days=int(edad) * 30)
+        elif unidad_temporal_edad == 'd':
+            fecha_nacimiento = fecha_referencia - timedelta(days=int(edad))
         else:
             return None
+        
+        return fecha_nacimiento
 
     def edad_x_nacimiento(self, fecha_nacimiento, fecha_referencia):
         
@@ -171,92 +178,35 @@ class DocumentoForm(forms.ModelForm):
         }
     
     unidad_documental_compuesta = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('Número de la unidad')}))
-    
-    titulo = forms.CharField(label= _('Título/resumen del documento'))
-    
-    folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('incluir número y \'r\' o \'v\'')}),
-                                    required=False)
+    titulo = forms.CharField(label=_('Título/resumen del documento'))
+    folio_inicial = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('incluir número y \'r\' o \'v\'')}), required=False)
     folio_final = forms.CharField(widget=forms.TextInput(attrs={'placeholder': _('folio final opcional')}), required=False)
-    
-    fecha_inicial = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
-        required=True 
-    )
-    
-    fecha_final = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
-        required=False
-    )
-    
-    tipo_documento = forms.ModelChoiceField(
-        queryset=TipoDocumental.objects.all(),
-        required=False,
-        widget=autocomplete.ModelSelect2(url='tiposdocumentales-autocomplete'),
-        label='Tipo documental'
-    )
-    
-    def clean_fecha_inicial(self):
-        
-        fecha_inicial = self.cleaned_data.get('fecha_inicial')
-        logger.debug(f"Cleaning Documento/fecha_inicial {fecha_inicial}")
-        
-        fecha_inicial_valid = CustomValidators().validate_date(fecha_inicial)
-        logger.debug(f"Fecha inicial cleaned {fecha_inicial_valid}")
-        
-        return fecha_inicial_valid
-    
-    def clean_fecha_final(self):
-        
-        fecha_final = self.cleaned_data.get('fecha_final')
-        logger.debug(f"Cleaning Documento/fecha_final \"{fecha_final}\"")
-        
-        if not fecha_final or fecha_final == "":
-            fecha_final = self.cleaned_data.get('fecha_inicial', '')
-            return fecha_final
-        
-        fecha_final_valid = CustomValidators().validate_date(fecha_final)
-        logger.debug(f"Fecha final cleaned {fecha_final_valid}")
-        
-        return fecha_final_valid
-    
-    def clean_folio_inicial(self):
-        folio_inicial = self.cleaned_data.get('folio_inicial')
-        deteriorado = self.cleaned_data.get('deteriorado')
-        
-        if deteriorado and not folio_inicial:
-            return "None"
-        
-        if not folio_inicial or folio_inicial == "":
-            raise forms.ValidationError(f"El valor del folio inicial no puede estar vacío.")
-            
-        pat = re.compile(r'^\d+[rv]$')
-        
-        if not re.fullmatch(pat, folio_inicial):
-            raise forms.ValidationError(f"El formato de {folio_inicial} no es correcto.\nEj: 25r o 25v")
-        
-        return folio_inicial
+    fecha_inicial = forms.CharField(widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}), required=True)
+    fecha_final = forms.CharField(widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}), required=False)
+    tipo_documento = forms.ModelChoiceField(queryset=TipoDocumental.objects.all(), required=False, widget=autocomplete.ModelSelect2(url='tiposdocumentales-autocomplete'), label='Tipo documental')
 
-    def clean_folio_final(self):
-        folio_final = self.cleaned_data.get('folio_final')
-        deteriorado = self.cleaned_data.get('deteriorado')
-        
-        if deteriorado:
-            return folio_final
-
-        # If folio_final is empty, use folio_inicial as folio_final
-        if not folio_final:
-            folio_inicial = self.cleaned_data.get('folio_inicial', '')
-            return folio_inicial
-
-        # Validate the format of folio_final
-        pat = re.compile(r'^\d+[rv]$')
-        if not re.fullmatch(pat, folio_final):
-            raise forms.ValidationError(f"El formato de {folio_final} no es correcto.\nEj: 25r o 25v")
-        
-        return folio_final
-    
     def clean(self):
         cleaned_data = super().clean()
+        
+        # Store raw values
+        fecha_inicial = cleaned_data.get('fecha_inicial', '').strip()
+        fecha_final = cleaned_data.get('fecha_final', '').strip()
+
+        cleaned_data['fecha_inicial_raw'] = fecha_inicial
+        cleaned_data['fecha_final_raw'] = fecha_final if fecha_final else fecha_inicial
+
+        # Validation logic for fechas
+        try:
+            cleaned_data['fecha_inicial'] = CustomValidators().validate_date(fecha_inicial)
+            if fecha_final:
+                cleaned_data['fecha_final'] = CustomValidators().validate_date(fecha_final)
+            else:
+                cleaned_data['fecha_final'] = cleaned_data['fecha_inicial']
+            CustomValidators().validate_date_range(cleaned_data['fecha_inicial'], cleaned_data['fecha_final'])
+        except forms.ValidationError as e:
+            self.add_error(None, e)
+        
+        # Other validations
         folio_inicial = cleaned_data.get('folio_inicial')
         folio_final = cleaned_data.get('folio_final')
         deteriorado = cleaned_data.get('deteriorado')
@@ -266,26 +216,19 @@ class DocumentoForm(forms.ModelForm):
 
         try:
             CustomValidators().validate_folios(folio_inicial, folio_final)
-            logger.debug(f"folios {folio_inicial} y {folio_final} validados")
         except forms.ValidationError as e:
-            # Add the error to the form's error list
             self.add_error(None, e)
-            
-        fecha_inicial = cleaned_data.get('fecha_inicial')
-        fecha_final = cleaned_data.get('fecha_final')
-        logger.debug(f"validando si {fecha_final} existe")
-        try:
-            logger.debug(f"validando {fecha_inicial}")
-            fecha_inicial = CustomValidators().validate_date(fecha_inicial)
-            if fecha_final:
-                logger.debug(f"validando {fecha_final}")
-                fecha_final = CustomValidators().validate_date(fecha_final)
-                CustomValidators().validate_date_range(fecha_inicial, fecha_final)
-        except forms.ValidationError as e:
-            logger.warning(e)
-            self.add_error(None, e)
+        
         return cleaned_data
-    
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.fecha_inicial_raw = self.cleaned_data.get('fecha_inicial_raw', '')
+        instance.fecha_final_raw = self.cleaned_data.get('fecha_final_raw', '')
+        if commit:
+            instance.save()
+        return instance
+
     def __init__(self, *args, **kwargs):
         super(DocumentoForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -345,7 +288,7 @@ class PersonaEsclavizadaForm(forms.ModelForm):
         widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
         label='Ocupación'
     )
-    
+
     ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
     
     conducta = forms.CharField(required=False, label="Registros de conducta")
@@ -363,7 +306,7 @@ class PersonaEsclavizadaForm(forms.ModelForm):
             if instance.edad is not None and not instance.fecha_nacimiento and documentos.count() == 1:
                 documento = documentos.first()
                 if documento and documento.fecha_inicial:
-                    calculated_date = CustomBuilders().nacimiento_x_edad(instance.edad, documento.fecha_inicial)
+                    calculated_date = CustomBuilders().nacimiento_x_edad(instance.edad, instance.unidad_temporal_edad, documento.fecha_inicial)
                     instance.fecha_nacimiento = calculated_date
                     instance.fecha_nacimiento_factual = True
                     instance.save()
@@ -445,16 +388,73 @@ class PersonaLugarRelForm(forms.ModelForm):
         label='Sitación en el lugar', required=False,
     ) 
     
+    fecha_inicial_lugar = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
+        required=False 
+    )
+    
+    fecha_final_lugar = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
+        required=False
+    )
+    
+    def clean_fecha_inicial_lugar(self):
+        fecha_inicial_lugar = self.cleaned_data.get('fecha_inicial_lugar')
+        logger.debug(f"Cleaning PersonaLugarRel/fecha_inicial_lugar {fecha_inicial_lugar}")
+        
+        fecha_inicial_lugar_valid = CustomValidators().validate_date(fecha_inicial_lugar)
+        logger.debug(f"Fecha inicial lugar cleaned {fecha_inicial_lugar_valid}")
+        
+        # Save the raw input
+        self.cleaned_data['fecha_inicial_lugar_raw'] = fecha_inicial_lugar.strip()
+        
+        return fecha_inicial_lugar_valid
+    
+    def clean_fecha_final_lugar(self):
+        fecha_final_lugar = self.cleaned_data.get('fecha_final_lugar')
+        logger.debug(f"Cleaning PersonaLugarRel/fecha_final_lugar \"{fecha_final_lugar}\"")
+        
+        if not fecha_final_lugar or fecha_final_lugar == "":
+            fecha_final_lugar = self.cleaned_data.get('fecha_inicial_lugar', '')
+            return fecha_final_lugar
+        
+        fecha_final_lugar_valid = CustomValidators().validate_date(fecha_final_lugar)
+        logger.debug(f"Fecha final lugar cleaned {fecha_final_lugar_valid}")
+        
+        # Save the raw input
+        self.cleaned_data['fecha_final_lugar_raw'] = fecha_final_lugar.strip()
+        
+        return fecha_final_lugar_valid
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        fecha_inicial_lugar = cleaned_data.get('fecha_inicial_lugar')
+        fecha_final_lugar = cleaned_data.get('fecha_final_lugar')
+        logger.debug(f"validando si {fecha_final_lugar} existe")
+        try:
+            logger.debug(f"validando {fecha_inicial_lugar}")
+            fecha_inicial_lugar = CustomValidators().validate_date(fecha_inicial_lugar)
+            if fecha_final_lugar:
+                logger.debug(f"validando {fecha_final_lugar}")
+                fecha_final_lugar = CustomValidators().validate_date(fecha_final_lugar)
+                CustomValidators().validate_date_range(fecha_inicial_lugar, fecha_final_lugar)
+        except forms.ValidationError as e:
+            logger.warning(e)
+            self.add_error(None, e)
+        return cleaned_data
+
+    def __init__(self, *args, **kwargs):
+        super(PersonaLugarRelForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+    
     def clean_ordinal(self):
         data = self.cleaned_data['ordinal']
         if data == 0:
             raise ValidationError(_('0 no es un valor permitido.'))
         return data
 
-    def __init__(self, *args, **kwargs):
-        super(PersonaLugarRelForm, self).__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            field.widget.attrs['class'] = 'form-control'
 
 
 class PersonaRelacionesForm(forms.ModelForm):
@@ -479,6 +479,67 @@ class PersonaRelacionesForm(forms.ModelForm):
         widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
         label='Personas relacionadas'
     )
+    
+    fecha_inicial_relacion = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
+        required=True 
+    )
+    
+    fecha_final_relacion = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
+        required=False
+    )
+    
+    def clean_fecha_inicial_relacion(self):
+        fecha_inicial_relacion = self.cleaned_data.get('fecha_inicial_relacion')
+        logger.debug(f"Cleaning PersonaRelaciones/fecha_inicial_relacion {fecha_inicial_relacion}")
+        
+        fecha_inicial_relacion_valid = CustomValidators().validate_date(fecha_inicial_relacion)
+        logger.debug(f"Fecha inicial relacion cleaned {fecha_inicial_relacion_valid}")
+        
+        # Save the raw input
+        self.cleaned_data['fecha_inicial_relacion_raw'] = fecha_inicial_relacion.strip()
+        
+        return fecha_inicial_relacion_valid
+    
+    def clean_fecha_final_relacion(self):
+        fecha_final_relacion = self.cleaned_data.get('fecha_final_relacion')
+        logger.debug(f"Cleaning PersonaRelaciones/fecha_final_relacion \"{fecha_final_relacion}\"")
+        
+        if not fecha_final_relacion or fecha_final_relacion == "":
+            fecha_final_relacion = self.cleaned_data.get('fecha_inicial_relacion', '')
+            return fecha_final_relacion
+        
+        fecha_final_relacion_valid = CustomValidators().validate_date(fecha_final_relacion)
+        logger.debug(f"Fecha final relacion cleaned {fecha_final_relacion_valid}")
+        
+        # Save the raw input
+        self.cleaned_data['fecha_final_relacion_raw'] = fecha_final_relacion.strip()
+        
+        return fecha_final_relacion_valid
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        fecha_inicial_relacion = cleaned_data.get('fecha_inicial_relacion')
+        fecha_final_relacion = cleaned_data.get('fecha_final_relacion')
+        logger.debug(f"validando si {fecha_final_relacion} existe")
+        try:
+            logger.debug(f"validando {fecha_inicial_relacion}")
+            fecha_inicial_relacion = CustomValidators().validate_date(fecha_inicial_relacion)
+            if fecha_final_relacion:
+                logger.debug(f"validando {fecha_final_relacion}")
+                fecha_final_relacion = CustomValidators().validate_date(fecha_final_relacion)
+                CustomValidators().validate_date_range(fecha_inicial_relacion, fecha_final_relacion)
+        except forms.ValidationError as e:
+            logger.warning(e)
+            self.add_error(None, e)
+        return cleaned_data
+    
+    def __init__(self, *args, **kwargs):
+        super(PersonaRelacionesForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
     
 
 class PersonaRolEventoForm(forms.ModelForm):

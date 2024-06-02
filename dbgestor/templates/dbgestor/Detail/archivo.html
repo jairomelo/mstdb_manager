@@ -27,7 +27,7 @@
                             <p><i class="far fa-folder-open"></i> {{ documento.fondo }}, {{ documento.subfondo }},
                                 {% if documento.sigla_documento %} {{ documento.sigla_documento }}, {% endif %} {{ documento.get_tipo_udc_display }} {{ documento.unidad_documental_compuesta }}, f. {{ documento.folio_inicial }}</p>
                                 <p class="card-text">{{ documento.get_tipo_documento_display }}</p>
-                                <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial }}</p>
+                                <p class="card-text"><i class="far fa-calendar-alt"></i> {{ documento.fecha_inicial_raw }}</p>
                             </div>
                         </div>
                     </div>

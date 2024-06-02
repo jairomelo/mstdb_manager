@@ -361,55 +361,42 @@ class DocumentoCreateView(CreateView):
         context['action'] = 'añadir'
         context['next_url'] = self.request.GET.get('next', '')
         return context
-    
-    def get_template_names(self):
-        # Use a different template when the request is AJAX
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return ['dbgestor/Modals/documento_form_only.html']
-        return ['dbgestor/Add/documento.html']
-    
-    def get_template_names(self):
-        # Use a different template when the request is AJAX
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return ['dbgestor/Modals/documento_form_only.html']
-        return ['dbgestor/Add/documento.html']
-    
+
     def form_valid(self, form):
-        # This method is called when valid form data has been POSTed.
-        # It should return an HttpResponse.
         self.object = form.save(commit=False)
         
         self.object.fecha_inicial_aproximada = self.request.POST.get('fecha_inicial_aproximada', '') == 'on'
         self.object.fecha_final_aproximada = self.request.POST.get('fecha_final_aproximada', '') == 'on'
         
+        # Double-check if raw dates are set correctly
+        logger.debug(f"Before saving: fecha_inicial_raw={self.object.fecha_inicial_raw}, fecha_final_raw={self.object.fecha_final_raw}")
+        
         self.object.save()
 
-        # Check if the request is AJAX
+        logger.debug(f"After saving: fecha_inicial_raw={self.object.fecha_inicial_raw}, fecha_final_raw={self.object.fecha_final_raw}")
+
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Return a JsonResponse with Documento data
             data = {
                 'documento_id': self.object.documento_id,
-                'documento_name': str(self.object)  # Adjust the name as per your model's __str__ method
+                'documento_name': str(self.object)
             }
             return JsonResponse(data)
 
-        # For non-AJAX requests, redirect as usual
         next_url = self.request.POST.get('next', '')
         if next_url:
             return redirect(next_url)
         return super().form_valid(form)
-    
+
     def get_success_url(self):
         return reverse_lazy('documento-detail', kwargs={'pk': self.object.pk})
 
     def get_initial(self):
         initial = super().get_initial()
-        
         archivo_initial = self.request.GET.get('archivo_initial')
         if archivo_initial:
             initial['archivo'] = archivo_initial
-            
         return initial
+
 
 
 class LugarCreateView(CreateView):

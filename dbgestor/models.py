@@ -182,8 +182,10 @@ class Documento(models.Model):
     deteriorado = models.BooleanField(default=False)
     
     fecha_inicial = models.DateField(null=True, blank=True)
+    fecha_inicial_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_inicial_aproximada = models.BooleanField(null=True, blank=True)
     fecha_final = models.DateField(null=True, blank=True)
+    fecha_final_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_final_aproximada = models.BooleanField(null=True, blank=True)
     
     lugar_de_produccion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_doc')
@@ -297,10 +299,12 @@ class Persona(PolymorphicModel):
     # Dates of existence
     
     fecha_nacimiento = models.DateField(null=True, blank=True)
+    fecha_nacimiento_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_nacimiento_factual = models.BooleanField(null=True, blank=True)
     lugar_nacimiento = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_nac')
     
     fecha_defuncion = models.DateField(null=True, blank=True)
+    fecha_defuncion_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_defuncion_factual = models.BooleanField(null=True, blank=True)
     lugar_defuncion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_def')
     
@@ -417,8 +421,10 @@ class PersonaLugarRel(models.Model):
     ordinal = models.SmallIntegerField(default=0) 
 
     fecha_inicial_lugar = models.DateField(null=True, blank=True)
+    fecha_inicial_lugar_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_inicial_lugar_factual = models.BooleanField(null=True, blank=True)
     fecha_final_lugar = models.DateField(null=True, blank=True)
+    fecha_final_lugar_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_final_lugar_factual = models.BooleanField(null=True, blank=True)
     
     notas = models.TextField(max_length=500, null=True, blank=True)
@@ -449,9 +455,12 @@ class PersonaRelaciones(models.Model):
     )
     naturaleza_relacion = models.CharField(max_length=50, choices=RELACIONES)
     descripcion_relacion = models.CharField(max_length=250, null=True, blank=True)
+    
     fecha_inicial_relacion = models.DateField(null=True, blank=True)
+    fecha_inicial_relacion_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_inicial_relacion_factual = models.BooleanField(null=True, blank=True)
     fecha_final_relacion = models.DateField(null=True, blank=True)
+    fecha_final_relacion_raw = models.CharField(max_length=10, blank=True, null=True)
     fecha_final_relacion_factual = models.BooleanField(null=True, blank=True)
     
     notas = models.TextField(max_length=500, null=True, blank=True)
