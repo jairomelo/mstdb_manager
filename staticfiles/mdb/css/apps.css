@@ -12,8 +12,33 @@ body {
     flex: 1 0 auto;
 }
 
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection {
+	height: auto!important;
+}
+
 .select2-autocomplete .select2-container {
     width: 100% !important; /* Adjust the width as needed */
+}
+
+.select2-selection__rendered {
+	width: 100%!important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+	padding-left: 5px!important;
+	padding-right: 0px!important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice .select2-selection__choice__remove {
+    float: right !important;
+	position: relative;
+	border-right: 0px!important;
+	border-left: 1px solid #aaa;
+	margin-left: 4px;
 }
 
 #userDropdown i {
