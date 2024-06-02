@@ -42,7 +42,9 @@
                 </div>
                 <div class="card-body">
                     <p><strong>Sexo:</strong> {{ personaesclavizada.get_sexo_display }}</p>
-                    {% display_field personaesclavizada "edad" "Edad" %}
+                    {% if personaesclavizada.edad %}
+                    <p><strong>Edad:</strong> {{ personaesclavizada.edad }} {% if personaesclavizada.unidad_temporal_edad %} {{ personaesclavizada.get_unidad_temporal_edad_display }} {% else %} años {% endif %}</p>
+                    {% endif %}
                     {% display_field personaesclavizada "ocupacion" "Actividad" %}
                     {% if personaesclavizada.calidades %}
                     <p><strong>Calidades:</strong>

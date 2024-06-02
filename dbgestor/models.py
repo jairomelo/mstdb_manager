@@ -306,7 +306,7 @@ class Persona(PolymorphicModel):
     
     sexo = models.CharField(max_length=50, choices=SEXOS)
 
-    ocupaciones = models.ManyToManyField(Actividades, related_name='%(class)s_ocupaciones_per')
+    ocupaciones = models.ManyToManyField(Actividades, related_name='%(class)s_ocupaciones_per', blank=True)
     ocupacion_categoria = models.CharField(max_length=150, null=True, blank=True)
     
     notas = models.TextField(max_length=500, null=True, blank=True)
@@ -372,7 +372,14 @@ class PersonaEsclavizada(Persona):
     """
     This table expands Persona to specifics features regarding a Persona Esclavizada
     """
+    UNIDADTEMP = (
+        ('d', 'días'),
+        ('m', 'meses'),
+        ('a', 'años')
+    )
+    
     edad = models.IntegerField(null=True, blank=True)
+    unidad_temporal_edad = models.CharField(choices=UNIDADTEMP, max_length=20, null=True, blank=True)
     altura = models.CharField(max_length=150, null=True, blank=True)
     cabello = models.CharField(max_length=150, null=True, blank=True)
     ojos = models.CharField(max_length=150, null=True, blank=True)

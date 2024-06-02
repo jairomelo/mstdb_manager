@@ -31,11 +31,8 @@
             <label for="{{ form.sexo.id_for_label }}" class="form-label">{{ form.sexo.label }}</label>
             {{ form.sexo }}
         </div>
-
-        <div class="mb-3">
-            <label for="{{ form.edad.id_for_label }}" class="form-label">{{ form.edad.label }}</label>
-            {{ form.edad }}
-        </div>
+        
+        {% bootstrap_input_group form.edad form.unidad_temporal_edad label="Edad" %}
 
         <div class="mb-3">
             <label for="{{ form.altura.id_for_label }}" class="form-label">{{ form.altura.label }}</label>
