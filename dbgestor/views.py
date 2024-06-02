@@ -11,12 +11,12 @@ from collections import defaultdict
 
 from dal import autocomplete
 
-from .models import (Corporacion, Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
+from .models import (Corporacion, EstadoCivil, Lugar, PersonaEsclavizada, PersonaNoEsclavizada, Documento, 
                      Archivo, Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, Persona, PersonaRelaciones, PersonaRolEvento, SituacionLugar,
                      TipoDocumental, RolEvento, TipoLugar, TiposInstitucion, InstitucionRolEvento)
 
-from .forms import (CorporacionForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
+from .forms import (CorporacionForm, EstadoCivilForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm, TipoDocumentalForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
                     PersonaLugarRelForm, PersonaRelacionesForm, PersonaRolEventoForm, RolesForm, SituacionLugarForm,
@@ -193,6 +193,13 @@ class EtnonimosAutocomplete(autocomplete.Select2QuerySetView):
         qs = Etonimos.objects.all().order_by('etonimo')
         if self.q:
             qs = qs.filter(etonimo__icontains=self.q)
+        return qs
+    
+class EstadoCivilAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = EstadoCivil.objects.all().order_by('estado_civil')
+        if self.q:
+            qs = qs.filter(estado_civil__icontains=self.q)
         return qs
 
 class OcupacionesAutocomplete(autocomplete.Select2QuerySetView):
@@ -891,6 +898,44 @@ class EtnonimosCreateView(CreateView):
         if next_url:
             return redirect(next_url)
         return response
+
+
+class EstadoCivilCreateView(CreateView):
+    model = EstadoCivil
+    form_class = EstadoCivilForm
+    template_name = 'dbgestor/Vocab/estado_civil.html'
+    success_url = reverse_lazy('documento-browse')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['create_estado_civil'] = context['form']
+        context['model_name'] = self.model._meta.model_name
+        context['action'] = 'añadir'
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
+    
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return ['dbgestor/Modals/estado_civil.html']
+        return ['dbgestor/Vocab/estado_civil.html']
+    
+    def form_valid(self, form):
+        self.object = form.save()
+
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = {
+                'estado_civil_id': self.object.id,
+                'estado_civil_name': str(self.object) 
+            }
+            return JsonResponse(data)
+
+        # For non-AJAX requests, redirect as usual
+        next_url = self.request.POST.get('next', '')
+        response = super().form_valid(form)
+        if next_url:
+            return redirect(next_url)
+        return response
+
 
 class OcupacionesCreateView(CreateView):
     model = Actividades

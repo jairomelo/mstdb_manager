@@ -43,6 +43,13 @@
                 <div class="card-body">
                     <p><strong>Sexo:</strong> {{ personanoesclavizada.get_sexo_display }}</p>
                     {% display_field personanoesclavizada "edad" "Edad" %}
+                    {% if personanoesclavizada.estado_civil %}
+                        <p><strong>Estado Civil:</strong>
+                        {% for estado in personanoesclavizada.estado_civil.all %}
+                            {{ estado.estado_civil }}
+                        {% endfor %}
+                        </p>
+                    {% endif %}
                     <p><strong>Actividad:</strong> 
                         {% for actividad in personanoesclavizada.ocupaciones.all %}
                            {{ actividad.actividad }}

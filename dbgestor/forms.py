@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from dal import autocomplete
 import re
 
-from .models import (InstitucionRolEvento, Lugar, PersonaEsclavizada, 
+from .models import (EstadoCivil, InstitucionRolEvento, Lugar, PersonaEsclavizada, 
                      PersonaNoEsclavizada, Persona, Documento, Archivo,
                      Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, PersonaRelaciones, PersonaRolEvento, TipoLugar,
@@ -278,6 +278,13 @@ class PersonaEsclavizadaForm(forms.ModelForm):
         label='Etnónimos'
     )
     
+    estado_civil = forms.ModelMultipleChoiceField(
+        queryset=EstadoCivil.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='estado_civil_autocomplete'),
+        label="Estado Civil"
+    )
+    
     procedencia = forms.ModelChoiceField(
         queryset=Lugar.objects.all(),
         required=False,
@@ -350,6 +357,13 @@ class PersonaNoEsclavizadaForm(forms.ModelForm):
         required=False,
         widget=autocomplete.ModelSelect2Multiple(url='ocupaciones-autocomplete'),
         label='Ocupación'
+    )
+    
+    estado_civil = forms.ModelMultipleChoiceField(
+        queryset=EstadoCivil.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='estado_civil_autocomplete'),
+        label="Estado Civil"
     )
     
     ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
@@ -708,6 +722,34 @@ class EtnonimosForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super(EtnonimosForm, self).__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+
+class EstadoCivilForm(forms.ModelForm):
+    
+    class Meta:
+        model = EstadoCivil
+        fields = ['estado_civil']
+        
+    estado_civil = forms.CharField(required=True, label='Estado Civil')
+    
+    def save(self, commit=True):
+        estado_civil_object = super().save(commit=False)
+        
+        estado_civil = self.cleaned_data.get('estado_civil')
+        estado_civil = estado_civil.title()
+        
+        estado_civil_object, created = EstadoCivil.objects.update_or_create(
+        estado_civil=estado_civil
+        )
+        logger.debug(f"Estado Civil created: {created}, Estado Civil ID: {estado_civil_object.id}")
+        
+        if commit:
+            estado_civil_object.save()
+        return estado_civil_object
+    
+    def __init__(self, *args, **kwargs):
+        super(EstadoCivilForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
 

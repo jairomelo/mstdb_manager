@@ -69,6 +69,9 @@ function attachFormSubmitListener(formId, submitUrl, selectElementId, modalId) {
                     } else if(modalId.includes("TipoInstitucion")) {
                         value = response.tipo_id;
                         text = response.tipo_name;
+                    } else if(modalId.includes("EstadoCivil")) {
+                        value = response.estado_civil_id;
+                        text = response.estado_civil_name;
                     } else {
                         console.log(response);
                     }

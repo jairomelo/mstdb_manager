@@ -271,6 +271,19 @@ class Etonimos(models.Model):
     def __str__(self) -> str:
         return f'{self.etonimo}'
 
+
+class EstadoCivil(models.Model):
+    """
+    Estado civil de las personas
+    """
+    
+    estado_civil = models.CharField(max_length=150, unique=True)
+    descripcion = models.TextField(null=True, blank=True)
+    
+    def __str__(self) -> str:
+        return f'{self.estado_civil}'
+
+
 ##########
 # Handling Person Information:
 # ----------------------------
@@ -309,6 +322,8 @@ class Persona(PolymorphicModel):
     lugar_defuncion = models.ForeignKey(Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_def')
     
     sexo = models.CharField(max_length=50, choices=SEXOS)
+    
+    estado_civil = models.ManyToManyField(EstadoCivil, blank=True)
 
     ocupaciones = models.ManyToManyField(Actividades, related_name='%(class)s_ocupaciones_per', blank=True)
     ocupacion_categoria = models.CharField(max_length=150, null=True, blank=True)

@@ -1,0 +1,55 @@
+{% extends 'main.html' %}
+{% load django_bootstrap5 django_bootstrap_input_group static %}
+{% block content %}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow auth-forms-container">
+    <h2 class="mb-4">Estado Civil</h2>
+
+    {% if perms.dbgestor.add_estadocivil %}
+
+    <form method="post" class="form" id="newEstadoCivilForm">
+        {% csrf_token %}
+        {% include '_form_errors.html' %}
+
+        {% bootstrap_field form.estado_civil %}
+
+        <div class="text-center">
+<input type="hidden" name="next" value="{{ next_url }}">
+<button type="submit" class="btn btn-primary me-2">Guardar</button>
+            <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'home' %}{% endif %}" class="btn btn-secondary" id="cancelButton">Cancelar</a>
+        </div>
+    </form>
+</div>
+</div>
+</div>
+
+
+{% include '_cancel_warning.html' %}
+
+
+{{ form.media }}
+
+
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+
+    
+
+{% else %}
+    
+        {% if user.is_authenticated %}
+            {% include '_no_permission.html' %}
+        {% else %}
+        {% include '_no_registered.html' %}
+        {% endif %}
+        {% endif %}
+
+{% endblock content %}
