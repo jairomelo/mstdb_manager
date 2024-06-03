@@ -405,61 +405,6 @@ class PersonaLugarRelForm(forms.ModelForm):
         label='Sitación en el lugar', required=False,
     ) 
     
-    fecha_inicial_lugar = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
-        required=False 
-    )
-    
-    fecha_final_lugar = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
-        required=False
-    )
-    
-    def clean_fecha_inicial_lugar(self):
-        fecha_inicial_lugar = self.cleaned_data.get('fecha_inicial_lugar')
-        logger.debug(f"Cleaning PersonaLugarRel/fecha_inicial_lugar {fecha_inicial_lugar}")
-        
-        fecha_inicial_lugar_valid = CustomValidators().validate_date(fecha_inicial_lugar)
-        logger.debug(f"Fecha inicial lugar cleaned {fecha_inicial_lugar_valid}")
-        
-        # Save the raw input
-        self.cleaned_data['fecha_inicial_lugar_raw'] = fecha_inicial_lugar.strip()
-        
-        return fecha_inicial_lugar_valid
-    
-    def clean_fecha_final_lugar(self):
-        fecha_final_lugar = self.cleaned_data.get('fecha_final_lugar')
-        logger.debug(f"Cleaning PersonaLugarRel/fecha_final_lugar \"{fecha_final_lugar}\"")
-        
-        if not fecha_final_lugar or fecha_final_lugar == "":
-            fecha_final_lugar = self.cleaned_data.get('fecha_inicial_lugar', '')
-            return fecha_final_lugar
-        
-        fecha_final_lugar_valid = CustomValidators().validate_date(fecha_final_lugar)
-        logger.debug(f"Fecha final lugar cleaned {fecha_final_lugar_valid}")
-        
-        # Save the raw input
-        self.cleaned_data['fecha_final_lugar_raw'] = fecha_final_lugar.strip()
-        
-        return fecha_final_lugar_valid
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        
-        fecha_inicial_lugar = cleaned_data.get('fecha_inicial_lugar')
-        fecha_final_lugar = cleaned_data.get('fecha_final_lugar')
-        logger.debug(f"validando si {fecha_final_lugar} existe")
-        try:
-            logger.debug(f"validando {fecha_inicial_lugar}")
-            fecha_inicial_lugar = CustomValidators().validate_date(fecha_inicial_lugar)
-            if fecha_final_lugar:
-                logger.debug(f"validando {fecha_final_lugar}")
-                fecha_final_lugar = CustomValidators().validate_date(fecha_final_lugar)
-                CustomValidators().validate_date_range(fecha_inicial_lugar, fecha_final_lugar)
-        except forms.ValidationError as e:
-            logger.warning(e)
-            self.add_error(None, e)
-        return cleaned_data
 
     def __init__(self, *args, **kwargs):
         super(PersonaLugarRelForm, self).__init__(*args, **kwargs)
