@@ -3,17 +3,17 @@
     <div class="bg-info sidebar-group">
         <ul class="nav nav-pills nav-flush flex-column mb-auto text-center">
             <li class="nav-item">
-                <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir persona esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
+                <a href="{% url 'personaesclavizada-new' %}?documento_initial={{ documento.pk }}&next={{ request.get_full_path  }}" class="nav-link py-3 border-bottom" title="Añadir persona esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
                     <i class="fas fa-user-tag"></i><span class="visually-hidden">Esclavizada</span>
                 </a>
             </li>
             <li>
-                <a href="{% url 'personanoesclavizada-new' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir persona no esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
+                <a href="{% url 'personanoesclavizada-new' %}?documento_initial={{ documento.pk }}&next={{ request.get_full_path  }}" class="nav-link py-3 border-bottom" title="Añadir persona no esclavizada" data-bs-toggle="tooltip" data-bs-placement="right">
                     <i class="fas fa-user-friends"></i><span class="visually-hidden">No Esclavizada</span>
                 </a>
             </li>
             <li>
-                <a href="{% url 'persona_x_documentos' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir persona ya existente al documento" data-bs-toggle="tooltip" data-bs-placement="right">
+                <a href="{% url 'persona_x_documentos' %}?documento_initial={{ documento.pk }}&next={{ request.get_full_path  }}" class="nav-link py-3 border-bottom" title="Añadir persona ya existente al documento" data-bs-toggle="tooltip" data-bs-placement="right">
                     <i class="fas fa-user"></i><i class="fas fa-plus-circle"></i><span class="visually-hidden">Existente</span>
                 </a>
             </li>
@@ -24,12 +24,12 @@
     <div class="bg-warning sidebar-group">
         <ul class="nav nav-pills nav-flush flex-column mb-auto text-center">
             <li>
-                <a href="{% url 'institucion_new' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Incluir institución/corporación" data-bs-toggle="tooltip" data-bs-placement="right">
+                <a href="{% url 'institucion_new' %}?documento_initial={{ documento.pk }}&next={{ request.get_full_path  }}" class="nav-link py-3 border-bottom" title="Incluir institución/corporación" data-bs-toggle="tooltip" data-bs-placement="right">
                     <i class="fas fa-place-of-worship"></i><span class="visually-hidden">Institución</span>
                 </a>
             </li>
             <li>
-                <a href="{% url 'institucion_x_documentos' %}?documento_initial={{ documento.pk }}" class="nav-link py-3 border-bottom" title="Añadir institución ya existente al documento" data-bs-toggle="tooltip" data-bs-placement="right">
+                <a href="{% url 'institucion_x_documentos' %}?documento_initial={{ documento.pk }}&next={{ request.get_full_path  }}" class="nav-link py-3 border-bottom" title="Añadir institución ya existente al documento" data-bs-toggle="tooltip" data-bs-placement="right">
                     <i class="fas fa-place-of-worship"></i><i class="fas fa-plus-circle"></i><span class="visually-hidden">Inst. Existente</span>
                 </a>
             </li>

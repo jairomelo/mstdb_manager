@@ -442,62 +442,6 @@ class PersonaRelacionesForm(forms.ModelForm):
         label='Personas relacionadas'
     )
     
-    fecha_inicial_relacion = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
-        required=True 
-    )
-    
-    fecha_final_relacion = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'date-input', 'placeholder': _('DD-MM-AAAA, MM-AAAA, o AAAA.')}),
-        required=False
-    )
-    
-    def clean_fecha_inicial_relacion(self):
-        fecha_inicial_relacion = self.cleaned_data.get('fecha_inicial_relacion')
-        logger.debug(f"Cleaning PersonaRelaciones/fecha_inicial_relacion {fecha_inicial_relacion}")
-        
-        fecha_inicial_relacion_valid = CustomValidators().validate_date(fecha_inicial_relacion)
-        logger.debug(f"Fecha inicial relacion cleaned {fecha_inicial_relacion_valid}")
-        
-        # Save the raw input
-        self.cleaned_data['fecha_inicial_relacion_raw'] = fecha_inicial_relacion.strip()
-        
-        return fecha_inicial_relacion_valid
-    
-    def clean_fecha_final_relacion(self):
-        fecha_final_relacion = self.cleaned_data.get('fecha_final_relacion')
-        logger.debug(f"Cleaning PersonaRelaciones/fecha_final_relacion \"{fecha_final_relacion}\"")
-        
-        if not fecha_final_relacion or fecha_final_relacion == "":
-            fecha_final_relacion = self.cleaned_data.get('fecha_inicial_relacion', '')
-            return fecha_final_relacion
-        
-        fecha_final_relacion_valid = CustomValidators().validate_date(fecha_final_relacion)
-        logger.debug(f"Fecha final relacion cleaned {fecha_final_relacion_valid}")
-        
-        # Save the raw input
-        self.cleaned_data['fecha_final_relacion_raw'] = fecha_final_relacion.strip()
-        
-        return fecha_final_relacion_valid
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        
-        fecha_inicial_relacion = cleaned_data.get('fecha_inicial_relacion')
-        fecha_final_relacion = cleaned_data.get('fecha_final_relacion')
-        logger.debug(f"validando si {fecha_final_relacion} existe")
-        try:
-            logger.debug(f"validando {fecha_inicial_relacion}")
-            fecha_inicial_relacion = CustomValidators().validate_date(fecha_inicial_relacion)
-            if fecha_final_relacion:
-                logger.debug(f"validando {fecha_final_relacion}")
-                fecha_final_relacion = CustomValidators().validate_date(fecha_final_relacion)
-                CustomValidators().validate_date_range(fecha_inicial_relacion, fecha_final_relacion)
-        except forms.ValidationError as e:
-            logger.warning(e)
-            self.add_error(None, e)
-        return cleaned_data
-    
     def __init__(self, *args, **kwargs):
         super(PersonaRelacionesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
