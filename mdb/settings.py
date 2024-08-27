@@ -46,18 +46,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'corsheaders',
     'import_export',
     'django_bootstrap5',
     'django_bootstrap_input_group',
     'simple_history',
     'cataloguers',
-    'dbgestor'
+    'dbgestor',
+    'api'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -223,3 +227,5 @@ DEFAULT_FROM_EMAIL = os.getenv('FROM_EMAIL', default='noreply@abcng.org')
 LOGIN_REDIRECT_URL = 'success'
 DEFAULT_HTTP_PROTOCOL = 'https'
 DEFAULT_DOMAIN = 'msdb.abcng.org'
+
+CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:5173', 'http://localhost:5173']
