@@ -20,8 +20,8 @@ class DocumentoSerializer(serializers.ModelSerializer):
         model = Documento
         fields = ['documento_id', 'documento_idno', 'archivo', 'fondo', 'subfondo', 'serie', 'subserie',
                   'tipo_udc', 'unidad_documental_compuesta', 'tipo_documento', 'sigla_documento',
-                  'titulo', 'descripcion', 'deteriorado', 'fecha_inicial', 'fecha_final',
-                  'lugar_de_produccion', 'folio_inicial', 'folio_final', 'notas', 'created_at', 'updated_at']
+                  'titulo', 'descripcion', 'deteriorado', 'fecha_inicial', 'fecha_inicial_raw', 'fecha_final',
+                  'fecha_final_raw', 'lugar_de_produccion', 'folio_inicial', 'folio_final', 'notas', 'created_at', 'updated_at']
 
 class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
     hispanizacion = serializers.SerializerMethodField()
@@ -33,7 +33,7 @@ class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
                   'sexo', 'edad', 'unidad_temporal_edad', 'altura', 'cabello', 'ojos',
                   'hispanizacion', 'etnonimos', 'procedencia', 'procedencia_adicional',
-                  'marcas_corporales', 'conducta', 'salud', 'created_at', 'updated_at']
+                  'marcas_corporales', 'conducta', 'salud', 'created_at', 'updated_at', 'polymorphic_ctype']
 
     def get_hispanizacion(self, obj):
         return self.get_attribute_or_none(obj, 'hispanizacion')
@@ -60,7 +60,7 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PersonaNoEsclavizada
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
-                  'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at']
+                  'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'polymorphic_ctype']
 
 class CorporacionSerializer(serializers.ModelSerializer):
     personas_asociadas = PersonaNoEsclavizadaSerializer(many=True, read_only=True)

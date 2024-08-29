@@ -30,12 +30,13 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
 class SearchAPIView(APIView):
     """
     API view to handle search queries across multiple models with custom pagination.
-    Supports exact phrase matching using quotes.
+    Supports exact phrase matching using quotes and sorting documents by date.
     """
     
     def get(self, request, *args, **kwargs):
         query = request.query_params.get('q', '')
         filter_type = request.query_params.get('filter', 'all')
+        sort_by = request.query_params.get('sort', '')
         
         if query:
             # Check if the query is wrapped in quotes for exact phrase matching
@@ -61,14 +62,12 @@ class SearchAPIView(APIView):
                     create_q('titulo') | 
                     create_q('descripcion') |
                     create_q('documento_idno') |
-                    create_q('fondo') |
-                    create_q('subfondo') |
-                    create_q('serie') |
-                    create_q('subserie') |
-                    create_q('unidad_documental_compuesta') |
-                    create_q('sigla_documento') |
                     create_q('notas')
                 )
+                # Apply sorting to documentos if specified
+                if sort_by in ['fecha_inicial', '-fecha_inicial', 'fecha_final', '-fecha_final']:
+                    documentos = documentos.order_by(sort_by)
+                    
             if filter_type == 'all' or filter_type == 'personas_no_esclavizadas':
                 personas_no_esclavizadas = PersonaNoEsclavizada.objects.filter(
                     create_q('nombre_normalizado') | 
