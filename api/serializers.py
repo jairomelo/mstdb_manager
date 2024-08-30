@@ -27,7 +27,7 @@ class DocumentoSerializer(serializers.ModelSerializer):
 class SimplePersonaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PersonaEsclavizada
-        fields = ['persona_id', 'persona_idno', 'nombre_normalizado']
+        fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'polymorphic_ctype']
 
 class SimpleLugarSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,19 +35,21 @@ class SimpleLugarSerializer(serializers.ModelSerializer):
         fields = ['lugar_id', 'nombre_lugar', 'tipo']
 
 class PersonaRelacionesSerializer(serializers.ModelSerializer):
+    documento = DocumentoSerializer(read_only = True)
     personas = SimplePersonaSerializer(many=True, read_only=True)
 
     class Meta:
         model = PersonaRelaciones
-        fields = ['persona_relacion_id', 'personas', 'naturaleza_relacion', 'descripcion_relacion']
+        fields = ['persona_relacion_id', 'documento', 'personas', 'naturaleza_relacion', 'descripcion_relacion']
 
 class PersonaLugarRelSerializer(serializers.ModelSerializer):
+    documento = DocumentoSerializer(read_only=True)
     lugar = SimpleLugarSerializer(read_only=True)
     situacion_lugar = serializers.StringRelatedField()
 
     class Meta:
         model = PersonaLugarRel
-        fields = ['persona_x_lugares', 'lugar', 'situacion_lugar', 'ordinal']
+        fields = ['persona_x_lugares', 'documento', 'lugar', 'situacion_lugar', 'ordinal']
 
 class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
