@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel)
+                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel)
 from django.db.models import Manager
 
 class ArchivoSerializer(serializers.ModelSerializer):
@@ -23,18 +23,47 @@ class DocumentoSerializer(serializers.ModelSerializer):
                   'titulo', 'descripcion', 'deteriorado', 'fecha_inicial', 'fecha_inicial_raw', 'fecha_final',
                   'fecha_final_raw', 'lugar_de_produccion', 'folio_inicial', 'folio_final', 'notas', 'created_at', 'updated_at']
 
+
+class SimplePersonaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonaEsclavizada
+        fields = ['persona_id', 'persona_idno', 'nombre_normalizado']
+
+class SimpleLugarSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lugar
+        fields = ['lugar_id', 'nombre_lugar', 'tipo']
+
+class PersonaRelacionesSerializer(serializers.ModelSerializer):
+    personas = SimplePersonaSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PersonaRelaciones
+        fields = ['persona_relacion_id', 'personas', 'naturaleza_relacion', 'descripcion_relacion']
+
+class PersonaLugarRelSerializer(serializers.ModelSerializer):
+    lugar = SimpleLugarSerializer(read_only=True)
+    situacion_lugar = serializers.StringRelatedField()
+
+    class Meta:
+        model = PersonaLugarRel
+        fields = ['persona_x_lugares', 'lugar', 'situacion_lugar', 'ordinal']
+
 class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     hispanizacion = serializers.SerializerMethodField()
     etnonimos = serializers.SerializerMethodField()
     procedencia = serializers.SerializerMethodField()
+    relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
+    lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
 
     class Meta:
         model = PersonaEsclavizada
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
                   'sexo', 'edad', 'unidad_temporal_edad', 'altura', 'cabello', 'ojos',
                   'hispanizacion', 'etnonimos', 'procedencia', 'procedencia_adicional',
-                  'marcas_corporales', 'conducta', 'salud', 'documentos', 'created_at', 'updated_at', 'polymorphic_ctype']
+                  'marcas_corporales', 'conducta', 'salud', 'documentos', 'created_at', 
+                  'updated_at', 'polymorphic_ctype', 'relaciones', 'lugares']
 
     def get_hispanizacion(self, obj):
         return self.get_attribute_or_none(obj, 'hispanizacion')
