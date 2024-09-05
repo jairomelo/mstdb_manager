@@ -3,6 +3,10 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel)
 from django.db.models import Manager
 
+class LogMessageSerializer(serializers.Serializer):
+    level = serializers.CharField(max_length=10)
+    message = serializers.CharField()
+
 class ArchivoSerializer(serializers.ModelSerializer):
     nombre_abreviado = serializers.CharField(read_only=True)
     archivo_idno = serializers.CharField(read_only=True)

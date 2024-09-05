@@ -1,16 +1,40 @@
+import logging
+
 from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.db.models import Q
-from rest_framework import generics, viewsets, filters
+from rest_framework import generics, viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel)
-from .serializers import (ArchivoSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
+from .serializers import (LogMessageSerializer, ArchivoSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
                           PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer)
 
+
+logger = logging.getLogger('dbgestor')
+
 # Create your views here.
+@api_view(['POST'])
+def log_message(request):
+    try:
+        serializer = LogMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            level = serializer.validated_data['level'].upper()
+            message = serializer.validated_data['message']
+            
+            log_method = getattr(logger, level.lower(), logger.info)
+            log_method(f"Client log: {message}")
+            
+            return Response({'status': 'success'})
+        else:
+            logger.error(f"Invalid log data received: {serializer.errors}")
+            return Response({'status': 'error', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception(f"Error processing log message: {str(e)}")
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DocumentoViewSet(viewsets.ModelViewSet):
     queryset = Documento.objects.all()

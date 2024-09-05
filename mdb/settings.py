@@ -188,13 +188,19 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'when': 'W6',
+            'interval': 1,
+            'backupCount': 7,
             'filename': genLogFile,
             'formatter': 'simple',
         },
         'appsfile': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'when': 'W6',
+            'interval': 1,
+            'backupCount': 7,
             'filename': appLogFile,
             'formatter': 'verbose',
         },
