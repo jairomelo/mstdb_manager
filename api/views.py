@@ -3,6 +3,7 @@ import logging
 from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.db.models import Q
+from rest_framework.permissions import BasePermission
 from rest_framework import generics, viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -36,11 +37,19 @@ def log_message(request):
         logger.exception(f"Error processing log message: {str(e)}")
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class APIPerm(BasePermission):
+    def has_permission(self, request, view):
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        return request.user and (request.user.is_staff or request.user.groups.filter(name="colectores").exists())
+
 class DocumentoViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
     queryset = Documento.objects.all()
     serializer_class = DocumentoSerializer
     
 class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
     search_fields = ['nombre_normalizado']
     filter_backends = (filters.SearchFilter,)
     serializer_class = PersonaEsclavizadaSerializer
@@ -52,6 +61,7 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
         return PersonaEsclavizada.objects.all()
     
 class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
     search_fields = ['nombre_normalizado']
     filter_backends = (filters.SearchFilter,)
     serializer_class = PersonaNoEsclavizadaSerializer
@@ -63,6 +73,7 @@ class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
         return PersonaNoEsclavizada.objects.all()
     
 class CorporacionViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
     search_fields = ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas']
     filter_backends = (filters.SearchFilter,)
     serializer_class = CorporacionSerializer
