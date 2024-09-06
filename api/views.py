@@ -61,6 +61,17 @@ class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
         if sort_by:
             return PersonaNoEsclavizada.objects.all().order_by(sort_by)
         return PersonaNoEsclavizada.objects.all()
+    
+class CorporacionViewSet(viewsets.ModelViewSet):
+    search_fields = ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas']
+    filter_backends = (filters.SearchFilter,)
+    serializer_class = CorporacionSerializer
+    
+    def get_queryset(self):
+        sort_by = self.request.query_params.get('sort', '')
+        if sort_by:
+            return Corporacion.objects.all().order_by(sort_by)
+        return Corporacion.objects.all()
       
 class SearchAPIView(APIView):
     """

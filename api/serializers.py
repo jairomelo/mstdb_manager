@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades)
+                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades, Persona)
 from django.db.models import Manager
 
 class LogMessageSerializer(serializers.Serializer):
@@ -110,13 +110,21 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
                   'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'documentos', 'relaciones', 
                   'lugares', 'polymorphic_ctype']
 
+class PersonaSerializer(serializers.ModelSerializer):
+    documentos = DocumentoSerializer(many=True, read_only=True)
+    ocupaciones = ActividadesSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Persona
+        fields = '__all__'
+
 class CorporacionSerializer(serializers.ModelSerializer):
-    personas_asociadas = PersonaNoEsclavizadaSerializer(many=True, read_only=True)
+    personas_asociadas = PersonaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Corporacion
         fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 'personas_asociadas',
-                  'created_at', 'updated_at']
+                  'notas', 'created_at', 'updated_at']
 
 class PersonaLugarRelSerializer(serializers.ModelSerializer):
     personas = PersonaEsclavizadaSerializer(many=True, read_only=True)
