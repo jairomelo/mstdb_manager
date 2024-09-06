@@ -110,16 +110,9 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
                   'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'documentos', 'relaciones', 
                   'lugares', 'polymorphic_ctype']
 
-class PersonaSerializer(serializers.ModelSerializer):
-    documentos = DocumentoSerializer(many=True, read_only=True)
-    ocupaciones = ActividadesSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Persona
-        fields = '__all__'
 
 class CorporacionSerializer(serializers.ModelSerializer):
-    personas_asociadas = PersonaSerializer(many=True, read_only=True)
+    personas_asociadas = SimplePersonaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Corporacion
