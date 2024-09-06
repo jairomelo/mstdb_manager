@@ -50,7 +50,7 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
         if sort_by:
             return PersonaEsclavizada.objects.all().order_by(sort_by)
         return PersonaEsclavizada.objects.all()
-    
+      
 class SearchAPIView(APIView):
     """
     API view to handle search queries across multiple models with custom pagination.
@@ -75,8 +75,8 @@ class SearchAPIView(APIView):
         # Define model-specific search fields
         search_fields = {
             'documentos': ['titulo', 'descripcion', 'documento_idno', 'notas'],
-            'personas_no_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'notas'],
-            'personas_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion__hispanizacion', 'etnonimos__etonimo', 'procedencia__nombre_lugar', 'procedencia_adicional', 'marcas_corporales', 'conducta', 'salud', 'notas'],
+            'personas_no_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas'],
+            'personas_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion__hispanizacion', 'etnonimos__etonimo', 'procedencia__nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas'],
             'corporaciones': ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas'],
             'personas_lugar_rel': ['personas__nombre_normalizado', 'lugar__nombre_lugar', 'situacion_lugar__situacion', 'documento__titulo', 'notas']
         }

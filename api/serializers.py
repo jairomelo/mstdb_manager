@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel)
+                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades)
 from django.db.models import Manager
 
 class LogMessageSerializer(serializers.Serializer):
@@ -55,10 +55,17 @@ class PersonaLugarRelSerializer(serializers.ModelSerializer):
         model = PersonaLugarRel
         fields = ['persona_x_lugares', 'documento', 'lugar', 'situacion_lugar', 'ordinal']
 
+class ActividadesSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Actividades
+        fields = ['actividad']
+
 class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     hispanizacion = serializers.SerializerMethodField()
     etnonimos = serializers.SerializerMethodField()
+    ocupaciones = ActividadesSerializer(many=True, read_only=True)
     procedencia = serializers.SerializerMethodField()
     relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
@@ -67,7 +74,7 @@ class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
         model = PersonaEsclavizada
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
                   'sexo', 'edad', 'unidad_temporal_edad', 'altura', 'cabello', 'ojos',
-                  'hispanizacion', 'etnonimos', 'procedencia', 'procedencia_adicional',
+                  'hispanizacion', 'etnonimos', 'ocupaciones',  'procedencia', 'procedencia_adicional',
                   'marcas_corporales', 'conducta', 'salud', 'documentos', 'created_at', 
                   'updated_at', 'polymorphic_ctype', 'relaciones', 'lugares']
 
