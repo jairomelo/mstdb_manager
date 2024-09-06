@@ -101,11 +101,14 @@ class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
 
 class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
+    relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
+    lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
     
     class Meta:
         model = PersonaNoEsclavizada
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
-                  'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'documentos', 'polymorphic_ctype']
+                  'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'documentos', 'relaciones', 
+                  'lugares', 'polymorphic_ctype']
 
 class CorporacionSerializer(serializers.ModelSerializer):
     personas_asociadas = PersonaNoEsclavizadaSerializer(many=True, read_only=True)
