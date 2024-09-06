@@ -50,6 +50,17 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
         if sort_by:
             return PersonaEsclavizada.objects.all().order_by(sort_by)
         return PersonaEsclavizada.objects.all()
+    
+class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
+    search_fields = ['nombre_normalizado']
+    filter_backends = (filters.SearchFilter,)
+    serializer_class = PersonaNoEsclavizadaSerializer
+    
+    def get_queryset(self):
+        sort_by = self.request.query_params.get('sort', '')
+        if sort_by:
+            return PersonaNoEsclavizada.objects.all().order_by(sort_by)
+        return PersonaNoEsclavizada.objects.all()
       
 class SearchAPIView(APIView):
     """
