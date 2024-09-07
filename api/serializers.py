@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion, InstitucionRolEvento,
-                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades, Persona)
+                             PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades, Persona,
+                             PersonaRolEvento)
 from django.db.models import Manager
 
 class LogMessageSerializer(serializers.Serializer):
@@ -61,6 +62,15 @@ class ActividadesSerializer(serializers.ModelSerializer):
         model = Actividades
         fields = ['actividad']
 
+class PersonaRolEventoSerializer(serializers.ModelSerializer):
+    documento = DocumentoSerializer(read_only=True)
+    rol_evento = serializers.CharField(source='rol_evento.rol_evento', read_only=True)
+    personas = SimplePersonaSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model =  PersonaRolEvento
+        fields = ['id', 'documento', 'personas', 'rol_evento']
+
 class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     hispanizacion = serializers.SerializerMethodField()
@@ -105,11 +115,12 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
     relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
+    eventos = PersonaRolEventoSerializer(source='p_roles_evento', many=True, read_only=True)
     
     class Meta:
         model = PersonaNoEsclavizada
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
-                  'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'documentos', 'relaciones', 
+                  'sexo', 'entidad_asociada', 'honorifico', 'created_at', 'updated_at', 'documentos', 'relaciones', 'eventos',
                   'lugares', 'polymorphic_ctype']
 
 
