@@ -10,9 +10,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel)
+                             PersonaLugarRel, Lugar)
 from .serializers import (LogMessageSerializer, ArchivoSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
-                          PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer)
+                          PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer,
+                          LugarAmpliadoSerializer)
 
 
 logger = logging.getLogger('dbgestor')
@@ -83,6 +84,16 @@ class CorporacionViewSet(viewsets.ModelViewSet):
         if sort_by:
             return Corporacion.objects.all().order_by(sort_by)
         return Corporacion.objects.all()
+
+class LugarAmpliadoViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
+    search_fields = ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de']
+    filter_backends = (filters.SearchFilter,)
+    serializer_class = LugarAmpliadoSerializer
+    
+    def get_queryset(self):
+        return Lugar.objects.all()
+
       
 class SearchAPIView(APIView):
     """

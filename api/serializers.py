@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
+from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion, InstitucionRolEvento,
                              PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades, Persona)
 from django.db.models import Manager
 
@@ -69,6 +69,7 @@ class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
     procedencia = serializers.SerializerMethodField()
     relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
+    sexo = serializers.CharField(source='get_sexo_display', read_only=True)
 
     class Meta:
         model = PersonaEsclavizada
@@ -103,6 +104,7 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
+    sexo = serializers.CharField(source='get_sexo_display', read_only=True)
     
     class Meta:
         model = PersonaNoEsclavizada
@@ -111,16 +113,25 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
                   'lugares', 'polymorphic_ctype']
 
 
+class InstitucionRolEventoSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = InstitucionRolEvento
+        fields = '__all__'
+
 class CorporacionSerializer(serializers.ModelSerializer):
+    documentos = DocumentoSerializer(many=True, read_only=True)
     personas_asociadas = SimplePersonaSerializer(many=True, read_only=True)
+    tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
+    eventos = InstitucionRolEventoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Corporacion
-        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 'personas_asociadas',
-                  'notas', 'created_at', 'updated_at']
+        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 
+                  'notas', 'created_at', 'updated_at', 'personas_asociadas', 'documentos']
 
 class PersonaLugarRelSerializer(serializers.ModelSerializer):
-    personas = PersonaEsclavizadaSerializer(many=True, read_only=True)
+    personas = SimplePersonaSerializer(many=True, read_only=True)
     lugar = serializers.StringRelatedField()
     situacion_lugar = serializers.StringRelatedField()
     documento = DocumentoSerializer(read_only=True)
@@ -138,7 +149,26 @@ class PersonaLugarRelSerializer(serializers.ModelSerializer):
             {
                 'persona_id': persona.persona_id,
                 'persona_idno': persona.persona_idno,
-                'nombre_normalizado': persona.nombre_normalizado
+                'nombre_normalizado': persona.nombre_normalizado,
+                'polymorphic_ctype': str(persona.polymorphic_ctype)
             } for persona in instance.personas.all()
         ]
         return representation
+
+class LugarAmpliadoSerializer(serializers.ModelSerializer):
+    personas_relacionadas = serializers.SerializerMethodField()
+    personas_esclavizadas_procedencia = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Lugar
+        fields = ['lugar_id', 'nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de', 'lat', 'lon',
+                  'personas_relacionadas', 'personas_esclavizadas_procedencia']
+
+    def get_personas_relacionadas(self, obj):
+        personas_lugar_rel = PersonaLugarRel.objects.filter(lugar=obj)
+        return PersonaLugarRelSerializer(personas_lugar_rel, many=True).data
+
+
+    def get_personas_esclavizadas_procedencia(self, obj):
+        esclavizados = PersonaEsclavizada.objects.filter(procedencia=obj)
+        return PersonaEsclavizadaSerializer(esclavizados, many=True).data
