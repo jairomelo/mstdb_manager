@@ -7,7 +7,8 @@ from rest_framework.permissions import BasePermission
 from rest_framework import generics, viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
+from rest_framework.pagination import PageNumberPagination
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar)
@@ -43,6 +44,11 @@ class APIPerm(BasePermission):
         if request.method in ['GET', 'HEAD', 'OPTIONS']:
             return True
         return request.user and (request.user.is_staff or request.user.groups.filter(name="colectores").exists())
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class DocumentoViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
@@ -90,9 +96,22 @@ class LugarAmpliadoViewSet(viewsets.ModelViewSet):
     search_fields = ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de']
     filter_backends = (filters.SearchFilter,)
     serializer_class = LugarAmpliadoSerializer
+    pagination_class = CustomPagination
     
     def get_queryset(self):
         return Lugar.objects.all()
+    
+    @action(detail=True, methods=['get'])
+    def personas_relacionadas(self, request, pk=None):
+        lugar = self.get_object()
+        personas_lugar_rel = PersonaLugarRel.objects.filter(lugar=lugar)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(personas_lugar_rel, request)
+        if page is not None:
+            serializer = PersonaLugarRelSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        serializer = PersonaLugarRelSerializer(personas_lugar_rel, many=True)
+        return Response(serializer.data)
 
       
 class SearchAPIView(APIView):
@@ -122,12 +141,12 @@ class SearchAPIView(APIView):
             'personas_no_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas'],
             'personas_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion__hispanizacion', 'etnonimos__etonimo', 'procedencia__nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas'],
             'corporaciones': ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas'],
-            'personas_lugar_rel': ['personas__nombre_normalizado', 'lugar__nombre_lugar', 'situacion_lugar__situacion', 'documento__titulo', 'notas']
+            'lugares': ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de__nombre_lugar']
         }
 
         # Helper function to create Q objects
         def create_q(field):
-            return Q(**{f"{field}__exact": query}) if exact_match else Q(**{f"{field}__icontains": query})
+            return Q(**{f"{field}__regex": fr'\b{query}\b'}) if exact_match else Q(**{f"{field}__icontains": query})
 
         # Perform search queries across selected models
         results = []
@@ -146,9 +165,9 @@ class SearchAPIView(APIView):
             elif model_name == 'corporaciones':
                 model_class = Corporacion
                 serializer_class = CorporacionSerializer
-            elif model_name == 'personas_lugar_rel':
-                model_class = PersonaLugarRel
-                serializer_class = PersonaLugarRelSerializer
+            elif model_name == 'lugares':
+                model_class = Lugar
+                serializer_class = LugarAmpliadoSerializer
             else:
                 continue  # Skip if model_name is not recognized
             
