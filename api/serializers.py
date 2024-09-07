@@ -113,22 +113,31 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
                   'lugares', 'polymorphic_ctype']
 
 
+class SimpleCorporacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Corporacion
+        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion']
+
 class InstitucionRolEventoSerializer(serializers.ModelSerializer):
+    documento = DocumentoSerializer(read_only=True)
+    rol_evento = serializers.CharField(source='rol_evento.rol_evento', read_only=True)
+    corporaciones = SimpleCorporacionSerializer(many=True, read_only=True)
     
     class Meta:
         model = InstitucionRolEvento
-        fields = '__all__'
+        fields = ['id', 'documento', 'corporaciones', 'rol_evento']
 
 class CorporacionSerializer(serializers.ModelSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     personas_asociadas = SimplePersonaSerializer(many=True, read_only=True)
     tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
-    eventos = InstitucionRolEventoSerializer(many=True, read_only=True)
+    eventos = InstitucionRolEventoSerializer(source='p_roles_evento', many=True, read_only=True)
 
     class Meta:
         model = Corporacion
         fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 
-                  'notas', 'created_at', 'updated_at', 'personas_asociadas', 'documentos']
+                  'notas', 'created_at', 'updated_at', 'personas_asociadas', 'documentos',
+                  'eventos']
 
 class PersonaLugarRelSerializer(serializers.ModelSerializer):
     personas = SimplePersonaSerializer(many=True, read_only=True)
