@@ -1,18 +1,18 @@
 import logging
 
-from django.core.paginator import Paginator
-from django.shortcuts import render
 from django.db.models import Q
 from rest_framework.permissions import BasePermission
-from rest_framework import generics, viewsets, filters, status
+from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action
-from django_elasticsearch_dsl.registries import registry
-from elasticsearch_dsl import Q as ESQ
+#from elasticsearch_dsl import Q as ESQ
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import MultiMatch, Range, Q as ESQ
+from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 
-from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
+from dbgestor.models import (Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar)
 
 from dbgestor.models import (
@@ -23,7 +23,7 @@ from dbgestor.models import (
     LugarDocument,
 )
 
-from .serializers import (LogMessageSerializer, ArchivoSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
+from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
                           PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer,
                           LugarAmpliadoSerializer)
 
@@ -170,71 +170,122 @@ class LugarAmpliadoViewSet(viewsets.ModelViewSet):
 
       
 class SearchAPIView(APIView):
+    """
+    Search API view to search for documents, personas, corporaciones, and places.
+    """
     def get(self, request, *args, **kwargs):
         query = request.query_params.get('q', '')
-        sort_by = request.query_params.get('sort', '')
-        page_number = request.query_params.get('page', 1)
-        page_size = 20
+        sort_by = request.query_params.get('sort', '_score')
+        sort_order = request.query_params.get('order', 'desc')
+        page_number = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        doc_type = request.query_params.get('type', None)
 
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
-        # Check if the query is wrapped in quotes for exact phrase matching
-        exact_match = query.startswith('"') and query.endswith('"')
-        if exact_match:
-            query = query[1:-1]  # Remove the quotes
-
-        # Define document classes to search over
-        document_classes = [
-            DocumentoDocument,
-            PersonaNoEsclavizadaDocument,
-            PersonaEsclavizadaDocument,
-            CorporacionDocument,
-            LugarDocument,
-        ]
-
-        # Define the fields to search on for each document class
-        search_fields = {
-            DocumentoDocument: ['titulo', 'descripcion', 'documento_idno', 'notas'],
-            PersonaNoEsclavizadaDocument: ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas'],
-            PersonaEsclavizadaDocument: ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion.hispanizacion', 'etnonimos.etonimo', 'procedencia.nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas'],
-            CorporacionDocument: ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas'],
-            LugarDocument: ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de__nombre_lugar'],
+        # Define document classes and their search fields
+        document_classes = {
+            'documento': (DocumentoDocument, ['titulo', 'descripcion', 'documento_idno', 'notas']),
+            'personanoesclavizada': (PersonaNoEsclavizadaDocument, ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas']),
+            'personaesclavizada': (PersonaEsclavizadaDocument, ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion.hispanizacion', 'etnonimos.etonimo', 'procedencia.nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas']),
+            'corporacion': (CorporacionDocument, ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas']),
+            'lugar': (LugarDocument, ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de__nombre_lugar']),
         }
 
-        results = []
+        search = Search(index=[doc_class._index._name for doc_class, _ in document_classes.values()])
 
-        # Iterate over each document class and perform the search
-        for document_class in document_classes:
-            q_objects = ESQ('multi_match', query=query, fields=search_fields[document_class], type='best_fields')
+        filters = []
 
-            # Execute the search using the document class
-            try:
-                search = document_class.search().query(q_objects)
-                search = search.source(search_fields[document_class])
+        if doc_type:
+            doc_types = doc_type.split(',')
+            type_filters = [ESQ('term', _index=document_classes[dt][0]._index._name) for dt in doc_types if dt in document_classes]
+            if type_filters:
+                filters.append(ESQ('bool', should=type_filters, minimum_should_match=1))
 
-                if sort_by:
-                    search = search.sort(sort_by)
+        # Add filters here as needed
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from or date_to:
+            date_range_filter = []
+            if date_from:
+                date_range_filter.append(ESQ('range', fecha_inicial={'gte': date_from}))
+                date_range_filter.append(ESQ('range', fecha_final={'gte': date_from}))
+            if date_to:
+                date_range_filter.append(ESQ('range', fecha_inicial={'lte': date_to}))
+                date_range_filter.append(ESQ('range', fecha_final={'lte': date_to}))
+            
+            date_filter = ESQ('bool', must=date_range_filter)
+            filters.append(date_filter)
 
-                # Pagination
-                page_size = int(page_size)
-                start = (int(page_number) - 1) * page_size
-                search = search[start:start + page_size]
+        # Apply all filters
+        if filters:
+            search = search.filter('bool', must=filters)
 
-                # Execute search
-                response = search.execute()
-                logger.debug(f"Elasticsearch response for {document_class.__name__}: {response.to_dict()}")
+        # Construct the query
+        should_queries = []
+        for doc_class, fields in document_classes.values():
+            should_queries.append(
+                MultiMatch(
+                    query=query,
+                    fields=fields,
+                    type="best_fields",
+                    fuzziness="AUTO"
+                )
+            )
+        search = search.query(ESQ("bool", should=should_queries))
 
-                # Add results to the list
-                results.extend(response.hits.hits)
+        # Add highlighting
+        search = search.highlight_options(pre_tags=['<em>'], post_tags=['</em>'])
+        search = search.highlight('*')
 
-            except Exception as e:
-                logger.error(f"Error executing search for {document_class.__name__}: {str(e)}")
+        # Apply sorting
+        if sort_by != '_score':
+            if sort_order not in ['asc', 'desc']:
+                sort_order = 'desc'
+            search = search.sort({sort_by: {'order': sort_order}})
+
+        # Apply pagination
+        start = (page_number - 1) * page_size
+        search = search[start:start + page_size]
+
+        # Execute search
+        try:
+            response = search.execute()
+        except Exception as e:
+            logger.error(f"Error executing search: {str(e)}")
+            return Response({'error': 'An error occurred during the search'}, status=500)
 
         # Prepare the response data
+        results = []
+        for hit in response.hits:
+            result = {
+                'id': hit.meta.id,
+                'type': hit.meta.index,
+                'score': hit.meta.score,
+                'highlight': hit.meta.highlight.to_dict() if hasattr(hit.meta, 'highlight') else {},
+                'source': hit.to_dict()
+            }
+            results.append(result)
+
+        # Prepare pagination links
+        query_params = request.query_params.copy()
+
+        def get_paginated_url(page):
+            """
+            Get the URL for a paginated page.
+            """
+            query_params['page'] = page
+            return f"?{urlencode(query_params)}"
+
         response_data = {
-            'count': len(results),
-            'results': [hit.to_dict() for hit in results],
+            'count': response.hits.total.value,
+            'page': page_number,
+            'page_size': page_size,
+            'next': get_paginated_url(page_number + 1) if response.hits.total.value > page_number * page_size else None,
+            'previous': get_paginated_url(page_number - 1) if page_number > 1 else None,
+            'results': results,
         }
 
         return Response(response_data)
+    
