@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
     'rest_framework',
     'corsheaders',
     'import_export',
@@ -169,8 +171,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 logdir = os.path.join(BASE_DIR, 'appslogs')
 genLogFile = os.path.join(logdir, 'general.log')
 appLogFile = os.path.join(logdir, 'apps.log')
-
-ensure_log_files = [CustomScripts.FileManager().createLogsFiles(file, logdir) for file in [genLogFile, appLogFile]]
+elasticsearchLogFile = os.path.join(logdir, 'elasticsearch.log')
+ensure_log_files = [CustomScripts.FileManager().createLogsFiles(file, logdir) for file in [genLogFile, appLogFile, elasticsearchLogFile]]
 
 LOGGING = {
     'version': 1,
@@ -181,7 +183,11 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+        'elasticsearch': {
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
@@ -208,6 +214,15 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
+        'elasticsearch': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'when': 'W6',
+            'interval': 1,
+            'backupCount': 7,
+            'filename': elasticsearchLogFile,
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
         'django': {
@@ -219,7 +234,12 @@ LOGGING = {
             'handlers': ['appsfile', 'console'],
             'level': 'DEBUG',
             'propagate': True,
-        }
+        },
+        'elasticsearch': {
+            'handlers': ['elasticsearch'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 
@@ -240,3 +260,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20, 
 }
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'http://localhost:9200',
+    },
+}
+

@@ -3,6 +3,8 @@ from django.db import models
 from simple_history.models import HistoricalRecords
 from polymorphic.models import PolymorphicModel
 from datetime import timezone
+from django_elasticsearch_dsl import Document, fields
+from django_elasticsearch_dsl.registries import registry
 
 import logging
 
@@ -63,22 +65,47 @@ class SituacionLugar(models.Model):
     def __str__(self) -> str:
         return f'{self.situacion}'
 
+@registry.register_document
+class SituacionLugarDocument(Document):
+    class Index:
+        name = 'situacionlugar'  # Name of the Elasticsearch index
+
+    class Django:
+        model = SituacionLugar
+        fields = ['situacion']
 class TipoDocumental(models.Model):
     
     tipo_documental = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
     
+  
     def __str__(self) -> str:
         return f'{self.tipo_documental}'
 
+@registry.register_document
+class TipoDocumentalDocument(Document):
+    class Index:
+        name = 'tipodocumental'
+
+    class Django:
+        model = TipoDocumental
+        fields = ['tipo_documental']
 class RolEvento(models.Model):
     
     rol_evento = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
-    
+       
     def __str__(self) -> str:
         return f'{self.rol_evento}'
 
+@registry.register_document
+class RolEventoDocument(Document):
+    class Index:
+        name = 'rolevento'
+
+    class Django:
+        model = RolEvento
+        fields = ['rol_evento']
 class TipoLugar(models.Model):
     
     tipo_lugar = models.CharField(max_length=70, unique=True)
@@ -86,6 +113,15 @@ class TipoLugar(models.Model):
     
     def __str__(self) -> str:
         return f'{self.tipo_lugar}'
+
+@registry.register_document
+class TipoLugarDocument(Document):
+    class Index:
+        name = 'tipolugar'
+
+    class Django:
+        model = TipoLugar
+        fields = ['tipo_lugar']
 
 ###############
 # Lugares
@@ -104,11 +140,60 @@ class Lugar(models.Model):
     
     history = HistoricalRecords()
     
-    def __str__(self) -> str:
-        return f"{self.nombre_lugar} ({self.tipo})"
-
-
+    def type_to_string(self):
+        if self.tipo == 'ciudad':
+            return 'Ciudad'
+        elif self.tipo == 'pueblo':
+            return 'Pueblo'
+        elif self.tipo == 'estado':
+            return 'Estado'
+        elif self.tipo == 'gobernacion':
+            return 'Gobernación'
+        elif self.tipo == 'pais':
+            return 'País'
+        elif self.tipo == 'provincia':
+            return 'Provincia'
+        elif self.tipo == 'villa':
+            return 'Villa'
+        elif self.tipo == 'real':
+            return 'Real de Minas'
+        elif self.tipo == 'parroquia':
+            return 'Parroquia'
+        elif self.tipo == 'fuerte':
+            return 'Fuerte'
+        elif self.tipo == 'puerto':
+            return 'Puerto'
+        elif self.tipo == 'isla':
+            return 'Isla'
+        elif self.tipo == 'region':
+            return 'Región'
+        elif self.tipo == 'diocesis':
+            return 'Diócesis'
+        else:
+            return 'Desconocido'
     
+    def __str__(self) -> str:
+        return f"{self.nombre_lugar} ({self.type_to_string()})"
+
+@registry.register_document
+class LugarDocument(Document):
+    nombre_lugar = fields.TextField(attr='nombre_lugar')
+    otros_nombres = fields.TextField(attr='otros_nombres')
+    tipo = fields.TextField(attr='tipo')
+    es_parte_de = fields.ObjectField(attr='es_parte_de',
+                                     properties={
+                                        'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                        'tipo': fields.TextField(attr='tipo')
+                                     })
+    
+    class Index:
+        name = 'lugar'
+
+    class Django:
+        model = Lugar
+        fields = []
+
+
 ####################
 # Documento
 ####################
@@ -158,6 +243,15 @@ class Archivo(models.Model):
     
     def __str__(self) -> str:
         return f'[{self.nombre_abreviado}] {self.nombre}'
+
+@registry.register_document
+class ArchivoDocument(Document):
+    class Index:
+        name = 'archivo'
+
+    class Django:
+        model = Archivo
+        fields = ['nombre', 'nombre_abreviado']
 
 class Documento(models.Model):
     
@@ -212,11 +306,46 @@ class Documento(models.Model):
 
         super(Documento, self).save(*args, **kwargs)
 
+    def type_to_string(self):
+        if self.tipo_udc == 'exp':
+            return 'Expediente'
+        elif self.tipo_udc == 'caj':
+            return 'Caja'
+        elif self.tipo_udc == 'vol':
+            return 'Volumen'
+        elif self.tipo_udc == 'lib':
+            return 'Libro'
+        elif self.tipo_udc == 'leg':
+            return 'Legajo'
+        else:
+            return 'Desconocido'
+
     def __str__(self) -> str:
         if self.sigla_documento:
             return f'{self.archivo.nombre_abreviado}, {self.sigla_documento}: {self.titulo[:50]}'
         else:
             return f'{self.archivo.nombre_abreviado}: {self.titulo[:50]}'
+
+@registry.register_document
+class DocumentoDocument(Document):
+    fondo = fields.TextField(attr='fondo')
+    subfondo = fields.TextField(attr='subfondo')
+    serie = fields.TextField(attr='serie')
+    subserie = fields.TextField(attr='subserie')
+    tipo_udc = fields.TextField(attr='tipo_udc')
+    unidad_documental_compuesta = fields.TextField(attr='unidad_documental_compuesta')
+    sigla_documento = fields.TextField(attr='sigla_documento')
+    titulo = fields.TextField(attr='titulo')
+    fecha_inicial = fields.DateField(attr='fecha_inicial')
+    fecha_final = fields.DateField(attr='fecha_final')
+    notas = fields.TextField(attr='notas')
+    
+    class Index:
+        name = 'documento'
+
+    class Django:
+        model = Documento
+        fields = []
 
 
 #####################
@@ -237,6 +366,14 @@ class Calidades(models.Model):
         return f'{self.calidad}'
     
 
+@registry.register_document
+class CalidadesDocument(Document):
+    class Index:
+        name = 'calidades'
+
+    class Django:
+        model = Calidades
+        fields = ['calidad']
 class Actividades(models.Model):
     
     actividad_id = models.AutoField(primary_key=True)
@@ -246,6 +383,14 @@ class Actividades(models.Model):
     def __str__(self) -> str:
         return f'{self.actividad}'
 
+@registry.register_document
+class ActividadesDocument(Document):
+    class Index:
+        name = 'actividades'
+
+    class Django:
+        model = Actividades
+        fields = ['actividad']
 class Hispanizaciones(models.Model):
     """
     This table has the only purpose to serve as basic vocabulary for Hispanizaciones for Persona Esclavizada
@@ -258,6 +403,14 @@ class Hispanizaciones(models.Model):
     def __str__(self) -> str:
         return f'{self.hispanizacion}'
 
+@registry.register_document
+class HispanizacionesDocument(Document):
+    class Index:
+        name = 'hispanizaciones'
+
+    class Django:
+        model = Hispanizaciones
+        fields = ['hispanizacion']
 
 class Etonimos(models.Model):
     """
@@ -271,6 +424,14 @@ class Etonimos(models.Model):
     def __str__(self) -> str:
         return f'{self.etonimo}'
 
+@registry.register_document
+class EtonimosDocument(Document):
+    class Index:
+        name = 'etonimos'
+
+    class Django:
+        model = Etonimos
+        fields = ['etonimo']
 
 class EstadoCivil(models.Model):
     """
@@ -283,6 +444,14 @@ class EstadoCivil(models.Model):
     def __str__(self) -> str:
         return f'{self.estado_civil}'
 
+@registry.register_document
+class EstadoCivilDocument(Document):
+    class Index:
+        name = 'estadocivil'
+
+    class Django:
+        model = EstadoCivil
+        fields = ['estado_civil']
 
 ##########
 # Handling Person Information:
@@ -381,12 +550,30 @@ class Persona(PolymorphicModel):
 
         super(Persona, self).save(*args, **kwargs)
 
+    def type_to_string(self):
+        if self.sexo == 'v':
+            return 'Varón'
+        elif self.sexo == 'm':
+            return 'Mujer'
+        else:
+            return 'Desconocido'
+
     def __str__(self) -> str:
         dates = " - ".join(filter(None, [str(self.fecha_nacimiento) if self.fecha_nacimiento else None, 
                                             str(self.fecha_defuncion) if self.fecha_defuncion else None]))
         return f'{self.nombre_normalizado} ({self.persona_idno})'
     
 
+@registry.register_document
+class PersonaDocument(Document):
+    class Index:
+        name = 'persona'
+
+    class Django:
+        model = Persona
+        fields = ['nombres', 'apellidos', 'nombre_normalizado', 'sexo']
+        
+        
 class PersonaEsclavizada(Persona):
     """
     This table expands Persona to specifics features regarding a Persona Esclavizada
@@ -411,12 +598,91 @@ class PersonaEsclavizada(Persona):
     marcas_corporales = models.TextField(null=True, blank=True)
     conducta = models.TextField(null=True, blank=True)
     salud = models.TextField(null=True, blank=True)
+    
+    def type_to_string(self):
+        if self.unidad_temporal_edad == 'd':
+            return 'Días'
+        elif self.unidad_temporal_edad == 'm':
+            return 'Meses'
+        elif self.unidad_temporal_edad == 'a':
+            return 'Años'
+        else:
+            return 'Desconocido'
+     
+    def __str__(self) -> str:
+        return f'{self.nombre_normalizado} ({self.persona_idno})'
 
+@registry.register_document
+class PersonaEsclavizadaDocument(PersonaDocument):
+    persona_idno = fields.KeywordField(attr='persona_idno')
+    nombre_normalizado = fields.TextField(attr='nombre_normalizado')
+    sexo = fields.TextField(attr='sexo')
+    edad = fields.IntegerField(attr='edad')
+    unidad_temporal_edad = fields.TextField(attr='unidad_temporal_edad')
+    altura = fields.TextField(attr='altura')
+    cabello = fields.TextField(attr='cabello')
+    ojos = fields.TextField(attr='ojos')
+
+    hispanizacion = fields.NestedField(properties={
+        'hispanizacion': fields.TextField()
+    })
+
+    etnonimos = fields.NestedField(properties={
+        'etnonimo': fields.TextField()
+    })
+
+    procedencia = fields.ObjectField(attr='procedencia', properties={
+        'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+        'tipo': fields.TextField(attr='tipo')
+    })
+
+    procedencia_adicional = fields.TextField(attr='procedencia_adicional')
+    marcas_corporales = fields.TextField(attr='marcas_corporales')
+    conducta = fields.TextField(attr='conducta')
+    salud = fields.TextField(attr='salud')
+
+    class Index:
+        name = 'personas_esclavizadas'
+
+    class Django:
+        model = PersonaEsclavizada
+        
 class PersonaNoEsclavizada(Persona):
     
     entidad_asociada = models.CharField(max_length=100, blank=True)
     honorifico = models.CharField(max_length=100, choices=HONORIFICOS, default='nan')
+    
+    def type_to_string(self):
+        if self.honorifico == 'nan':
+            return 'N/A'
+        elif self.honorifico == 'don':
+            return 'Don'
+        elif self.honorifico == 'dna':
+            return 'Doña'
+        elif self.honorifico == 'doc':
+            return 'Doctor'
+        elif self.honorifico == 'dra':
+            return 'Dra.'
+        elif self.honorifico == 'sra':
+            return 'Sra.'
+        elif self.honorifico == 'sr':
+            return 'Sr.'
+        elif self.honorifico == 'sn':
+            return 'Sn.'
+        else:
+            return 'Desconocido'
+    
+    def __str__(self) -> str:
+        return f'{self.nombre_normalizado} ({self.persona_idno})'
 
+@registry.register_document
+class PersonaNoEsclavizadaDocument(Document):
+    class Index:
+        name = 'personanoesclavizada'
+
+    class Django:
+        model = PersonaNoEsclavizada
+        fields = ['entidad_asociada', 'honorifico']
 
 class PersonaLugarRel(models.Model):
     
@@ -452,6 +718,33 @@ class PersonaLugarRel(models.Model):
     def __str__(self) -> str:
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - ({self.ordinal}){self.lugar}"
 
+@registry.register_document
+class PersonaLugarRelDocument(Document):
+    documento = fields.ObjectField(attr='documento',
+                                     properties={
+                                        'titulo': fields.TextField(attr='titulo')
+                                     })
+    personas = fields.ObjectField(attr='personas',
+                                     properties={
+                                        'nombre_normalizado': fields.TextField(attr='nombre_normalizado')
+                                     })
+    lugar = fields.ObjectField(attr='lugar',
+                                     properties={
+                                        'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                        'tipo': fields.TextField(attr='tipo')
+                                     })
+    situacion_lugar = fields.ObjectField(attr='situacion_lugar',
+                                     properties={
+                                        'situacion': fields.TextField(attr='situacion')
+                                     })
+    
+    class Index:
+        name = 'personalugarrel'
+
+    class Django:
+        model = PersonaLugarRel
+        fields = []
+
 class PersonaRelaciones(models.Model):
     
     RELACIONES = (
@@ -482,8 +775,27 @@ class PersonaRelaciones(models.Model):
     
     history = HistoricalRecords()
     
+    def type_to_string(self):
+        if self.naturaleza_relacion == 'fam':
+            return 'Familiar'
+        elif self.naturaleza_relacion == 'aso':
+            return 'Asociativa'
+        elif self.naturaleza_relacion == 'tmp':
+            return 'Temporal'
+        else:
+            return 'Desconocido'
+    
     def __str__(self) -> str:
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - {self.get_naturaleza_relacion_display()}"
+
+@registry.register_document
+class PersonaRelacionesDocument(Document):
+    class Index:
+        name = 'personalrelaciones'
+
+    class Django:
+        model = PersonaRelaciones
+        fields = []
 
 
 class PersonaRolEvento(models.Model):
@@ -497,11 +809,19 @@ class PersonaRolEvento(models.Model):
     
     rol_evento = models.ForeignKey(RolEvento, on_delete=models.CASCADE,
                                    related_name="rol_evento_personas")
-    
+      
     def __str__(self) -> str:
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()])
     
 
+@registry.register_document
+class PersonaRolEventoDocument(Document):
+    class Index:
+        name = 'personalrolevento'
+
+    class Django:
+        model = PersonaRolEvento
+        fields = []
 class TiposInstitucion(models.Model):
     
     tipo_id = models.AutoField(primary_key=True)
@@ -512,6 +832,14 @@ class TiposInstitucion(models.Model):
         return f'{self.tipo}'
     
 
+@registry.register_document
+class TiposInstitucionDocument(Document):
+    class Index:
+        name = 'tiposinstitucion'
+
+    class Django:
+        model = TiposInstitucion
+        fields = ['tipo']
 class Corporacion(PolymorphicModel):
     
     corporacion_id = models.AutoField(primary_key=True)
@@ -548,6 +876,14 @@ class Corporacion(PolymorphicModel):
         return f"{self.nombre_institucion}"
     
     
+@registry.register_document
+class CorporacionDocument(Document):
+    class Index:
+        name = 'corporacion'
+
+    class Django:
+        model = Corporacion
+        fields = []
 class InstitucionRolEvento(models.Model):
     
     documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='institucion_rol_evento_documento', blank=True)
@@ -564,3 +900,11 @@ class InstitucionRolEvento(models.Model):
         return ', '.join([corporaciones.nombre_institucion for corporaciones in self.corporaciones.all()])
     
     
+@registry.register_document
+class InstitucionRolEventoDocument(Document):
+    class Index:
+        name = 'institucionrolevento'
+
+    class Django:
+        model = InstitucionRolEvento
+        fields = []

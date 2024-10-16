@@ -1,14 +1,33 @@
+from api.models import LogMessage
 from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion, InstitucionRolEvento,
                              PersonaLugarRel, Lugar, PersonaRelaciones, PersonaLugarRel, Actividades, Persona,
                              PersonaRolEvento)
+
 from django.db.models import Manager
 
-class LogMessageSerializer(serializers.Serializer):
+from django_elasticsearch_dsl.registries import registry
+
+class BaseElasticSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        abstract = True
+        
+    @classmethod
+    def search(cls, query):
+        """Search in ElasticSearch index"""
+        document = registry.get_document(cls.Meta.model.__name__)
+        results = document.search().query('multi_match', query=query, fields=['*'])
+        return results.to_dict()
+
+class LogMessageSerializer(BaseElasticSearchSerializer):
     level = serializers.CharField(max_length=10)
     message = serializers.CharField()
+    
+    class Meta:
+        model = LogMessage
+        fields = ['level', 'message']
 
-class ArchivoSerializer(serializers.ModelSerializer):
+class ArchivoSerializer(BaseElasticSearchSerializer):
     nombre_abreviado = serializers.CharField(read_only=True)
     archivo_idno = serializers.CharField(read_only=True)
 
@@ -16,7 +35,7 @@ class ArchivoSerializer(serializers.ModelSerializer):
         model = Archivo
         fields = ['archivo_id', 'nombre', 'nombre_abreviado', 'archivo_idno', 'created_at', 'updated_at']
 
-class DocumentoSerializer(serializers.ModelSerializer):
+class DocumentoSerializer(BaseElasticSearchSerializer):
     archivo = ArchivoSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
     lugar_de_produccion = serializers.StringRelatedField()
@@ -29,17 +48,17 @@ class DocumentoSerializer(serializers.ModelSerializer):
                   'fecha_final_raw', 'lugar_de_produccion', 'folio_inicial', 'folio_final', 'notas', 'created_at', 'updated_at']
 
 
-class SimplePersonaSerializer(serializers.ModelSerializer):
+class SimplePersonaSerializer(BaseElasticSearchSerializer):
     class Meta:
         model = PersonaEsclavizada
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'polymorphic_ctype']
 
-class SimpleLugarSerializer(serializers.ModelSerializer):
+class SimpleLugarSerializer(BaseElasticSearchSerializer):
     class Meta:
         model = Lugar
         fields = ['lugar_id', 'nombre_lugar', 'tipo']
 
-class PersonaRelacionesSerializer(serializers.ModelSerializer):
+class PersonaRelacionesSerializer(BaseElasticSearchSerializer):
     documento = DocumentoSerializer(read_only = True)
     personas = SimplePersonaSerializer(many=True, read_only=True)
 
@@ -47,7 +66,7 @@ class PersonaRelacionesSerializer(serializers.ModelSerializer):
         model = PersonaRelaciones
         fields = ['persona_relacion_id', 'documento', 'personas', 'naturaleza_relacion', 'descripcion_relacion']
 
-class PersonaLugarRelSerializer(serializers.ModelSerializer):
+class PersonaLugarRelSerializer(BaseElasticSearchSerializer):
     documento = DocumentoSerializer(read_only=True)
     lugar = SimpleLugarSerializer(read_only=True)
     situacion_lugar = serializers.StringRelatedField()
@@ -56,13 +75,13 @@ class PersonaLugarRelSerializer(serializers.ModelSerializer):
         model = PersonaLugarRel
         fields = ['persona_x_lugares', 'documento', 'lugar', 'situacion_lugar', 'ordinal']
 
-class ActividadesSerializer(serializers.ModelSerializer):
+class ActividadesSerializer(BaseElasticSearchSerializer):
     
     class Meta:
         model = Actividades
         fields = ['actividad']
 
-class PersonaRolEventoSerializer(serializers.ModelSerializer):
+class PersonaRolEventoSerializer(BaseElasticSearchSerializer):
     documento = DocumentoSerializer(read_only=True)
     rol_evento = serializers.CharField(source='rol_evento.rol_evento', read_only=True)
     personas = SimplePersonaSerializer(many=True, read_only=True)
@@ -71,7 +90,7 @@ class PersonaRolEventoSerializer(serializers.ModelSerializer):
         model =  PersonaRolEvento
         fields = ['id', 'documento', 'personas', 'rol_evento']
 
-class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
+class PersonaEsclavizadaSerializer(BaseElasticSearchSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     hispanizacion = serializers.SerializerMethodField()
     etnonimos = serializers.SerializerMethodField()
@@ -110,7 +129,7 @@ class PersonaEsclavizadaSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         return {k: v for k, v in representation.items() if v is not None}
 
-class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
+class PersonaNoEsclavizadaSerializer(BaseElasticSearchSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
@@ -124,12 +143,12 @@ class PersonaNoEsclavizadaSerializer(serializers.ModelSerializer):
                   'lugares', 'polymorphic_ctype']
 
 
-class SimpleCorporacionSerializer(serializers.ModelSerializer):
+class SimpleCorporacionSerializer(BaseElasticSearchSerializer):
     class Meta:
         model = Corporacion
         fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion']
 
-class InstitucionRolEventoSerializer(serializers.ModelSerializer):
+class InstitucionRolEventoSerializer(BaseElasticSearchSerializer):
     documento = DocumentoSerializer(read_only=True)
     rol_evento = serializers.CharField(source='rol_evento.rol_evento', read_only=True)
     corporaciones = SimpleCorporacionSerializer(many=True, read_only=True)
@@ -138,7 +157,7 @@ class InstitucionRolEventoSerializer(serializers.ModelSerializer):
         model = InstitucionRolEvento
         fields = ['id', 'documento', 'corporaciones', 'rol_evento']
 
-class CorporacionSerializer(serializers.ModelSerializer):
+class CorporacionSerializer(BaseElasticSearchSerializer):
     documentos = DocumentoSerializer(many=True, read_only=True)
     personas_asociadas = SimplePersonaSerializer(many=True, read_only=True)
     tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
@@ -150,7 +169,7 @@ class CorporacionSerializer(serializers.ModelSerializer):
                   'notas', 'created_at', 'updated_at', 'personas_asociadas', 'documentos',
                   'eventos']
 
-class PersonaLugarRelSerializer(serializers.ModelSerializer):
+class PersonaLugarRelSerializer(BaseElasticSearchSerializer):
     personas = SimplePersonaSerializer(many=True, read_only=True)
     lugar = serializers.StringRelatedField()
     situacion_lugar = serializers.StringRelatedField()
@@ -175,7 +194,7 @@ class PersonaLugarRelSerializer(serializers.ModelSerializer):
         ]
         return representation
 
-class LugarAmpliadoSerializer(serializers.ModelSerializer):
+class LugarAmpliadoSerializer(BaseElasticSearchSerializer):
     personas_relacionadas = serializers.SerializerMethodField()
     personas_esclavizadas_procedencia = serializers.SerializerMethodField()
     

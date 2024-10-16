@@ -8,10 +8,21 @@ from rest_framework import generics, viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action
+from django_elasticsearch_dsl.registries import registry
+from elasticsearch_dsl import Q as ESQ
 from rest_framework.pagination import PageNumberPagination
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar)
+
+from dbgestor.models import (
+    DocumentoDocument,
+    PersonaNoEsclavizadaDocument,
+    PersonaEsclavizadaDocument,
+    CorporacionDocument,
+    LugarDocument,
+)
+
 from .serializers import (LogMessageSerializer, ArchivoSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
                           PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer,
                           LugarAmpliadoSerializer)
@@ -55,6 +66,15 @@ class DocumentoViewSet(viewsets.ModelViewSet):
     queryset = Documento.objects.all()
     serializer_class = DocumentoSerializer
     
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+        if query:
+            results = Documento.objects.filter(Q(titulo__icontains=query) | Q(descripcion__icontains=query) | Q(documento_idno__icontains=query) | Q(notas__icontains=query))
+            serializer = DocumentoSerializer(results, many=True)
+            return Response(results)
+        return Response({'error': 'No query provided'}, status=400)
+    
 class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     search_fields = ['nombre_normalizado']
@@ -66,6 +86,15 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
         if sort_by:
             return PersonaEsclavizada.objects.all().order_by(sort_by)
         return PersonaEsclavizada.objects.all()
+    
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+        if query:
+            results = PersonaEsclavizada.objects.filter(Q(nombre_normalizado__icontains=query))
+            serializer = PersonaEsclavizadaSerializer(results, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'No query provided'}, status=400)
     
 class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
@@ -79,6 +108,15 @@ class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
             return PersonaNoEsclavizada.objects.all().order_by(sort_by)
         return PersonaNoEsclavizada.objects.all()
     
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+        if query:
+            results = PersonaNoEsclavizada.objects.filter(Q(nombre_normalizado__icontains=query))
+            serializer = PersonaNoEsclavizadaSerializer(results, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'No query provided'}, status=400)
+    
 class CorporacionViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     search_fields = ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas']
@@ -90,6 +128,14 @@ class CorporacionViewSet(viewsets.ModelViewSet):
         if sort_by:
             return Corporacion.objects.all().order_by(sort_by)
         return Corporacion.objects.all()
+    
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+        if query:
+            results = Corporacion.objects.filter(Q(nombre_institucion__icontains=query) | Q(tipo_institucion__tipo__icontains=query) | Q(personas_asociadas__nombre_normalizado__icontains=query) | Q(notas__icontains=query))
+            serializer = CorporacionSerializer(results, many=True)
+            return Response(serializer.data)
 
 class LugarAmpliadoViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
@@ -112,21 +158,24 @@ class LugarAmpliadoViewSet(viewsets.ModelViewSet):
             return paginator.get_paginated_response(serializer.data)
         serializer = PersonaLugarRelSerializer(personas_lugar_rel, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q', '')
+        if query:
+            results = Lugar.objects.filter(Q(nombre_lugar__icontains=query) | Q(tipo__icontains=query) | Q(otros_nombres__icontains=query) | Q(es_parte_de__nombre_lugar__icontains=query))
+            serializer = LugarAmpliadoSerializer(results, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'No query provided'}, status=400)
 
       
 class SearchAPIView(APIView):
-    """
-    API view to handle search queries across multiple models with custom pagination.
-    Supports exact phrase matching using quotes and sorting documents by date.
-    """
-    
     def get(self, request, *args, **kwargs):
         query = request.query_params.get('q', '')
-        filter_type = request.query_params.get('filter', 'all')
         sort_by = request.query_params.get('sort', '')
         page_number = request.query_params.get('page', 1)
-        page_size = 20  # Adjust as needed
-        
+        page_size = 20
+
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
@@ -135,63 +184,57 @@ class SearchAPIView(APIView):
         if exact_match:
             query = query[1:-1]  # Remove the quotes
 
-        # Define model-specific search fields
+        # Define document classes to search over
+        document_classes = [
+            DocumentoDocument,
+            PersonaNoEsclavizadaDocument,
+            PersonaEsclavizadaDocument,
+            CorporacionDocument,
+            LugarDocument,
+        ]
+
+        # Define the fields to search on for each document class
         search_fields = {
-            'documentos': ['titulo', 'descripcion', 'documento_idno', 'notas'],
-            'personas_no_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas'],
-            'personas_esclavizadas': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion__hispanizacion', 'etnonimos__etonimo', 'procedencia__nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas'],
-            'corporaciones': ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas'],
-            'lugares': ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de__nombre_lugar']
+            DocumentoDocument: ['titulo', 'descripcion', 'documento_idno', 'notas'],
+            PersonaNoEsclavizadaDocument: ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas'],
+            PersonaEsclavizadaDocument: ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion.hispanizacion', 'etnonimos.etonimo', 'procedencia.nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas'],
+            CorporacionDocument: ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas'],
+            LugarDocument: ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de__nombre_lugar'],
         }
 
-        # Helper function to create Q objects
-        def create_q(field):
-            return Q(**{f"{field}__regex": fr'\b{query}\b'}) if exact_match else Q(**{f"{field}__icontains": query})
-
-        # Perform search queries across selected models
         results = []
-        models_to_search = search_fields.keys() if filter_type == 'all' else [filter_type]
-        
-        for model_name in models_to_search:
-            if model_name == 'documentos':
-                model_class = Documento
-                serializer_class = DocumentoSerializer
-            elif model_name == 'personas_no_esclavizadas':
-                model_class = PersonaNoEsclavizada
-                serializer_class = PersonaNoEsclavizadaSerializer
-            elif model_name == 'personas_esclavizadas':
-                model_class = PersonaEsclavizada
-                serializer_class = PersonaEsclavizadaSerializer
-            elif model_name == 'corporaciones':
-                model_class = Corporacion
-                serializer_class = CorporacionSerializer
-            elif model_name == 'lugares':
-                model_class = Lugar
-                serializer_class = LugarAmpliadoSerializer
-            else:
-                continue  # Skip if model_name is not recognized
-            
-            q_objects = Q()
-            for field in search_fields[model_name]:
-                q_objects |= create_q(field)
-            
-            queryset = model_class.objects.filter(q_objects)
-            
-            if model_name == 'documentos' and sort_by in ['fecha_inicial', '-fecha_inicial', 'fecha_final', '-fecha_final']:
-                queryset = queryset.order_by(sort_by)
-            
-            serialized_data = serializer_class(queryset, many=True).data
-            results.extend(serialized_data)
 
-        # Paginate the combined results
-        paginator = Paginator(results, page_size)
-        paginated_data = paginator.get_page(page_number)
+        # Iterate over each document class and perform the search
+        for document_class in document_classes:
+            q_objects = ESQ('multi_match', query=query, fields=search_fields[document_class], type='best_fields')
 
+            # Execute the search using the document class
+            try:
+                search = document_class.search().query(q_objects)
+                search = search.source(search_fields[document_class])
+
+                if sort_by:
+                    search = search.sort(sort_by)
+
+                # Pagination
+                page_size = int(page_size)
+                start = (int(page_number) - 1) * page_size
+                search = search[start:start + page_size]
+
+                # Execute search
+                response = search.execute()
+                logger.debug(f"Elasticsearch response for {document_class.__name__}: {response.to_dict()}")
+
+                # Add results to the list
+                results.extend(response.hits.hits)
+
+            except Exception as e:
+                logger.error(f"Error executing search for {document_class.__name__}: {str(e)}")
+
+        # Prepare the response data
         response_data = {
-            'count': paginator.count,
-            'next': paginated_data.has_next() and f'?q={query}&filter={filter_type}&sort={sort_by}&page={paginated_data.next_page_number()}',
-            'previous': paginated_data.has_previous() and f'?q={query}&filter={filter_type}&sort={sort_by}&page={paginated_data.previous_page_number()}',
-            'results': paginated_data.object_list,
+            'count': len(results),
+            'results': [hit.to_dict() for hit in results],
         }
 
         return Response(response_data)
