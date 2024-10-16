@@ -73,6 +73,7 @@ class SituacionLugarDocument(Document):
     class Django:
         model = SituacionLugar
         fields = ['situacion']
+        
 class TipoDocumental(models.Model):
     
     tipo_documental = models.CharField(max_length=70, unique=True)
@@ -89,7 +90,7 @@ class TipoDocumentalDocument(Document):
 
     class Django:
         model = TipoDocumental
-        fields = ['tipo_documental']
+        fields = ['tipo_documental', 'descripcion']
 class RolEvento(models.Model):
     
     rol_evento = models.CharField(max_length=70, unique=True)
@@ -105,7 +106,8 @@ class RolEventoDocument(Document):
 
     class Django:
         model = RolEvento
-        fields = ['rol_evento']
+        fields = ['rol_evento', 'descripcion']
+        
 class TipoLugar(models.Model):
     
     tipo_lugar = models.CharField(max_length=70, unique=True)
@@ -121,7 +123,7 @@ class TipoLugarDocument(Document):
 
     class Django:
         model = TipoLugar
-        fields = ['tipo_lugar']
+        fields = ['tipo_lugar', 'descripcion']
 
 ###############
 # Lugares
@@ -191,7 +193,7 @@ class LugarDocument(Document):
 
     class Django:
         model = Lugar
-        fields = []
+        
 
 
 ####################
@@ -246,12 +248,18 @@ class Archivo(models.Model):
 
 @registry.register_document
 class ArchivoDocument(Document):
+    ubicacion_archivo = fields.ObjectField(attr='ubicacion_archivo',
+                                     properties={
+                                        'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                        'tipo': fields.TextField(attr='tipo')
+                                     })
+    
     class Index:
         name = 'archivo'
 
     class Django:
         model = Archivo
-        fields = ['nombre', 'nombre_abreviado']
+        fields = ['nombre', 'nombre_abreviado', 'archivo_idno']
 
 class Documento(models.Model):
     
@@ -328,24 +336,30 @@ class Documento(models.Model):
 
 @registry.register_document
 class DocumentoDocument(Document):
-    fondo = fields.TextField(attr='fondo')
-    subfondo = fields.TextField(attr='subfondo')
-    serie = fields.TextField(attr='serie')
-    subserie = fields.TextField(attr='subserie')
-    tipo_udc = fields.TextField(attr='tipo_udc')
-    unidad_documental_compuesta = fields.TextField(attr='unidad_documental_compuesta')
-    sigla_documento = fields.TextField(attr='sigla_documento')
-    titulo = fields.TextField(attr='titulo')
-    fecha_inicial = fields.DateField(attr='fecha_inicial')
-    fecha_final = fields.DateField(attr='fecha_final')
-    notas = fields.TextField(attr='notas')
+    archivo = fields.ObjectField(attr='archivo',
+                                 properties={
+                                    'nombre': fields.TextField(attr='nombre'),
+                                    'nombre_abreviado': fields.TextField(attr='nombre_abreviado')
+                                 })
+    tipo_documento = fields.ObjectField(attr='tipo_documento',
+                                        properties={
+                                            'tipo_documental': fields.TextField(attr='tipo_documental')
+                                        })
+    lugar_de_produccion = fields.ObjectField(attr='lugar_de_produccion',
+                                             properties={
+                                                'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                                'tipo': fields.TextField(attr='tipo')
+                                             })
     
     class Index:
         name = 'documento'
 
     class Django:
         model = Documento
-        fields = []
+        fields = ['documento_idno', 'fondo', 'subfondo', 'serie', 'subserie', 'tipo_udc', 
+                  'unidad_documental_compuesta', 'sigla_documento', 'titulo', 'descripcion', 
+                  'deteriorado', 'fecha_inicial', 'fecha_final', 'folio_inicial', 'folio_final', 
+                  'evento_valor_sp', 'evento_forma_de_pago', 'evento_total', 'notas']
 
 
 #####################
@@ -566,12 +580,33 @@ class Persona(PolymorphicModel):
 
 @registry.register_document
 class PersonaDocument(Document):
+    calidades = fields.NestedField(properties={
+        'calidad': fields.TextField()
+    })
+    lugar_nacimiento = fields.ObjectField(attr='lugar_nacimiento',
+                                          properties={
+                                             'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                             'tipo': fields.TextField(attr='tipo')
+                                          })
+    lugar_defuncion = fields.ObjectField(attr='lugar_defuncion',
+                                         properties={
+                                            'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                            'tipo': fields.TextField(attr='tipo')
+                                         })
+    estado_civil = fields.NestedField(properties={
+        'estado_civil': fields.TextField()
+    })
+    ocupaciones = fields.NestedField(properties={
+        'actividad': fields.TextField()
+    })
+    
     class Index:
         name = 'persona'
 
     class Django:
         model = Persona
-        fields = ['nombres', 'apellidos', 'nombre_normalizado', 'sexo']
+        fields = ['persona_idno', 'nombres', 'apellidos', 'nombre_normalizado', 'sexo', 
+                  'fecha_nacimiento', 'fecha_defuncion', 'ocupacion_categoria', 'notas']
         
         
 class PersonaEsclavizada(Persona):
@@ -676,7 +711,7 @@ class PersonaNoEsclavizada(Persona):
         return f'{self.nombre_normalizado} ({self.persona_idno})'
 
 @registry.register_document
-class PersonaNoEsclavizadaDocument(Document):
+class PersonaNoEsclavizadaDocument(PersonaDocument):
     class Index:
         name = 'personanoesclavizada'
 
@@ -721,29 +756,30 @@ class PersonaLugarRel(models.Model):
 @registry.register_document
 class PersonaLugarRelDocument(Document):
     documento = fields.ObjectField(attr='documento',
-                                     properties={
-                                        'titulo': fields.TextField(attr='titulo')
-                                     })
-    personas = fields.ObjectField(attr='personas',
-                                     properties={
-                                        'nombre_normalizado': fields.TextField(attr='nombre_normalizado')
-                                     })
+                                   properties={
+                                      'titulo': fields.TextField(attr='titulo'),
+                                      'documento_idno': fields.TextField(attr='documento_idno')
+                                   })
+    personas = fields.NestedField(properties={
+        'nombre_normalizado': fields.TextField(),
+        'persona_idno': fields.TextField()
+    })
     lugar = fields.ObjectField(attr='lugar',
-                                     properties={
-                                        'nombre_lugar': fields.TextField(attr='nombre_lugar'),
-                                        'tipo': fields.TextField(attr='tipo')
-                                     })
+                               properties={
+                                  'nombre_lugar': fields.TextField(attr='nombre_lugar'),
+                                  'tipo': fields.TextField(attr='tipo')
+                               })
     situacion_lugar = fields.ObjectField(attr='situacion_lugar',
-                                     properties={
-                                        'situacion': fields.TextField(attr='situacion')
-                                     })
+                                         properties={
+                                            'situacion': fields.TextField(attr='situacion')
+                                         })
     
     class Index:
         name = 'personalugarrel'
 
     class Django:
         model = PersonaLugarRel
-        fields = []
+        fields = ['ordinal', 'fecha_inicial_lugar', 'fecha_final_lugar', 'notas']
 
 class PersonaRelaciones(models.Model):
     
@@ -790,12 +826,23 @@ class PersonaRelaciones(models.Model):
 
 @registry.register_document
 class PersonaRelacionesDocument(Document):
+    documento = fields.ObjectField(attr='documento',
+                                   properties={
+                                      'titulo': fields.TextField(attr='titulo'),
+                                      'documento_idno': fields.TextField(attr='documento_idno')
+                                   })
+    personas = fields.NestedField(properties={
+        'nombre_normalizado': fields.TextField(),
+        'persona_idno': fields.TextField()
+    })
+    
     class Index:
         name = 'personalrelaciones'
 
     class Django:
         model = PersonaRelaciones
-        fields = []
+        fields = ['naturaleza_relacion', 'descripcion_relacion', 'fecha_inicial_relacion', 
+                  'fecha_final_relacion', 'notas']
 
 
 class PersonaRolEvento(models.Model):
@@ -816,12 +863,26 @@ class PersonaRolEvento(models.Model):
 
 @registry.register_document
 class PersonaRolEventoDocument(Document):
+    documento = fields.ObjectField(attr='documento',
+                                   properties={
+                                      'titulo': fields.TextField(attr='titulo'),
+                                      'documento_idno': fields.TextField(attr='documento_idno')
+                                   })
+    personas = fields.NestedField(properties={
+        'nombre_normalizado': fields.TextField(),
+        'persona_idno': fields.TextField()
+    })
+    rol_evento = fields.ObjectField(attr='rol_evento',
+                                    properties={
+                                       'rol_evento': fields.TextField(attr='rol_evento')
+                                    })
+    
     class Index:
         name = 'personalrolevento'
 
     class Django:
         model = PersonaRolEvento
-        fields = []
+        
 class TiposInstitucion(models.Model):
     
     tipo_id = models.AutoField(primary_key=True)
@@ -878,12 +939,21 @@ class Corporacion(PolymorphicModel):
     
 @registry.register_document
 class CorporacionDocument(Document):
+    tipo_institucion = fields.ObjectField(attr='tipo_institucion',
+                                          properties={
+                                             'tipo': fields.TextField(attr='tipo')
+                                          })
+    personas_asociadas = fields.NestedField(properties={
+        'nombre_normalizado': fields.TextField(),
+        'persona_idno': fields.TextField()
+    })
+    
     class Index:
         name = 'corporacion'
 
     class Django:
         model = Corporacion
-        fields = []
+        fields = ['corporacion_idno', 'nombre_institucion', 'nombres_alternativos', 'notas']
 class InstitucionRolEvento(models.Model):
     
     documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='institucion_rol_evento_documento', blank=True)
@@ -902,9 +972,23 @@ class InstitucionRolEvento(models.Model):
     
 @registry.register_document
 class InstitucionRolEventoDocument(Document):
+    documento = fields.ObjectField(attr='documento',
+                                   properties={
+                                      'titulo': fields.TextField(attr='titulo'),
+                                      'documento_idno': fields.TextField(attr='documento_idno')
+                                   })
+    corporaciones = fields.NestedField(properties={
+        'nombre_institucion': fields.TextField(),
+        'corporacion_idno': fields.TextField()
+    })
+    rol_evento = fields.ObjectField(attr='rol_evento',
+                                    properties={
+                                       'rol_evento': fields.TextField(attr='rol_evento')
+                                    })
+    
     class Index:
         name = 'institucionrolevento'
 
     class Django:
         model = InstitucionRolEvento
-        fields = []
+        
