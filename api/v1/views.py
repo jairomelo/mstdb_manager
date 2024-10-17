@@ -1,14 +1,13 @@
 import logging
 
 from django.db.models import Q as DjangoQ
-from itertools import chain
 from rest_framework.permissions import BasePermission
 from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action
 from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import MultiMatch, Range, Q as ESQ
+from elasticsearch_dsl.query import MultiMatch, Q as ESQ
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 
