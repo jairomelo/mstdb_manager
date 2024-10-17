@@ -15,7 +15,7 @@ from rest_framework.pagination import PageNumberPagination
 from dbgestor.models import (Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar)
 
-from dbgestor.models import (
+from dbgestor.documents import (
     DocumentoDocument,
     PersonaNoEsclavizadaDocument,
     PersonaEsclavizadaDocument,
