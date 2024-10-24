@@ -290,14 +290,20 @@ class SearchAPIView(APIView):
     """
     def get(self, request, *args, **kwargs):
         query = request.query_params.get('q', '')
+        
+        if not query:
+            return Response({'error': 'No query provided'}, status=400)
+        
         sort_by = request.query_params.get('sort', '_score')
+        
+        if not sort_by.strip():
+            sort_by = '_score'
+            
         sort_order = request.query_params.get('order', 'desc')
         page_number = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
         doc_type = request.query_params.get('type', None)
 
-        if not query:
-            return Response({'error': 'No query provided'}, status=400)
 
         # Define document classes and their search fields
         document_classes = {
