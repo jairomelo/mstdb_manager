@@ -31,12 +31,12 @@ router_v1.register('lugares', LugarAmpliadoViewSet, basename='lugares_api')
 urlpatterns = [
     path('v1-beta/', include(router_v1beta.urls), name='v1beta'),
     path('v1-beta/search/', SearchAPIViewBeta.as_view(), name='search_api_beta'),
-    path('v1-beta/log', log_message_beta, name='log_message_beta')
+    path('v1-beta/log/', log_message_beta, name='log_message_beta')
 ]
 
 # v1 paths
 urlpatterns += [
     path('v1/', include(router_v1.urls), name='v1'),
     path('v1/search/', SearchAPIView.as_view(), name='search_api'),
-    path('v1/log', log_message, name='log_message'),
+    path('v1/log/', log_message, name='log_message'),
 ]
