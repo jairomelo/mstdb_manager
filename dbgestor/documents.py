@@ -16,7 +16,6 @@ from .models import (
     PersonaLugarRel,
     PersonaNoEsclavizada,
     Corporacion,
-    LugarAmpliado,
     PersonaRelaciones,
     PersonaRolEvento,
     RolEvento,
@@ -74,6 +73,7 @@ class LugarDocument(Document):
     tipo = fields.TextField(attr='tipo')
     es_parte_de = fields.ObjectField(attr='es_parte_de',
                                      properties={
+                                         'lugarpk': fields.IntegerField(attr='lugar_id'),
                                          'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                          'tipo': fields.TextField(attr='tipo')
                                      })
@@ -89,6 +89,7 @@ class LugarDocument(Document):
 class ArchivoDocument(Document):
     ubicacion_archivo = fields.ObjectField(attr='ubicacion_archivo',
                                            properties={
+                                               'lugarpk': fields.IntegerField(attr='lugar_id'),
                                                'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                                'tipo': fields.TextField(attr='tipo')
                                            })
@@ -105,15 +106,18 @@ class ArchivoDocument(Document):
 class DocumentoDocument(Document):
     archivo = fields.ObjectField(attr='archivo',
                                  properties={
+                                     'archivopk': fields.IntegerField(attr='archivo_id'),
                                      'nombre': fields.TextField(attr='nombre'),
                                      'nombre_abreviado': fields.TextField(attr='nombre_abreviado')
                                  })
     tipo_documento = fields.ObjectField(attr='tipo_documento',
                                         properties={
+                                            'tipodocumentalpk': fields.IntegerField(attr='id'),
                                             'tipo_documental': fields.TextField(attr='tipo_documental')
                                         })
     lugar_de_produccion = fields.ObjectField(attr='lugar_de_produccion',
                                              properties={
+                                                 'lugarpk': fields.IntegerField(attr='lugar_id'),
                                                  'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                                  'tipo': fields.TextField(attr='tipo')
                                              })
@@ -181,25 +185,41 @@ class EstadoCivilDocument(Document):
 
 @registry.register_document
 class PersonaDocument(Document):
+    
+    documentos = fields.NestedField(attr='documentos',
+                                   properties={
+                                       'documentopk': fields.IntegerField(attr='documento_id'),
+                                       'titulo': fields.TextField(attr='titulo'),
+                                       'documento_idno': fields.TextField(attr='documento_idno')
+                                   })
+    
     calidades = fields.NestedField(properties={
         'calidad': fields.TextField()
     })
     lugar_nacimiento = fields.ObjectField(attr='lugar_nacimiento',
                                           properties={
+                                              'lugarpk': fields.IntegerField(attr='lugar_id'),
                                               'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                               'tipo': fields.TextField(attr='tipo')
                                           })
     lugar_defuncion = fields.ObjectField(attr='lugar_defuncion',
                                          properties={
+                                             'lugarpk': fields.IntegerField(attr='lugar_id'),
                                              'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                              'tipo': fields.TextField(attr='tipo')
                                          })
     estado_civil = fields.NestedField(properties={
+        'estadopk': fields.IntegerField(attr='id'),
         'estado_civil': fields.TextField()
     })
     ocupaciones = fields.NestedField(properties={
+        'actividadpk': fields.IntegerField(attr='actividad_id'),
         'actividad': fields.TextField()
     })
+
+    persona_lugar_rel = fields.IntegerField(multi=True)
+    
+    persona_x_persona_rel = fields.IntegerField(multi=True)
 
     class Index:
         name = 'persona'
@@ -209,6 +229,13 @@ class PersonaDocument(Document):
         fields = ['persona_idno', 'nombres', 'apellidos', 'nombre_normalizado', 'sexo',
                   'fecha_nacimiento', 'fecha_defuncion', 'ocupacion_categoria', 'notas']
 
+    
+    def prepare_persona_lugar_rel(self, instance):
+        return list(PersonaLugarRel.objects.filter(personas=instance).values_list('persona_x_lugares', flat=True))
+
+    def prepare_persona_x_persona_rel(self, instance):
+        return list(PersonaRelaciones.objects.filter(personas=instance).values_list('persona_relacion_id', flat=True))
+    
 
 @registry.register_document
 class PersonaEsclavizadaDocument(PersonaDocument):
@@ -222,14 +249,17 @@ class PersonaEsclavizadaDocument(PersonaDocument):
     ojos = fields.TextField(attr='ojos')
 
     hispanizacion = fields.NestedField(properties={
+        'hispanizacionpk': fields.IntegerField(attr='hispanizacion_id'),
         'hispanizacion': fields.TextField()
     })
 
     etnonimos = fields.NestedField(properties={
+        'etnonimopk': fields.IntegerField(attr='etonimo_id'),
         'etnonimo': fields.TextField()
     })
 
     procedencia = fields.ObjectField(attr='procedencia', properties={
+        'procedenciapk': fields.IntegerField(attr='lugar_id'),
         'nombre_lugar': fields.TextField(attr='nombre_lugar'),
         'tipo': fields.TextField(attr='tipo')
     })
@@ -260,20 +290,24 @@ class PersonaNoEsclavizadaDocument(PersonaDocument):
 class PersonaLugarRelDocument(Document):
     documento = fields.ObjectField(attr='documento',
                                    properties={
+                                       'documentopk': fields.IntegerField(attr='documento_id'),
                                        'titulo': fields.TextField(attr='titulo'),
                                        'documento_idno': fields.TextField(attr='documento_idno')
                                    })
     personas = fields.NestedField(properties={
+        'personapk': fields.IntegerField(attr='persona_id'),
         'nombre_normalizado': fields.TextField(),
         'persona_idno': fields.TextField()
     })
     lugar = fields.ObjectField(attr='lugar',
                                properties={
+                                   'lugarpk': fields.IntegerField(attr='lugar_id'),
                                    'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                    'tipo': fields.TextField(attr='tipo')
                                })
     situacion_lugar = fields.ObjectField(attr='situacion_lugar',
                                          properties={
+                                             'situacionpk': fields.IntegerField(attr='situacion_id'),
                                              'situacion': fields.TextField(attr='situacion')
                                          })
 
@@ -290,10 +324,12 @@ class PersonaLugarRelDocument(Document):
 class PersonaRelacionesDocument(Document):
     documento = fields.ObjectField(attr='documento',
                                    properties={
+                                       'documentopk': fields.IntegerField(attr='documento_id'),
                                        'titulo': fields.TextField(attr='titulo'),
                                        'documento_idno': fields.TextField(attr='documento_idno')
                                    })
     personas = fields.NestedField(properties={
+        'personapk': fields.IntegerField(attr='persona_id'),
         'nombre_normalizado': fields.TextField(),
         'persona_idno': fields.TextField()
     })
@@ -311,15 +347,18 @@ class PersonaRelacionesDocument(Document):
 class PersonaRolEventoDocument(Document):
     documento = fields.ObjectField(attr='documento',
                                    properties={
+                                       'documentopk': fields.IntegerField(attr='documento_id'),
                                        'titulo': fields.TextField(attr='titulo'),
                                        'documento_idno': fields.TextField(attr='documento_idno')
                                    })
     personas = fields.NestedField(properties={
+        'personapk': fields.IntegerField(attr='persona_id'),
         'nombre_normalizado': fields.TextField(),
         'persona_idno': fields.TextField()
     })
     rol_evento = fields.ObjectField(attr='rol_evento',
                                     properties={
+                                        'rol_eventopk': fields.IntegerField(attr='id'),
                                         'rol_evento': fields.TextField(attr='rol_evento')
                                     })
 
@@ -342,11 +381,21 @@ class TiposInstitucionDocument(Document):
 
 @registry.register_document
 class CorporacionDocument(Document):
+    
+    documentos = fields.NestedField(attr='documentos',
+                                   properties={
+                                       'documentopk': fields.IntegerField(attr='documento_id'),
+                                       'titulo': fields.TextField(attr='titulo'),
+                                       'documento_idno': fields.TextField(attr='documento_idno')
+                                   })
+    
     tipo_institucion = fields.ObjectField(attr='tipo_institucion',
                                           properties={
+                                              'tipopk': fields.IntegerField(attr='tipo_id'),
                                               'tipo': fields.TextField(attr='tipo')
                                           })
     personas_asociadas = fields.NestedField(properties={
+        'personapk': fields.IntegerField(attr='persona_id'),
         'nombre_normalizado': fields.TextField(),
         'persona_idno': fields.TextField()
     })
@@ -364,15 +413,18 @@ class CorporacionDocument(Document):
 class InstitucionRolEventoDocument(Document):
     documento = fields.ObjectField(attr='documento',
                                    properties={
+                                       'documentopk': fields.IntegerField(attr='documento_id'),
                                        'titulo': fields.TextField(attr='titulo'),
                                        'documento_idno': fields.TextField(attr='documento_idno')
                                    })
     corporaciones = fields.NestedField(properties={
+        'corporacionpk': fields.IntegerField(attr='corporacion_id'),
         'nombre_institucion': fields.TextField(),
         'corporacion_idno': fields.TextField()
     })
     rol_evento = fields.ObjectField(attr='rol_evento',
                                     properties={
+                                        'rol_eventopk': fields.IntegerField(attr='id'),
                                         'rol_evento': fields.TextField(attr='rol_evento')
                                     })
 
