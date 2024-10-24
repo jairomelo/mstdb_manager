@@ -141,10 +141,9 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
     
 class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
-    search_fields = ['nombre_normalizado']
-    filter_backends = (filters.SearchFilter,)
     serializer_class = PersonaNoEsclavizadaSerializer
-    
+    pagination_class = PageNumberPagination
+
     def get_queryset(self):
         sort_by = self.request.query_params.get('sort', '')
         if sort_by:
@@ -154,18 +153,42 @@ class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def search(self, request):
         query = request.query_params.get('q', '')
-        if query:
-            results = PersonaNoEsclavizada.objects.filter(DjangoQ(nombre_normalizado__icontains=query))
-            serializer = PersonaNoEsclavizadaSerializer(results, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'No query provided'}, status=400)
+        if not query:
+            return Response({'error': 'No query provided'}, status=400)
+
+        try:
+            search = PersonaNoEsclavizadaDocument.search()
+            fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas']
+            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
+            search = search.query(multi_match)
+            
+            # Get the paginator
+            paginator = self.pagination_class()
+            page_size = paginator.get_page_size(request)
+            
+            # Execute search
+            response = search[:page_size].execute()
+            
+            # Paginate the results
+            page = paginator.paginate_queryset(response, request)
+            
+            if page is not None:
+                results = [hit.to_dict() for hit in page]
+                return paginator.get_paginated_response(results)
+            
+            # If pagination is not applied, return all results
+            results = [hit.to_dict() for hit in response]
+            
+            return Response(results)
+        except Exception as e:
+            logger.error(f"Error executing search: {str(e)}")
+            return Response({'error': 'An error occurred during the search'}, status=500)
     
 class CorporacionViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
-    search_fields = ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas']
-    filter_backends = (filters.SearchFilter,)
     serializer_class = CorporacionSerializer
-    
+    pagination_class = PageNumberPagination
+
     def get_queryset(self):
         sort_by = self.request.query_params.get('sort', '')
         if sort_by:
@@ -175,15 +198,39 @@ class CorporacionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def search(self, request):
         query = request.query_params.get('q', '')
-        if query:
-            results = Corporacion.objects.filter(DjangoQ(nombre_institucion__icontains=query) | DjangoQ(tipo_institucion__tipo__icontains=query) | DjangoQ(personas_asociadas__nombre_normalizado__icontains=query) | DjangoQ(notas__icontains=query))
-            serializer = CorporacionSerializer(results, many=True)
-            return Response(serializer.data)
+        if not query:
+            return Response({'error': 'No query provided'}, status=400)
+
+        try:
+            search = CorporacionDocument.search()
+            fields = ['nombre_institucion', 'tipo_institucion.tipo', 'personas_asociadas.nombre_normalizado', 'notas']
+            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
+            search = search.query(multi_match)
+            
+            # Get the paginator
+            paginator = self.pagination_class()
+            page_size = paginator.get_page_size(request)
+            
+            # Execute search
+            response = search[:page_size].execute()
+            
+            # Paginate the results
+            page = paginator.paginate_queryset(response, request)
+            
+            if page is not None:
+                results = [hit.to_dict() for hit in page]
+                return paginator.get_paginated_response(results)
+            
+            # If pagination is not applied, return all results
+            results = [hit.to_dict() for hit in response]
+            
+            return Response(results)
+        except Exception as e:
+            logger.error(f"Error executing search: {str(e)}")
+            return Response({'error': 'An error occurred during the search'}, status=500)
 
 class LugarAmpliadoViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
-    search_fields = ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de']
-    filter_backends = (filters.SearchFilter,)
     serializer_class = LugarAmpliadoSerializer
     pagination_class = CustomPagination
     
@@ -205,11 +252,36 @@ class LugarAmpliadoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def search(self, request):
         query = request.query_params.get('q', '')
-        if query:
-            results = Lugar.objects.filter(DjangoQ(nombre_lugar__icontains=query) | DjangoQ(tipo__icontains=query) | DjangoQ(otros_nombres__icontains=query) | DjangoQ(es_parte_de__nombre_lugar__icontains=query))
-            serializer = LugarAmpliadoSerializer(results, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'No query provided'}, status=400)
+        if not query:
+            return Response({'error': 'No query provided'}, status=400)
+
+        try:
+            search = LugarDocument.search()
+            fields = ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de.nombre_lugar']
+            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
+            search = search.query(multi_match)
+            
+            # Get the paginator
+            paginator = self.pagination_class()
+            page_size = paginator.get_page_size(request)
+            
+            # Execute search
+            response = search[:page_size].execute()
+            
+            # Paginate the results
+            page = paginator.paginate_queryset(response, request)
+            
+            if page is not None:
+                results = [hit.to_dict() for hit in page]
+                return paginator.get_paginated_response(results)
+            
+            # If pagination is not applied, return all results
+            results = [hit.to_dict() for hit in response]
+            
+            return Response(results)
+        except Exception as e:
+            logger.error(f"Error executing search: {str(e)}")
+            return Response({'error': 'An error occurred during the search'}, status=500)
 
       
 class SearchAPIView(APIView):
@@ -331,3 +403,4 @@ class SearchAPIView(APIView):
         }
 
         return Response(response_data)
+
