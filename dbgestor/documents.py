@@ -68,6 +68,7 @@ class TipoLugarDocument(Document):
 
 @registry.register_document
 class LugarDocument(Document):
+    lugar_id = fields.IntegerField(attr='lugar_id')
     nombre_lugar = fields.TextField(attr='nombre_lugar')
     otros_nombres = fields.TextField(attr='otros_nombres')
     tipo = fields.TextField(attr='tipo')
@@ -87,6 +88,7 @@ class LugarDocument(Document):
 
 @registry.register_document
 class ArchivoDocument(Document):
+    archivo_id = fields.IntegerField(attr='archivo_id')
     ubicacion_archivo = fields.ObjectField(attr='ubicacion_archivo',
                                            properties={
                                                'lugarpk': fields.IntegerField(attr='lugar_id'),
@@ -104,6 +106,7 @@ class ArchivoDocument(Document):
 
 @registry.register_document
 class DocumentoDocument(Document):
+    documento_id = fields.IntegerField(attr='documento_id')
     archivo = fields.ObjectField(attr='archivo',
                                  properties={
                                      'archivopk': fields.IntegerField(attr='archivo_id'),
@@ -185,6 +188,7 @@ class EstadoCivilDocument(Document):
 
 @registry.register_document
 class PersonaDocument(Document):
+    persona_id = fields.IntegerField(attr='persona_id')
     
     documentos = fields.NestedField(attr='documentos',
                                    properties={
@@ -381,6 +385,8 @@ class TiposInstitucionDocument(Document):
 
 @registry.register_document
 class CorporacionDocument(Document):
+    
+    corporacion_id = fields.IntegerField(attr='corporacion_id')
     
     documentos = fields.NestedField(attr='documentos',
                                    properties={
