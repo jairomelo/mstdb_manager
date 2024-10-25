@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 
 from dbgestor.models import (Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel, Lugar)
+                             PersonaLugarRel, Lugar, PersonaRelaciones)
 
 from dbgestor.documents import (
     DocumentoDocument,
@@ -24,7 +24,7 @@ from dbgestor.documents import (
 
 from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
                           PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer,
-                          LugarAmpliadoSerializer)
+                          LugarAmpliadoSerializer, PersonaRelacionesSerializer)
 
 
 logger = logging.getLogger('dbgestor')
@@ -283,7 +283,24 @@ class LugarAmpliadoViewSet(viewsets.ModelViewSet):
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
 
-      
+
+class PersonaLugarRelViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
+    serializer_class = PersonaLugarRelSerializer
+    pagination_class = CustomPagination
+    
+    def get_queryset(self):
+        return PersonaLugarRel.objects.all().order_by('created_at')
+
+
+class PersonaPersonaRelViewSet(viewsets.ModelViewSet):
+    permission_classes = [APIPerm]
+    serializer_class = PersonaRelacionesSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        return PersonaRelaciones.objects.all().order_by('naturaleza_relacion')
+
 class SearchAPIView(APIView):
     """
     Search API view to search for documents, personas, corporaciones, and places.

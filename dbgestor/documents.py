@@ -78,6 +78,11 @@ class LugarDocument(Document):
                                          'nombre_lugar': fields.TextField(attr='nombre_lugar'),
                                          'tipo': fields.TextField(attr='tipo')
                                      })
+    
+    persona_lugar_rel = fields.IntegerField(multi=True)
+    
+    def prepare_persona_lugar_rel(self, instance):
+        return list(PersonaLugarRel.objects.filter(lugar=instance).values_list('persona_x_lugares', flat=True))
 
     class Index:
         name = 'lugar'
@@ -132,7 +137,7 @@ class DocumentoDocument(Document):
         model = Documento
         fields = ['documento_idno', 'fondo', 'subfondo', 'serie', 'subserie', 'tipo_udc',
                   'unidad_documental_compuesta', 'sigla_documento', 'titulo', 'descripcion',
-                  'deteriorado', 'fecha_inicial', 'fecha_final', 'folio_inicial', 'folio_final',
+                  'deteriorado', 'fecha_inicial', 'fecha_inicial_raw', 'fecha_final', 'fecha_final_raw', 'folio_inicial', 'folio_final',
                   'evento_valor_sp', 'evento_forma_de_pago', 'evento_total', 'notas']
 
 

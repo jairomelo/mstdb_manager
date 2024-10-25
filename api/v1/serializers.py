@@ -171,7 +171,7 @@ class CorporacionSerializer(BaseElasticSearchSerializer):
 
 class PersonaLugarRelSerializer(BaseElasticSearchSerializer):
     personas = SimplePersonaSerializer(many=True, read_only=True)
-    lugar = serializers.StringRelatedField()
+    lugar = SimpleLugarSerializer(read_only=True)
     situacion_lugar = serializers.StringRelatedField()
     documento = DocumentoSerializer(read_only=True)
 
