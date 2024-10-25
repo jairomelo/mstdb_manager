@@ -279,7 +279,7 @@ class PersonaEsclavizadaDocument(PersonaDocument):
     salud = fields.TextField(attr='salud')
 
     class Index:
-        name = 'personas_esclavizadas'
+        name = 'personaesclavizada'
 
     class Django:
         model = PersonaEsclavizada
