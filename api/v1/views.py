@@ -383,13 +383,28 @@ class SearchAPIView(APIView):
                 sort_order = 'desc'
             search = search.sort({sort_by: {'order': sort_order}})
 
+        # Add aggregation for type counts
+        search.aggs.bucket('type_counts', 'terms', field='_index')
+
         # Apply pagination
         start = (page_number - 1) * page_size
         search = search[start:start + page_size]
+        
 
         # Execute search
         try:
             response = search.execute()
+            
+            index_to_type = {
+            doc_class._index._name: type_name
+                for type_name, (doc_class, _) in document_classes.items()
+            }
+            
+            type_counts = {}
+            for bucket in response.aggregations.type_counts.buckets:
+                # Use the mapping to get the correct type name
+                    type_name = index_to_type.get(bucket.key, bucket.key)
+                    type_counts[type_name] = bucket.doc_count
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
@@ -422,6 +437,7 @@ class SearchAPIView(APIView):
             'page_size': page_size,
             'next': get_paginated_url(page_number + 1) if response.hits.total.value > page_number * page_size else None,
             'previous': get_paginated_url(page_number - 1) if page_number > 1 else None,
+            'typeCounts': type_counts,
             'results': results,
         }
 
