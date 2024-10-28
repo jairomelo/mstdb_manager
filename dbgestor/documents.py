@@ -278,6 +278,9 @@ class PersonaEsclavizadaDocument(PersonaDocument):
     conducta = fields.TextField(attr='conducta')
     salud = fields.TextField(attr='salud')
 
+    def prepare_sexo(self, instance):
+        return instance.get_sexo_display()
+    
     class Index:
         name = 'personaesclavizada'
 
