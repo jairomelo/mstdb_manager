@@ -401,10 +401,12 @@ class SearchAPIView(APIView):
             }
             
             type_counts = {}
-            for bucket in response.aggregations.type_counts.buckets:
-                # Use the mapping to get the correct type name
+            if hasattr(response, 'aggregations') and hasattr(response.aggregations, 'type_counts'):
+                for bucket in response.aggregations.type_counts.buckets:
                     type_name = index_to_type.get(bucket.key, bucket.key)
                     type_counts[type_name] = bucket.doc_count
+            else:
+                logger.warning("No type counts found in the response")
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
