@@ -363,14 +363,25 @@ class SearchAPIView(APIView):
         # Construct the query
         should_queries = []
         for doc_class, fields in document_classes.values():
-            should_queries.append(
-                MultiMatch(
-                    query=query,
-                    fields=fields,
-                    type="best_fields",
-                    fuzziness="AUTO"
+            if query.startswith('"') and query.endswith('"') and len(query) > 2:
+                exact_query = query.strip('"')
+                should_queries.append(
+                    MultiMatch(
+                        query=exact_query,
+                        fields=fields,
+                        type="phrase",
+                        boost=2.0
+                    )
                 )
-            )
+            else:
+                should_queries.append(
+                    MultiMatch(
+                        query=query,
+                        fields=fields,
+                        type="best_fields",
+                        fuzziness="AUTO"
+                    )
+                )
         search = search.query(ESQ("bool", should=should_queries))
 
         # Add highlighting
