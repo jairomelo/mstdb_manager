@@ -12,10 +12,12 @@ django-bootstrap-input-group==1.0.1
 django-bootstrap5==23.3
 django-cors-headers==4.4.0
 django-elasticsearch-dsl==8.0
+django-elasticsearch-dsl-drf==0.22.5
 django-filter==23.5
 django-guardian==2.4.0
 django-import-export==3.3.7
 django-modelcluster==6.1
+django-nine==0.2.7
 django-permissionedforms==0.1
 django-polymorphic==3.1.0
 django-redis==5.4.0
@@ -39,6 +41,7 @@ MarkupPy==1.14
 mysqlclient==2.2.0
 odfpy==1.4.1
 openpyxl==3.1.2
+packaging==24.1
 pillow==10.4.0
 pillow-heif==0.14.0
 Pygments==2.18.0
