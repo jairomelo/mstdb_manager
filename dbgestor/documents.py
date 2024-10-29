@@ -290,6 +290,13 @@ class PersonaEsclavizadaDocument(PersonaDocument):
 
 @registry.register_document
 class PersonaNoEsclavizadaDocument(PersonaDocument):
+    
+    sexo = fields.TextField(attr='sexo')
+    
+    
+    def prepare_sexo(self, instance):
+        return instance.get_sexo_display()
+    
     class Index:
         name = 'personanoesclavizada'
 
