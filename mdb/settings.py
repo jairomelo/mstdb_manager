@@ -263,7 +263,9 @@ REST_FRAMEWORK = {
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'http://localhost:9200',
+        'hosts': 'https://' + os.getenv('ELASTICSEARCH_HOST') + ':' + os.getenv('ELASTICSEARCH_PORT') if os.getenv('ELASTICSEARCH_PORT') else '',
+        'http_auth': (os.getenv('ELASTICSEARCH_USER'), os.getenv('ELASTICSEARCH_PASSWORD')),
+        'verify_certs': False, # Set to True when deploying to production
     },
 }
 
