@@ -1,0 +1,16 @@
+# Use this env variables to configure your local environment (.env file)
+# Be sure to secure your .env file and include it in your .gitignore file
+
+DATABASE_USER=
+DATABASE_PASSWORD=
+DATABASE_HOST=
+DATABASE_PORT=
+SECRET_KEY=
+DATABASE_NAME=
+SMTP_API_KEY=
+FROM_EMAIL=
+ELASTICSEARCH_HOST=
+ELASTICSEARCH_PORT=
+ELASTICSEARCH_USER=
+ELASTICSEARCH_PASSWORD=
+ELASTICSEARCH_VERIFY_CERTS=

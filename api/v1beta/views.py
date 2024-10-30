@@ -111,7 +111,10 @@ class LugarAmpliadoViewSet(viewsets.ModelViewSet):
             serializer = PersonaLugarRelSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
         serializer = PersonaLugarRelSerializer(personas_lugar_rel, many=True)
-        return Response(serializer.data)
+        
+        response_data = serializer.data
+        response_data['experimental'] = "v1-beta is experimental and slow. It may be deprecated in favor of v1 in the future."
+        return Response(response_data)
 
       
 class SearchAPIView(APIView):
@@ -193,5 +196,7 @@ class SearchAPIView(APIView):
             'previous': paginated_data.has_previous() and f'?q={query}&filter={filter_type}&sort={sort_by}&page={paginated_data.previous_page_number()}',
             'results': paginated_data.object_list,
         }
+        
+        response_data['experimental'] = "v1-beta is experimental and slow. It may be deprecated in favor of v1 in the future."
 
         return Response(response_data)

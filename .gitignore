@@ -1,0 +1,9 @@
+.*
+!.gitignore
+__pycache__
+staticfiles
+appslogs
+dbgestor/migrations/0*.py
+api/migrations/0*.py
+appslogs/general.log
+*.log
