@@ -32,7 +32,7 @@ SECRET_KEY = 'django-insecure-^5(lt(57sz1#_u*j29dlphi*_cv81l&7ew^u@or08z0li1ov39
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['172.22.139.213', '127.0.0.1', 'msdb.abcng.org', 'localhost']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
 # Application definition
 
@@ -254,7 +254,7 @@ LOGIN_REDIRECT_URL = 'success'
 DEFAULT_HTTP_PROTOCOL = 'https'
 DEFAULT_DOMAIN = 'msdb.abcng.org'
 
-CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:5173', 'http://localhost:5173', 'http://localhost:3000', 'https://test-msdb.abcng.org']
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS').split(',')
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
