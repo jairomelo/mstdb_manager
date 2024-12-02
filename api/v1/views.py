@@ -57,8 +57,9 @@ class APIPerm(BasePermission):
 
 class CustomPagination(PageNumberPagination):
     page_size = 20
-    page_size_query_param = 'page_size'
+    page_size_query_param = 'length'
     max_page_size = 100
+    page_query_param = 'start'
 
 class DocumentoViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
@@ -97,7 +98,7 @@ class DocumentoViewSet(viewsets.ModelViewSet):
 class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     serializer_class = PersonaEsclavizadaSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         sort_by = self.request.query_params.get('sort', '')
@@ -142,7 +143,7 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
 class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     serializer_class = PersonaNoEsclavizadaSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         sort_by = self.request.query_params.get('sort', '')
@@ -187,7 +188,7 @@ class PersonaNoEsclavizadaViewSet(viewsets.ModelViewSet):
 class CorporacionViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     serializer_class = CorporacionSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         sort_by = self.request.query_params.get('sort', '')
