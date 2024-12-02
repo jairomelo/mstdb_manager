@@ -99,6 +99,7 @@ class PersonaEsclavizadaSerializer(BaseElasticSearchSerializer):
     relaciones = PersonaRelacionesSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelSerializer(source='p_x_l_pere', many=True, read_only=True)
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
+    unidad_temporal_edad = serializers.CharField(source='get_unidad_temporal_edad_display', read_only=True)
 
     class Meta:
         model = PersonaEsclavizada
