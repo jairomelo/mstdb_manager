@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.db.models import Q as DjangoQ
@@ -101,10 +102,30 @@ class PersonaEsclavizadaViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        sort_by = self.request.query_params.get('sort', '')
+        queryset = PersonaEsclavizada.objects.all()        
+        
+        sort_by = self.request.query_params.get('sort_by', None)
+        
         if sort_by:
-            return PersonaEsclavizada.objects.all().order_by(sort_by)
-        return PersonaEsclavizada.objects.all()
+            try:
+                sort_params = json.loads(sort_by)
+                ordering = []
+                
+                for param in sort_params:
+                    column = param.get('column')
+                    direction = param.get('dir')
+                    
+                    if column and direction:
+                        ordering.append(
+                            f"-{column}" if direction == 'desc' else column
+                        )
+                if ordering:
+                    queryset = queryset.order_by(*ordering)
+                    
+            except json.JSONDecodeError:
+                logger.error(f"Error sorting queryset: {sort_by}")
+                pass
+        return queryset
     
     @action(detail=False, methods=['get'])
     def search(self, request):
