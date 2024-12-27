@@ -1,5 +1,6 @@
 .*
 !.gitignore
+!.env_development
 __pycache__
 staticfiles
 appslogs
