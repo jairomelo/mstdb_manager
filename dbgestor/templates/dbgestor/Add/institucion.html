@@ -42,6 +42,13 @@
 
         </div>
 
+
+        <div class="mb-3">
+            <label for="{{ form.lugar_corporacion.id_for_label }}" class="form-label">{{ form.lugar_corporacion.label }}</label>
+            {{ form.lugar_corporacion }}
+            <button type="button" id="add_lugar_corporacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Añadir lugar"><i class="fas fa-map-marked"></i></button>
+        </div>
+
         <div class="mb-3">
             <label for="{{ form.notas.id_for_label }}" class="form-label">{{ form.notas.label }}</label>
             {{ form.notas }}
@@ -131,6 +138,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         bindEventToButton('add_documento', '#addDocumentoModal .modal-content', "{% url 'documento-new' %}", "#newDocumentoForm", "{% url 'documento-new' %}", 'id_documento', '#addDocumentoModal');
         bindEventToButton('add_tipo_institucion', '#addTipoInstitucionModal .modal-content', "{% url 'tipo_institucion_new' %}", "#newtipo_institucionForm", "{% url 'tipo_institucion_new' %}", 'id_tipo_institucion', '#addTipoInstitucionModal');
+        bindEventToButton('add_lugar_corporacion', '#addLugarModal .modal-content', "{% url 'lugar-new' %}", "#newLugarForm", "{% url 'lugar-new' %}", 'id_lugar_corporacion', '#addLugarModal');
     });
     
 </script>

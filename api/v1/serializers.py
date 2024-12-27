@@ -145,9 +145,10 @@ class PersonaNoEsclavizadaSerializer(BaseElasticSearchSerializer):
 
 
 class SimpleCorporacionSerializer(BaseElasticSearchSerializer):
+    lugar_corporacion = SimpleLugarSerializer(read_only=True)
     class Meta:
         model = Corporacion
-        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion']
+        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 'lugar_corporacion']
 
 class InstitucionRolEventoSerializer(BaseElasticSearchSerializer):
     documento = DocumentoSerializer(read_only=True)
@@ -163,10 +164,11 @@ class CorporacionSerializer(BaseElasticSearchSerializer):
     personas_asociadas = SimplePersonaSerializer(many=True, read_only=True)
     tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
     eventos = InstitucionRolEventoSerializer(source='p_roles_evento', many=True, read_only=True)
+    lugar_corporacion = SimpleLugarSerializer(read_only=True)
 
     class Meta:
         model = Corporacion
-        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 
+        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 'lugar_corporacion',
                   'notas', 'created_at', 'updated_at', 'personas_asociadas', 'documentos',
                   'eventos']
 
