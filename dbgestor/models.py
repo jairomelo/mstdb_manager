@@ -666,6 +666,14 @@ class Corporacion(PolymorphicModel):
     personas_asociadas = models.ManyToManyField(
         Persona, blank=True)  # ! optional
 
+    lugar_corporacion = models.ForeignKey(
+        Lugar,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(class)s_lugar_corporacion'
+    )
+
     notas = models.TextField(max_length=500, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

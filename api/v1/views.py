@@ -225,7 +225,7 @@ class CorporacionViewSet(viewsets.ModelViewSet):
 
         try:
             search = CorporacionDocument.search()
-            fields = ['nombre_institucion', 'tipo_institucion.tipo', 'personas_asociadas.nombre_normalizado', 'notas']
+            fields = ['nombre_institucion', 'tipo_institucion.tipo', 'personas_asociadas.nombre_normalizado', 'lugar_corporacion.nombre_lugar', 'notas']
             multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
             search = search.query(multi_match)
             
@@ -349,7 +349,7 @@ class SearchAPIView(APIView):
             'documento': (DocumentoDocument, ['titulo', 'descripcion', 'documento_idno', 'notas']),
             'personanoesclavizada': (PersonaNoEsclavizadaDocument, ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'entidad_asociada', 'honorifico', 'ocupaciones__actividad', 'notas']),
             'personaesclavizada': (PersonaEsclavizadaDocument, ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno', 'hispanizacion.hispanizacion', 'etnonimos.etonimo', 'procedencia.nombre_lugar', 'procedencia_adicional', 'ocupaciones__actividad', 'marcas_corporales', 'conducta', 'salud', 'notas']),
-            'corporacion': (CorporacionDocument, ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'notas']),
+            'corporacion': (CorporacionDocument, ['nombre_institucion', 'tipo_institucion__tipo', 'personas_asociadas__nombre_normalizado', 'lugar_corporacion.nombre_lugar', 'notas']),
             'lugar': (LugarDocument, ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de__nombre_lugar']),
         }
 
