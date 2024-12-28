@@ -14,8 +14,14 @@ import os
 from customscripts import CustomScripts
 from django.utils.translation import gettext_lazy as _
 
+from dbgestor.version import VERSION, VERSION_STRING, VERSION_DATE
+
 from pathlib import Path
 from dotenv import load_dotenv
+
+VERSION = VERSION
+VERSION_STRING = VERSION_STRING
+VERSION_DATE = VERSION_DATE
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
