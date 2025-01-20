@@ -1,6 +1,8 @@
 import json
 import logging
 
+from django.db.models import Count, F
+from django.db.models.functions import ExtractYear
 from rest_framework.permissions import BasePermission
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -30,6 +32,15 @@ from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEscl
 logger = logging.getLogger('dbgestor')
 
 # Create your views here.
+
+@api_view(['GET'])
+def gender_status_distribution(request):
+    data = (
+        PersonaEsclavizada.objects.values('sexo', 'hispanizacion__hispanizacion').annotate(count=Count('persona_idno')).order_by('-count')
+    )
+    return Response(data)
+
+
 @api_view(['POST'])
 def log_message(request):
     try:
@@ -477,3 +488,33 @@ class SearchAPIView(APIView):
 
         return Response(response_data)
 
+class PlacesPeopleDistribution(APIView):
+    def get(self, request):
+        # Query and aggregate data grouped strictly by lugar, tipo, and year
+        data = (
+            PersonaEsclavizada.objects
+            .annotate(
+                year=ExtractYear('p_x_l_pere__documento__fecha_inicial'),
+                lugar=F('p_x_l_pere__lugar__nombre_lugar'),
+                tipo=F('p_x_l_pere__lugar__tipo'),
+            )
+            .values('lugar', 'tipo', 'year')  # Explicit grouping only by these fields
+            .annotate(
+                count=Count('persona_id', distinct=True)  # Count unique personas
+            )
+            .filter(lugar__isnull=False, year__isnull=False)
+            .order_by('year', 'lugar')
+        )
+
+        # Transform the data for the response
+        response_data = [
+            {
+                "lugar": item['lugar'],
+                "tipo": item['tipo'],
+                "year": item['year'],
+                "count": item['count'],
+            }
+            for item in data
+        ]
+
+        return Response(response_data)
