@@ -56,7 +56,7 @@ class SimplePersonaSerializer(BaseElasticSearchSerializer):
 class SimpleLugarSerializer(BaseElasticSearchSerializer):
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'nombre_lugar', 'tipo']
+        fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon']
 
 class PersonaRelacionesSerializer(BaseElasticSearchSerializer):
     documento = DocumentoSerializer(read_only = True)
