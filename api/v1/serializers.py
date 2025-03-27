@@ -214,3 +214,39 @@ class LugarAmpliadoSerializer(BaseElasticSearchSerializer):
     def get_personas_esclavizadas_procedencia(self, obj):
         esclavizados = PersonaEsclavizada.objects.filter(procedencia=obj)
         return PersonaEsclavizadaSerializer(esclavizados, many=True).data
+
+
+class TravelTrajectorySerializer(BaseElasticSearchSerializer):
+    persona = SimplePersonaSerializer()
+    lugar = SimpleLugarSerializer()
+    fecha_efectiva = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PersonaLugarRel
+        fields = ['persona_x_lugares', 'persona', 'lugar', 'ordinal', 'fecha_efectiva', 'situacion_lugar']
+
+    def get_fecha_efectiva(self, obj):
+        # Use fecha_inicial_lugar if available, otherwise fall back to documento.fecha_inicial
+        return obj.fecha_inicial_lugar or obj.documento.fecha_inicial
+
+class PersonaTravelTrajectorySerializer(serializers.Serializer):
+    persona_id = serializers.IntegerField()
+    persona_idno = serializers.CharField()
+    nombre_normalizado = serializers.CharField()
+    polymorphic_ctype = serializers.SerializerMethodField()
+    trayectoria = serializers.SerializerMethodField()
+
+    def get_polymorphic_ctype(self, obj):
+        return str(obj.polymorphic_ctype)
+
+    def get_trayectoria(self, obj):
+        lugares = obj.p_x_l_pere.all().order_by('ordinal')
+        return [
+            {
+                'lugar': SimpleLugarSerializer(rel.lugar).data,
+                'fecha': rel.fecha_inicial_lugar or rel.documento.fecha_inicial,
+                'ordinal': rel.ordinal,
+                'situacion': str(rel.situacion_lugar) if rel.situacion_lugar else None
+            }
+            for rel in lugares
+        ]

@@ -11,7 +11,7 @@ from .v1beta.views import (DocumentoViewSet as DocumentoViewSetBeta,
                             )
 
 from .v1.views import (DocumentoViewSet, PersonaEsclavizadaViewSet, PersonaLugarRelViewSet, PersonaNoEsclavizadaViewSet, 
-                    CorporacionViewSet, SearchAPIView, log_message, LugarAmpliadoViewSet, PersonaPersonaRelViewSet,
+                    CorporacionViewSet, PersonaTravelTrajectoryViewSet, SearchAPIView, log_message, LugarAmpliadoViewSet, PersonaPersonaRelViewSet,
                     gender_status_distribution, PlacesPeopleDistribution)
 
 router_v1beta = DefaultRouter()
@@ -29,6 +29,7 @@ router_v1.register('corporaciones', CorporacionViewSet, basename='corporaciones_
 router_v1.register('lugares', LugarAmpliadoViewSet, basename='lugares_api')
 router_v1.register('personas_lugares', PersonaLugarRelViewSet, basename='personas_lugares_api')
 router_v1.register('personas_relaciones', PersonaPersonaRelViewSet, basename='personas_relaciones_api')
+router_v1.register(f'travel-trajectories', PersonaTravelTrajectoryViewSet, basename='travel-trajectories')
 
 # beta paths
 urlpatterns = [

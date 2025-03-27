@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 
 from dbgestor.models import (Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel, Lugar, PersonaRelaciones)
+                             PersonaLugarRel, Lugar, PersonaRelaciones, Persona)
 
 from dbgestor.documents import (
     DocumentoDocument,
@@ -26,7 +26,8 @@ from dbgestor.documents import (
 
 from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
                           PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer,
-                          LugarAmpliadoSerializer, PersonaRelacionesSerializer)
+                          LugarAmpliadoSerializer, PersonaRelacionesSerializer, TravelTrajectorySerializer,
+                          PersonaTravelTrajectorySerializer)
 
 
 logger = logging.getLogger('dbgestor')
@@ -518,3 +519,30 @@ class PlacesPeopleDistribution(APIView):
         ]
 
         return Response(response_data)
+
+class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [APIPerm]
+    serializer_class = PersonaTravelTrajectorySerializer
+    pagination_class = CustomPagination
+    
+    def get_queryset(self):
+        return Persona.objects.prefetch_related(
+            'p_x_l_pere',
+            'p_x_l_pere__lugar',
+            'p_x_l_pere__documento',
+            'p_x_l_pere__situacion_lugar'
+        ).filter(
+            p_x_l_pere__isnull=False
+        ).distinct()
+
+    @action(detail=True, methods=['get'])
+    def trajectories(self, request, pk=None):
+        persona = self.get_object()
+        trajectories = persona.p_x_l_pere.all().select_related(
+            'lugar',
+            'documento',
+            'situacion_lugar'
+        ).order_by('ordinal')
+        
+        serializer = TravelTrajectorySerializer(trajectories, many=True)
+        return Response(serializer.data)
