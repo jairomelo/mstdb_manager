@@ -3,6 +3,9 @@ import logging
 
 from django.db.models import Count, F
 from django.db.models.functions import ExtractYear
+from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -49,6 +52,25 @@ def whoami(request):
         })
     else:
         return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+
+@csrf_exempt
+def api_login(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user = authenticate(
+            request,
+            username=data["username"],
+            password=data["password"]
+        )
+        if user is not None:
+            login(request, user)
+            return JsonResponse({
+                "username": user.username,
+                "email": user.email,
+                "is_staff": user.is_staff
+            })
+        else:
+            return JsonResponse({"error": "Invalid credentials"}, status=401)
 
 # Create your views here.
 
