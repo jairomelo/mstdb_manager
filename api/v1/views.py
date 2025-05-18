@@ -3,11 +3,11 @@ import logging
 
 from django.db.models import Count, F
 from django.db.models.functions import ExtractYear
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, action, permission_classes
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import MultiMatch, Q as ESQ
 from urllib.parse import urlencode
@@ -31,6 +31,24 @@ from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEscl
 
 
 logger = logging.getLogger('dbgestor')
+
+# user auth manager
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def whoami(request):
+    """
+    Return the current user.
+    """
+    user = request.user
+    if user.is_authenticated:
+        return Response({
+            'username': user.username,
+            'email': user.email,
+            'is_staff': user.is_staff,
+            'groups': [group.name for group in user.groups.all()]
+        })
+    else:
+        return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
 
 # Create your views here.
 

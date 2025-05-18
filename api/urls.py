@@ -12,7 +12,7 @@ from .v1beta.views import (DocumentoViewSet as DocumentoViewSetBeta,
 
 from .v1.views import (DocumentoViewSet, PersonaEsclavizadaViewSet, PersonaLugarRelViewSet, PersonaNoEsclavizadaViewSet, 
                     CorporacionViewSet, PersonaTravelTrajectoryViewSet, SearchAPIView, log_message, LugarAmpliadoViewSet, PersonaPersonaRelViewSet,
-                    gender_status_distribution, PlacesPeopleDistribution)
+                    gender_status_distribution, PlacesPeopleDistribution, whoami)
 
 router_v1beta = DefaultRouter()
 router_v1beta.register('documentos', DocumentoViewSetBeta, basename='documentos_api_beta')
@@ -44,5 +44,6 @@ urlpatterns += [
     path('v1/search/', SearchAPIView.as_view(), name='search_api'),
     path('v1/log/', log_message, name='log_message'),
     path('v1/gender-status-distribution/', gender_status_distribution, name='gender_status_distribution'),
-    path('v1/places-people-distribution/', PlacesPeopleDistribution.as_view(), name='places_people_distribution')
+    path('v1/places-people-distribution/', PlacesPeopleDistribution.as_view(), name='places_people_distribution'),
+    path('v1/whoami/', whoami, name='whoami'),
 ]
