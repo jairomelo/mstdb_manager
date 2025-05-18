@@ -3,7 +3,7 @@ import logging
 
 from django.db.models import Count, F
 from django.db.models.functions import ExtractYear
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -71,6 +71,12 @@ def api_login(request):
             })
         else:
             return JsonResponse({"error": "Invalid credentials"}, status=401)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_logout(request):
+    logout(request)
+    return Response({"success": "Logged out successfully"}, status=200)
 
 # Create your views here.
 
