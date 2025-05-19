@@ -4,7 +4,7 @@ import logging
 from django.db.models import Count, F
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import viewsets, status
@@ -35,6 +35,13 @@ from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEscl
 
 logger = logging.getLogger('dbgestor')
 
+@ensure_csrf_cookie
+def get_csrf_token(request):
+    """
+    Get CSRF token for the current session.
+    """
+    return JsonResponse({'csrfToken': request.META.get('CSRF_COOKIE', ''), 'detail': 'CSRF cookie set'})
+
 # user auth manager
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -53,7 +60,6 @@ def whoami(request):
     else:
         return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
 
-@csrf_exempt
 def api_login(request):
     if request.method == 'POST':
         data = json.loads(request.body)
