@@ -3,11 +3,14 @@ import logging
 
 from django.db.models import Count, F
 from django.db.models.functions import ExtractYear
-from rest_framework.permissions import BasePermission
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.http import JsonResponse
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, action, permission_classes
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import MultiMatch, Q as ESQ
 from urllib.parse import urlencode
@@ -31,6 +34,55 @@ from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEscl
 
 
 logger = logging.getLogger('dbgestor')
+
+@ensure_csrf_cookie
+def get_csrf_token(request):
+    """
+    Get CSRF token for the current session.
+    """
+    return JsonResponse({'csrfToken': request.META.get('CSRF_COOKIE', ''), 'detail': 'CSRF cookie set'})
+
+# user auth manager
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def whoami(request):
+    """
+    Return the current user.
+    """
+    user = request.user
+    if user.is_authenticated:
+        return Response({
+            'username': user.username,
+            'email': user.email,
+            'is_staff': user.is_staff,
+            'groups': [group.name for group in user.groups.all()]
+        })
+    else:
+        return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+
+def api_login(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user = authenticate(
+            request,
+            username=data["username"],
+            password=data["password"]
+        )
+        if user is not None:
+            login(request, user)
+            return JsonResponse({
+                "username": user.username,
+                "email": user.email,
+                "is_staff": user.is_staff
+            })
+        else:
+            return JsonResponse({"error": "Invalid credentials"}, status=401)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_logout(request):
+    logout(request)
+    return Response({"success": "Logged out successfully"}, status=200)
 
 # Create your views here.
 
