@@ -54,6 +54,8 @@ sudo chmod 750 /home/trayectorias
 sudo chown -R trayectorias:www-data /home/trayectorias/mstdb_manager
 ```
 
+> All parent directories of static files (e.g., `/home`, `/home/trayectorias`, etc.) must be executable (`chmod +x`) by Nginx’s user (`www-data`) for static file access to work.
+
 #### Gunicorn Systemd Service
 
 Create `/etc/systemd/system/gunicorn.service`:
