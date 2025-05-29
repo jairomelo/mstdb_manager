@@ -103,7 +103,7 @@ server {
     location = /favicon.ico { access_log off; log_not_found off; }
 
     location /static/ {
-        root /home/trayectorias/mstdb_manager;
+        alias /home/trayectorias/mstdb_manager/staticfiles/;
     }
 
     location /media/ {
