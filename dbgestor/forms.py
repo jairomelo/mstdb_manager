@@ -268,7 +268,7 @@ class PersonaEsclavizadaForm(forms.ModelForm):
         queryset=Hispanizaciones.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2Multiple(url='hispanizaciones-autocomplete'),
-        label='Hispanización'
+        label='Agencia / Adaptación'
     )
     
     etnonimos = forms.ModelMultipleChoiceField(
