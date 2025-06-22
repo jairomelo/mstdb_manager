@@ -6,6 +6,7 @@ from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
