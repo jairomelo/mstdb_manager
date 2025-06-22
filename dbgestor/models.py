@@ -108,6 +108,8 @@ class Lugar(models.Model):
         max_digits=9, decimal_places=6, null=True, blank=True)
 
     tipo = models.CharField(max_length=50, choices=PLACE_TYPE_CHOICES)
+    
+    is_published = models.BooleanField(default=False, help_text="Indicates if the place is published in the API")
 
     history = HistoricalRecords()
 
@@ -241,6 +243,8 @@ class Documento(models.Model):
     evento_total = models.CharField(max_length=100, null=True, blank=True)
 
     notas = models.TextField(max_length=500, null=True, blank=True)
+    
+    is_published = models.BooleanField(default=False, help_text="Indicates if the document is published in the API")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -395,6 +399,8 @@ class Persona(PolymorphicModel):
         max_length=150, null=True, blank=True)
 
     notas = models.TextField(max_length=500, null=True, blank=True)
+
+    is_published = models.BooleanField(default=False, help_text="Indicates if the person is published in the API")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -675,6 +681,8 @@ class Corporacion(PolymorphicModel):
     )
 
     notas = models.TextField(max_length=500, null=True, blank=True)
+    
+    is_published = models.BooleanField(default=False, help_text="Indicates if the corporation is published in the API")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
