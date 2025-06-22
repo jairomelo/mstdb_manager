@@ -40,7 +40,11 @@ def get_csrf_token(request):
     """
     Get CSRF token for the current session.
     """
-    return JsonResponse({'csrfToken': request.META.get('CSRF_COOKIE', ''), 'detail': 'CSRF cookie set'})
+    token = get_token(request)
+    return JsonResponse({
+        'csrfToken': token,
+        'detail': 'CSRF cookie set'
+    })
 
 # user auth manager
 @api_view(['GET'])
