@@ -185,17 +185,16 @@ class Archivo(models.Model):
         return acronym
 
     def save(self, *args, **kwargs):
+        creating = self.pk is None
 
         if not self.nombre_abreviado:
-            siglas = self.create_acronym(self.nombre)
-            self.nombre_abreviado = siglas
+            self.nombre_abreviado = self.create_acronym(self.nombre)
+            
+        super().save(*args, **kwargs)
 
-        if not self.pk:
-            super(Archivo, self).save(*args, **kwargs)
-
-        self.archivo_idno = f"mx-sv-doc-{str(self.archivo_id).zfill(6)}"
-
-        super(Archivo, self).save(*args, **kwargs)
+        if creating and not self.archivo_idno:
+            self.archivo_idno = f"mx-sv-doc-{str(self.archivo_id).zfill(6)}"
+            super().save(update_fields=["archivo_idno"])
 
     def __str__(self) -> str:
         return f'[{self.nombre_abreviado}] {self.nombre}'
