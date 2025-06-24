@@ -254,9 +254,13 @@ class Documento(models.Model):
         ordering = ['-updated_at']
 
     def save(self, *args, **kwargs):
-        self.documento_idno = f"mx-sv-doc-{str(self.documento_id).zfill(6)}"
-
-        super(Documento, self).save(*args, **kwargs)
+        creating = self.pk is None
+        
+        super().save(*args, **kwargs)
+        
+        if creating and not self.documento_idno:
+            self.documento_idno = f"mx-sv-doc-{str(self.documento_id).zfill(6)}"
+            super().save(update_fields=["documento_idno"])
 
     def type_to_string(self):
         if self.tipo_udc == 'exp':
@@ -432,6 +436,7 @@ class Persona(PolymorphicModel):
         return None
 
     def save(self, *args, **kwargs):
+        creating = self.pk is None
 
         if self.nombres:
             self.nombres = self.capitalize_name(self.nombres)
@@ -442,15 +447,13 @@ class Persona(PolymorphicModel):
             self.apellidos = ""
 
         if not self.nombre_normalizado:
-            nombre_normalizado = f"{self.nombres} {self.apellidos}"
-            self.nombre_normalizado = self.capitalize_name(nombre_normalizado)
+            self.nombre_normalizado = self.capitalize_name(f"{self.nombres} {self.apellidos}")
 
-        if not self.pk:
-            super(Persona, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
-        self.persona_idno = f"mx-sv-per-{str(self.persona_id).zfill(6)}"
-
-        super(Persona, self).save(*args, **kwargs)
+        if creating and not self.persona_idno:
+            self.persona_idno = f"mx-sv-per-{str(self.persona_id).zfill(6)}"
+            super().save(update_fields=["persona_idno"])
 
     def type_to_string(self):
         if self.sexo == 'v':
