@@ -13,7 +13,7 @@ from .v1beta.views import (DocumentoViewSet as DocumentoViewSetBeta,
 from .v1.views import (DocumentoViewSet, PersonaEsclavizadaViewSet, PersonaLugarRelViewSet, PersonaNoEsclavizadaViewSet, 
                     CorporacionViewSet, PersonaTravelTrajectoryViewSet, SearchAPIView, log_message, LugarAmpliadoViewSet, PersonaPersonaRelViewSet,
                     gender_status_distribution, PlacesPeopleDistribution, whoami, api_login, api_logout,
-                    get_csrf_token)
+                    get_csrf_token, BulkIngestAPIView)
 
 router_v1beta = DefaultRouter()
 router_v1beta.register('documentos', DocumentoViewSetBeta, basename='documentos_api_beta')
@@ -49,5 +49,6 @@ urlpatterns += [
     path('v1/login/', api_login, name='api_login'),
     path('v1/logout/', api_logout, name='api_logout'),
     path('v1/whoami/', whoami, name='whoami'),
-    path("v1/csrf/", get_csrf_token)
+    path("v1/csrf/", get_csrf_token),
+    path('v1/bulk-ingest/', BulkIngestAPIView.as_view(), name='bulk_ingest')
 ]

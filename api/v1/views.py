@@ -5,6 +5,7 @@ from django.db.models import Count, F
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -16,6 +17,8 @@ from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import MultiMatch, Q as ESQ
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
+
+from .resolvers import ingest_row
 
 from dbgestor.models import (Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar, PersonaRelaciones, Persona)
@@ -603,3 +606,17 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         
         serializer = TravelTrajectorySerializer(trajectories, many=True)
         return Response(serializer.data)
+
+class BulkIngestAPIView(APIView):
+    def post(self, request):
+        rows = request.data
+        summary = {"ingested": 0, "errores": []}
+
+        for idx, row in enumerate(rows):
+            try:
+                ingest_row(row)
+                summary["ingested"] += 1
+            except Exception as e:
+                summary["errores"].append(f"Row {idx+1}: {str(e)}")
+
+        return Response(summary, status=status.HTTP_201_CREATED)
