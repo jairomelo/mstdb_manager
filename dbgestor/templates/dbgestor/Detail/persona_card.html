@@ -18,26 +18,25 @@
 <div class="card-body border-dark">
     
     <h5 class="card-title text-primary"><i class="fas fa-globe-americas"></i> Lugares</h5>
-    <p class="card-text">
-        {% for category, places in place_data.items %}
-            {% with filtered_places=places|filter_person:person.persona_idno %}
-                {% if filtered_places %}
-                    <strong class="d-block my-2"><i class="fas fa-map-signs"></i> {{ category }}</strong>
-                    <ul class="list-group">
-                        {% for place, details in filtered_places.items %}
-                            <li class="my-3 list-group-item">
-                                {{ details.ordinal }}: {{ place }}
-                                <div class="btn-group float-end">
-                                    <a href="{% url 'persona_x_lugar-update' details.rel_id %}?next={{ request.get_full_path }}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            {% endwith %}
-        {% endfor %}
-    </p>
+<p class="card-text">
+    {% for category, places in place_data.items %}
+        {% filter_person_places places person.persona_idno documento.id as filtered_places %}
+        {% if filtered_places %}
+            <strong class="d-block my-2"><i class="fas fa-map-signs"></i> {{ category }}</strong>
+            <ul class="list-group">
+                {% for place, details in filtered_places.items %}
+                    <li class="my-3 list-group-item">
+                        {{ details.ordinal }}: {{ place }}
+                        <div class="btn-group float-end">
+                            <a href="{% url 'persona_x_lugar-update' details.rel_id %}?next={{ request.get_full_path }}" class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-pencil-alt"></i></a>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('{% url 'delete-personalugarrel' details.rel_id %}');"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endfor %}
+</p>
     <!-- End of Persona Esclavizada Lugares -->
     <hr>
     <!-- Persona Esclavizada Relaciones -->

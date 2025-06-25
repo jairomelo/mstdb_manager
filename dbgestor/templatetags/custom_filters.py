@@ -10,8 +10,8 @@ register = template.Library()
 def map_attribute(value, attribute):
     return [item.get(attribute) if isinstance(item, dict) else getattr(item, attribute, None) for item in value]
 
-@register.filter
-def filter_person(places_dict, person_idno):
+@register.simple_tag
+def filter_person_places(places_dict, person_idno, documento_id=None):
     """
     Filter places to show only those associated with the specific person,
     with the correct rel_id for that person.
@@ -21,7 +21,11 @@ def filter_person(places_dict, person_idno):
     for place_name, details in places_dict.items():
         if person_idno in details['personas']:
             # Get the correct rel_id for this specific person-place combination
-            correct_rel_id = get_rel_id_for_person_place(person_idno, details['place_id'])
+            correct_rel_id = get_rel_id_for_person_place(
+                person_idno, 
+                details['place_id'], 
+                documento_id
+            )
             
             if correct_rel_id:
                 filtered_places[place_name] = {
@@ -32,15 +36,25 @@ def filter_person(places_dict, person_idno):
     
     return filtered_places
 
-def get_rel_id_for_person_place(person_idno, place_id):
+def get_rel_id_for_person_place(person_idno, place_id, documento_id=None):
     """
     Helper function to get the correct rel_id for a specific person-place combination
     """
     try:
         persona = Persona.objects.get(persona_idno=person_idno)
-        rel = PersonaLugarRel.objects.get(personas=persona, lugar_id=place_id)
-        return rel.persona_x_lugares
-    except (Persona.DoesNotExist, PersonaLugarRel.DoesNotExist):
+        
+        # Build the filter with document constraint if available
+        filter_kwargs = {
+            'personas': persona,
+            'lugar_id': place_id
+        }
+        
+        if documento_id:
+            filter_kwargs['documento_id'] = documento_id
+        
+        rel = PersonaLugarRel.objects.filter(**filter_kwargs).first()
+        return rel.persona_x_lugares if rel else None
+    except Persona.DoesNotExist:
         return None
 
 @register.filter
