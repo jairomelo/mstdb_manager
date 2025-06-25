@@ -20,11 +20,12 @@ def filter_person_places(places_dict, person_idno, documento_id=None):
     
     for place_name, details in places_dict.items():
         if person_idno in details['personas']:
-            # Get the correct rel_id for this specific person-place combination
+            # Get the correct rel_id for this specific person-place combination including ordinal
             correct_rel_id = get_rel_id_for_person_place(
                 person_idno, 
                 details['place_id'], 
-                documento_id
+                documento_id,
+                details.get('ordinal')  # Pass the ordinal from the details
             )
             
             if correct_rel_id:
@@ -36,7 +37,7 @@ def filter_person_places(places_dict, person_idno, documento_id=None):
     
     return filtered_places
 
-def get_rel_id_for_person_place(person_idno, place_id, documento_id=None):
+def get_rel_id_for_person_place(person_idno, place_id, documento_id=None, ordinal=None):
     """
     Helper function to get the correct rel_id for a specific person-place combination
     """
@@ -51,6 +52,9 @@ def get_rel_id_for_person_place(person_idno, place_id, documento_id=None):
         
         if documento_id:
             filter_kwargs['documento_id'] = documento_id
+            
+        if ordinal is not None:
+            filter_kwargs['ordinal'] = ordinal
         
         rel = PersonaLugarRel.objects.filter(**filter_kwargs).first()
         return rel.persona_x_lugares if rel else None
