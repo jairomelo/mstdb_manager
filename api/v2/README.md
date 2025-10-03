@@ -1,16 +1,7 @@
 # API V2 - Lightweight Reference-Based Design
 
 ## Overview
-API V2 introduces a cleaner, more performant architecture that addresses the issues with V1's heavy nested serializers. T### 4. **History/Attribution**
-- Clean separation allows adding audit fields
-- Reference-based design supports versioning
-- Can add history endpoints without breaking existing structure
-
-### 5. **Travel Trajectory Visualization**
-- Optimized endpoints for map visualizations
-- Lightweight trajectory points with coordinates
-- Summary statistics for performance
-- Detailed trajectory data when neededversion is designed specifically to support table-style visualizations, CSV exports, and better frontend performance.
+API V2 introduces a cleaner, more performant architecture that addresses the issues with V1's heavy nested serializers. It is designed to support new features like table views, CSV export, and map visualizations while maintaining a clear separation of concerns.
 
 ## Key Improvements Over V1
 
