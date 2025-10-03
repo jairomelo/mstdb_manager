@@ -1,6 +1,28 @@
 # Trayectorias Afro - Database manager
 
-This is a Django application that provides a web interface and REST API to manage the database of the Trayectorias Afro project. The application includes both a traditional Django web interface and a modern REST API (V2) for accessing and manipulating historical data about enslaved persons, documents, places, and institutions. 
+## Project Location
+
+Choose an appropriate location for your Django project (e.g., `/home/your-user/mstdb_manager`).
+
+Permissions must allow system services to access the directory:
+
+```bash
+sudo chmod 755 /home
+sudo chmod 750 /home/your-user
+sudo chown -R your-user:www-data /path/to/your/mstdb_manager
+```
+
+> All parent directories of static files must be executable (`chmod +x`) by Nginx's user (`www-data`) for static file access to work.Django project should be located in a directory accessible by your web server (e.g., `/home/your-user/mstdb_manager`).
+
+Permissions must allow system services to access the directory:
+
+```bash
+sudo chmod 755 /home
+sudo chmod 750 /home/your-user
+sudo chown -R your-user:www-data /home/your-user/mstdb_manager
+```
+
+> All parent directories of static files must be executable (`chmod +x`) by Nginx's user (`www-data`) for static file access to work.application that provides a web interface and REST API to manage the database of the Trayectorias Afro project. The application includes both a traditional Django web interface and a modern REST API (V2) for accessing and manipulating historical data about enslaved persons, documents, places, and institutions. 
 
 ## Prerequisites
 
@@ -14,7 +36,7 @@ The user registration and password reset features require an SMTP server. For de
 
 ### MySQL
 
-This application uses MySQL as the database backend. To run it needs this dependencies:
+This application uses MySQL as the database backend. To run it needs these dependencies:
 
 `sudo apt install -y pkg-config libmysqlclient-dev default-libmysqlclient-dev build-essential`
 
@@ -33,7 +55,7 @@ This project is deployed using:
 
 #### System Requirements
 
-Install the following on your Ubuntu-based Lightsail instance:
+Install the following on your instance:
 
 ```bash
 sudo apt update
@@ -66,14 +88,14 @@ Description=Gunicorn for Django project
 After=network.target
 
 [Service]
-User=trayectorias
+User=your-user
 Group=www-data
-WorkingDirectory=/home/trayectorias/mstdb_manager
+WorkingDirectory=/path/to/your/mstdb_manager
 
 RuntimeDirectory=gunicorn
 RuntimeDirectoryMode=0755
 
-ExecStart=/home/trayectorias/mstdb_manager/.venv/bin/gunicorn \
+ExecStart=/path/to/your/mstdb_manager/venv/bin/gunicorn \
     --access-logfile - \
     --workers 3 \
     --bind unix:/run/gunicorn/gunicorn.sock \
@@ -93,21 +115,21 @@ sudo systemctl start gunicorn
 
 #### Nginx Configuration
 
-Create `/etc/nginx/sites-available/mstdb_manager`:
+Create `/etc/nginx/sites-available/your-project-name`:
 
 ```nginx
 server {
     listen 80;
-    server_name <your-ip-or-domain>;
+    server_name your-domain.com;
 
     location = /favicon.ico { access_log off; log_not_found off; }
 
     location /static/ {
-        alias /home/trayectorias/mstdb_manager/staticfiles/;
+        alias /path/to/your/mstdb_manager/staticfiles/;
     }
 
     location /media/ {
-        root /home/trayectorias/mstdb_manager;
+        root /path/to/your/mstdb_manager;
     }
 
     location / {
@@ -120,7 +142,7 @@ server {
 Enable the config:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/mstdb_manager /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/your-project-name /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
@@ -142,7 +164,7 @@ The application provides a comprehensive REST API (V2) that offers improved perf
 
 #### Base URL
 ```
-http://localhost/mdb/api/v2/
+http://your-domain.com/mdb/api/v2/
 ```
 
 #### Authentication
@@ -332,8 +354,8 @@ mstdb_manager/
 
 2. **Create and activate Python virtual environment:**
    ```bash
-   python -m venv envMDB
-   source envMDB/bin/activate  # On Windows use `envMDB\Scripts\activate`
+   python -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
    ```
 
 3. **Install dependencies:**
