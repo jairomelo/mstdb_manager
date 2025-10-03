@@ -50,7 +50,10 @@ from .serializers import (
     PersonaRolEventoDetailSerializer, ActividadesSerializer, LogMessageSerializer,
     
     # Travel trajectory serializers
-    TravelTrajectorySerializer, PersonaTravelTrajectorySerializer
+    TravelTrajectorySerializer, PersonaTravelTrajectorySerializer,
+    
+    # History serializers
+    DocumentoHistorySerializer, PersonaHistorySerializer, CorporacionHistorySerializer
 )
 
 
@@ -217,6 +220,20 @@ class DocumentoViewSet(BaseV2ViewSet):
         serializer = PersonaListSerializer(personas, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def history(self, request, documento_id=None):
+        """Get change history for this documento"""
+        documento = self.get_object()
+        history_records = documento.history.all().order_by('-history_date')
+        
+        page = self.paginate_queryset(history_records)
+        if page is not None:
+            serializer = DocumentoHistorySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = DocumentoHistorySerializer(history_records, many=True)
+        return Response(serializer.data)
+
 
 # Persona ViewSets
 class PersonaEsclavizadaViewSet(BaseV2ViewSet):
@@ -311,6 +328,20 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
         serializer = PersonaLugarRelDetailSerializer(lugares_rel, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def history(self, request, persona_id=None):
+        """Get change history for this persona"""
+        persona = self.get_object()
+        history_records = persona.history.all().order_by('-history_date')
+        
+        page = self.paginate_queryset(history_records)
+        if page is not None:
+            serializer = PersonaHistorySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = PersonaHistorySerializer(history_records, many=True)
+        return Response(serializer.data)
+
 
 class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
     queryset = PersonaNoEsclavizada.objects.prefetch_related('documentos').all()
@@ -364,6 +395,20 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, persona_id=None):
+        """Get change history for this persona"""
+        persona = self.get_object()
+        history_records = persona.history.all().order_by('-history_date')
+        
+        page = self.paginate_queryset(history_records)
+        if page is not None:
+            serializer = PersonaHistorySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = PersonaHistorySerializer(history_records, many=True)
+        return Response(serializer.data)
 
 
 # Lugar ViewSet
@@ -459,6 +504,20 @@ class CorporacionViewSet(BaseV2ViewSet):
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, corporacion_id=None):
+        """Get change history for this corporacion"""
+        corporacion = self.get_object()
+        history_records = corporacion.history.all().order_by('-history_date')
+        
+        page = self.paginate_queryset(history_records)
+        if page is not None:
+            serializer = CorporacionHistorySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = CorporacionHistorySerializer(history_records, many=True)
+        return Response(serializer.data)
 
 
 # Relationship ViewSets

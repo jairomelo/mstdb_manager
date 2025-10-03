@@ -413,3 +413,59 @@ class LogMessageSerializer(BaseElasticSearchSerializer):
     class Meta:
         model = LogMessage
         fields = ['level', 'message']
+
+
+# History Serializers - For tracking changes using django-simple-history
+class BaseHistorySerializer(serializers.ModelSerializer):
+    """Base serializer for historical records"""
+    history_user_name = serializers.SerializerMethodField()
+    history_type_display = serializers.SerializerMethodField()
+    
+    def get_history_user_name(self, obj):
+        """Get the username of the user who made the change"""
+        return obj.history_user.username if obj.history_user else 'System'
+    
+    def get_history_type_display(self, obj):
+        """Convert history type to human readable format"""
+        type_mapping = {
+            '+': 'Created',
+            '~': 'Updated', 
+            '-': 'Deleted'
+        }
+        return type_mapping.get(obj.history_type, obj.history_type)
+
+    class Meta:
+        abstract = True
+        fields = ['history_id', 'history_date', 'history_user_name', 'history_type_display']
+
+
+class DocumentoHistorySerializer(BaseHistorySerializer):
+    """Documento history records"""
+    
+    class Meta:
+        model = Documento.history.model  # This gets the HistoricalDocumento model
+        fields = BaseHistorySerializer.Meta.fields + [
+            'documento_id', 'documento_idno', 'titulo', 'fecha_inicial_raw',
+            'fondo', 'subfondo', 'is_published'
+        ]
+
+
+class PersonaHistorySerializer(BaseHistorySerializer):
+    """Persona history records"""
+    
+    class Meta:
+        model = Persona.history.model  # This gets the HistoricalPersona model
+        fields = BaseHistorySerializer.Meta.fields + [
+            'persona_id', 'persona_idno', 'nombre_normalizado', 
+            'nombres', 'apellidos', 'is_published'
+        ]
+
+
+class CorporacionHistorySerializer(BaseHistorySerializer):
+    """Corporacion history records"""
+    
+    class Meta:
+        model = Corporacion.history.model  # This gets the HistoricalCorporacion model
+        fields = BaseHistorySerializer.Meta.fields + [
+            'corporacion_id', 'nombre_institucion', 'nombres_alternativos', 'is_published'
+        ]
