@@ -15,6 +15,9 @@ from .v1.views import (DocumentoViewSet, PersonaEsclavizadaViewSet, PersonaLugar
                     gender_status_distribution, PlacesPeopleDistribution, whoami, api_login, api_logout,
                     get_csrf_token, BulkIngestAPIView)
 
+# Import V2 views
+from .v2 import urls as v2_urls
+
 router_v1beta = DefaultRouter()
 router_v1beta.register('documentos', DocumentoViewSetBeta, basename='documentos_api_beta')
 router_v1beta.register('peresclavizadas', PersonaEsclavizadaViewSetBeta, basename='peresclavizadas_api_beta')
@@ -51,4 +54,9 @@ urlpatterns += [
     path('v1/whoami/', whoami, name='whoami'),
     path("v1/csrf/", get_csrf_token),
     path('v1/bulk-ingest/', BulkIngestAPIView.as_view(), name='bulk_ingest')
+]
+
+# v2 paths  
+urlpatterns += [
+    path('v2/', include(v2_urls), name='v2')
 ]
