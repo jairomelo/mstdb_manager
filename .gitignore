@@ -8,3 +8,4 @@ dbgestor/migrations/0*.py
 api/migrations/0*.py
 appslogs/general.log
 *.log
+temp/
