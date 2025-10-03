@@ -144,15 +144,16 @@ class ArchivoViewSet(BaseV2ViewSet):
     serializer_class = ArchivoListSerializer
     list_serializer_class = ArchivoListSerializer
     detail_serializer_class = ArchivoDetailSerializer
+    lookup_field = 'archivo_id'
 
     def get_export_filename(self):
         return "archivos_export.csv"
 
     @action(detail=True, methods=['get'])
-    def documentos(self, request, pk=None):
+    def documentos(self, request, archivo_id=None):
         """Get all documents for this archivo"""
         archivo = self.get_object()
-        documentos = archivo.documentos.all()
+        documentos = archivo.documento_set.all()
         page = self.paginate_queryset(documentos)
         
         if page is not None:
@@ -169,6 +170,7 @@ class DocumentoViewSet(BaseV2ViewSet):
     serializer_class = DocumentoListSerializer
     list_serializer_class = DocumentoListSerializer
     detail_serializer_class = DocumentoDetailSerializer
+    lookup_field = 'documento_id'
 
     def get_export_filename(self):
         return "documentos_export.csv"
@@ -202,7 +204,7 @@ class DocumentoViewSet(BaseV2ViewSet):
             return Response({'error': 'An error occurred during the search'}, status=500)
 
     @action(detail=True, methods=['get'])
-    def personas(self, request, pk=None):
+    def personas(self, request, documento_id=None):
         """Get all personas for this documento"""
         documento = self.get_object()
         personas = documento.personas.all()
@@ -222,6 +224,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
     serializer_class = PersonaEsclavizadaListSerializer
     list_serializer_class = PersonaEsclavizadaListSerializer
     detail_serializer_class = PersonaEsclavizadaDetailSerializer
+    lookup_field = 'persona_id'
 
     def get_export_filename(self):
         return "personas_esclavizadas_export.csv"
@@ -281,7 +284,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
             return Response({'error': 'An error occurred during the search'}, status=500)
 
     @action(detail=True, methods=['get'])
-    def relaciones(self, request, pk=None):
+    def relaciones(self, request, persona_id=None):
         """Get all relationships for this persona"""
         persona = self.get_object()
         relaciones = persona.relaciones.all()
@@ -295,7 +298,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
-    def lugares(self, request, pk=None):
+    def lugares(self, request, persona_id=None):
         """Get all place relationships for this persona"""
         persona = self.get_object()
         lugares_rel = persona.p_x_l_pere.all()
@@ -314,6 +317,7 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
     serializer_class = PersonaNoEsclavizadaListSerializer
     list_serializer_class = PersonaNoEsclavizadaListSerializer
     detail_serializer_class = PersonaNoEsclavizadaDetailSerializer
+    lookup_field = 'persona_id'
 
     def get_export_filename(self):
         return "personas_no_esclavizadas_export.csv"
@@ -368,6 +372,7 @@ class LugarViewSet(BaseV2ViewSet):
     serializer_class = LugarListSerializer
     list_serializer_class = LugarListSerializer
     detail_serializer_class = LugarDetailSerializer
+    lookup_field = 'lugar_id'
 
     def get_export_filename(self):
         return "lugares_export.csv"
@@ -401,10 +406,11 @@ class LugarViewSet(BaseV2ViewSet):
             return Response({'error': 'An error occurred during the search'}, status=500)
 
     @action(detail=True, methods=['get'])
-    def personas(self, request, pk=None):
+    def personas(self, request, lugar_id=None):
         """Get all personas associated with this lugar"""
         lugar = self.get_object()
-        personas = lugar.personas_relacionadas.all()
+        # Get personas through PersonaLugarRel relationship
+        personas = Persona.objects.filter(p_x_l_pere__lugar=lugar).distinct()
         page = self.paginate_queryset(personas)
         
         if page is not None:
@@ -417,10 +423,11 @@ class LugarViewSet(BaseV2ViewSet):
 
 # Corporacion ViewSet
 class CorporacionViewSet(BaseV2ViewSet):
-    queryset = Corporacion.objects.select_related('lugar_corporacion').all()
+    queryset = Corporacion.objects.select_related('lugar_corporacion', 'tipo_institucion').prefetch_related('documentos', 'personas_asociadas').all()
     serializer_class = CorporacionListSerializer
     list_serializer_class = CorporacionListSerializer
     detail_serializer_class = CorporacionDetailSerializer
+    lookup_field = 'corporacion_id'
 
     def get_export_filename(self):
         return "corporaciones_export.csv"
@@ -461,6 +468,7 @@ class PersonaRelacionesViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PersonaRelaciones.objects.select_related('documento').prefetch_related('personas').all()
     serializer_class = PersonaRelacionesDetailSerializer
     pagination_class = CustomPagination
+    lookup_field = 'persona_relacion_id'
 
 
 class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
@@ -469,6 +477,7 @@ class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PersonaLugarRel.objects.select_related('documento', 'lugar').prefetch_related('personas').all()
     serializer_class = PersonaLugarRelDetailSerializer
     pagination_class = CustomPagination
+    lookup_field = 'persona_x_lugares'
 
 
 # Global Search API
@@ -542,13 +551,14 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [APIPerm]
     serializer_class = PersonaTravelTrajectorySerializer
     pagination_class = CustomPagination
+    lookup_field = 'persona_id'
 
     def get_queryset(self):
         # Only return personas that have travel trajectories (place relationships)
         return Persona.objects.filter(p_x_l_pere__isnull=False).distinct()
 
     @action(detail=True, methods=['get'])
-    def trajectory_details(self, request, pk=None):
+    def trajectory_details(self, request, persona_id=None):
         """Get detailed trajectory points for a specific person"""
         persona = self.get_object()
         trajectories = persona.p_x_l_pere.select_related('lugar', 'documento', 'situacion_lugar').all().order_by('ordinal')

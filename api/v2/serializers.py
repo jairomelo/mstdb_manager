@@ -168,7 +168,7 @@ class DocumentoDetailSerializer(BaseElasticSearchSerializer):
                   'persona_ids', 'created_at', 'updated_at']
 
     def get_persona_ids(self, obj):
-        return list(obj.personas.values_list('persona_id', flat=True))
+        return list(obj.persona_set.values_list('persona_id', flat=True))
 
 
 class PersonaDetailSerializer(BaseElasticSearchSerializer):
@@ -222,7 +222,7 @@ class PersonaEsclavizadaDetailSerializer(PersonaDetailSerializer):
         return self.get_attribute_or_none(obj, 'procedencia')
 
     def get_ocupacion_ids(self, obj):
-        return list(obj.ocupaciones.values_list('id', flat=True))
+        return list(obj.ocupaciones.values_list('actividad_id', flat=True))
 
     def get_attribute_or_none(self, obj, attr):
         try:
@@ -269,7 +269,7 @@ class LugarDetailSerializer(BaseElasticSearchSerializer):
 
 class CorporacionDetailSerializer(BaseElasticSearchSerializer):
     """Full Corporacion details"""
-    tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
+    tipo_institucion_nombre = serializers.CharField(source='tipo_institucion.nombre', read_only=True)
     lugar_corporacion = LugarReferenceSerializer(read_only=True)
     documento_ids = serializers.SerializerMethodField()
     persona_ids = serializers.SerializerMethodField()
@@ -277,7 +277,7 @@ class CorporacionDetailSerializer(BaseElasticSearchSerializer):
 
     class Meta:
         model = Corporacion
-        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 'descripcion',
+        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion_nombre', 'nombres_alternativos',
                   'lugar_corporacion', 'documento_ids', 'persona_ids', 'evento_ids']
 
     def get_documento_ids(self, obj):
@@ -287,8 +287,8 @@ class CorporacionDetailSerializer(BaseElasticSearchSerializer):
         return list(obj.personas_asociadas.values_list('persona_id', flat=True))
 
     def get_evento_ids(self, obj):
-        if hasattr(obj, 'p_roles_evento'):
-            return list(obj.p_roles_evento.values_list('id', flat=True))
+        if hasattr(obj, 'roles_evento'):
+            return list(obj.roles_evento.values_list('id', flat=True))
         return []
 
 
@@ -403,7 +403,7 @@ class ActividadesSerializer(BaseElasticSearchSerializer):
     
     class Meta:
         model = Actividades
-        fields = ['id', 'actividad']
+        fields = ['actividad_id', 'actividad']
 
 
 class LogMessageSerializer(BaseElasticSearchSerializer):
