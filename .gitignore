@@ -9,3 +9,4 @@ api/migrations/0*.py
 appslogs/general.log
 *.log
 temp/
+DEV.md
