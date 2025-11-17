@@ -42,6 +42,10 @@ def get_rel_id_for_person_place(person_idno, place_id, documento_id=None, ordina
     Helper function to get the correct rel_id for a specific person-place combination
     """
     try:
+        # Handle NULL or empty persona_idno values
+        if not person_idno:
+            return None
+            
         persona = Persona.objects.get(persona_idno=person_idno)
         
         # Build the filter with document constraint if available
@@ -58,7 +62,10 @@ def get_rel_id_for_person_place(person_idno, place_id, documento_id=None, ordina
         
         rel = PersonaLugarRel.objects.filter(**filter_kwargs).first()
         return rel.persona_x_lugares if rel else None
-    except Persona.DoesNotExist:
+    except (Persona.DoesNotExist, Persona.MultipleObjectsReturned) as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Persona lookup issue for persona_idno='{person_idno}': {e}")
         return None
 
 @register.filter
