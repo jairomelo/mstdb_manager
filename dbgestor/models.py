@@ -1,5 +1,5 @@
 import re
-from django.db import models
+from django.db import models, transaction
 from simple_history.models import HistoricalRecords
 from polymorphic.models import PolymorphicModel
 from datetime import timezone
@@ -452,8 +452,66 @@ class Persona(PolymorphicModel):
         super().save(*args, **kwargs)
 
         if creating and not self.persona_idno:
-            self.persona_idno = f"mx-sv-per-{str(self.persona_id).zfill(6)}"
-            super().save(update_fields=["persona_idno"])
+            self._set_persona_idno_with_retry()
+
+    def _set_persona_idno_with_retry(self, max_retries=3, wait_seconds=0.1):
+        """
+        Set persona_idno with retry logic to handle race conditions and timing issues.
+        
+        Args:
+            max_retries (int): Maximum number of retry attempts
+            wait_seconds (float): Seconds to wait between retries
+        """
+        import time
+        
+        for attempt in range(max_retries + 1):
+            try:
+                # Refresh from database to ensure we have the latest state
+                if attempt > 0:
+                    self.refresh_from_db(fields=['persona_id'])
+                
+                # Validate that persona_id is available and valid
+                if not self.persona_id:
+                    if attempt < max_retries:
+                        logger.warning(f"persona_id not available on attempt {attempt + 1}, retrying in {wait_seconds}s")
+                        time.sleep(wait_seconds)
+                        continue
+                    else:
+                        raise ValueError("persona_id is not available after all retry attempts")
+                
+                # Generate and save the persona_idno
+                expected_idno = f"mx-sv-per-{str(self.persona_id).zfill(6)}"
+                self.persona_idno = expected_idno
+                
+                # Using update() for atomic operation to avoid potential conflicts
+                with transaction.atomic():
+                    updated_rows = self.__class__.objects.filter(
+                        persona_id=self.persona_id, 
+                        persona_idno__isnull=True
+                    ).update(persona_idno=expected_idno)
+                    
+                    if updated_rows == 1:
+                        logger.info(f"Successfully set persona_idno={expected_idno} for persona_id={self.persona_id}")
+                        return  # Success!
+                    elif updated_rows == 0:
+                        # Record might already have persona_idno set, check current state
+                        current_record = self.__class__.objects.get(persona_id=self.persona_id)
+                        if current_record.persona_idno:
+                            self.persona_idno = current_record.persona_idno
+                            logger.info(f"persona_idno already set to {self.persona_idno} for persona_id={self.persona_id}")
+                            return  # Success - already set
+                        else:
+                            raise ValueError(f"Failed to update persona_idno - no rows affected (attempt {attempt + 1})")
+                    else:
+                        raise ValueError(f"Unexpected: {updated_rows} rows updated (expected 1)")
+                        
+            except Exception as e:
+                if attempt < max_retries:
+                    logger.warning(f"Attempt {attempt + 1} failed to set persona_idno for persona_id {self.persona_id}: {e}. Retrying...")
+                    time.sleep(wait_seconds * (attempt + 1))  # Exponential backoff
+                else:
+                    logger.error(f"Failed to set persona_idno after {max_retries + 1} attempts for persona_id {self.persona_id}: {e}")
+                    # Don't raise - let the record exist without persona_idno for later repair
 
     def type_to_string(self):
         if self.sexo == 'v':
