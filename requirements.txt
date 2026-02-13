@@ -11,8 +11,6 @@ django-autocomplete-light==3.9.7
 django-bootstrap-input-group==1.0.1
 django-bootstrap5==23.3
 django-cors-headers==4.4.0
-django-elasticsearch-dsl==8.0
-django-elasticsearch-dsl-drf==0.22.5
 django-filter==23.5
 django-guardian==2.4.0
 django-import-export==3.3.7
@@ -27,9 +25,6 @@ django-taggit==4.0.0
 django-treebeard==4.7
 djangorestframework==3.15.2
 draftjs-exporter==2.1.7
-elastic-transport==8.15.1
-elasticsearch==8.15.1
-elasticsearch-dsl==8.15.4
 et-xmlfile==1.1.0
 filetype==1.2.0
 hiredis==3.0.0
@@ -38,7 +33,6 @@ idna==3.6
 l18n==2021.3
 Markdown==3.7
 MarkupPy==1.14
-mysqlclient==2.2.0
 odfpy==1.4.1
 openpyxl==3.1.2
 packaging==24.1
@@ -62,3 +56,7 @@ urllib3==2.1.0
 webencodings==0.5.1
 xlrd==2.0.1
 xlwt==1.3.0
+
+# PostgreSQL adapter (replacing mysqlclient)
+psycopg[binary]==3.1.18
+dj-database-url==2.1.0
