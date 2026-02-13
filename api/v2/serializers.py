@@ -5,20 +5,10 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaRolEvento)
 
 from django.db.models import Manager
-from django_elasticsearch_dsl.registries import registry
-
-
-class BaseElasticSearchSerializer(serializers.ModelSerializer):
-    class Meta:
-        abstract = True
-        
-    @classmethod
-    def search(cls, query):
-        pass  # Implement search functionality
 
 
 # Reference Serializers - Lightweight for relationships
-class ArchivoReferenceSerializer(BaseElasticSearchSerializer):
+class ArchivoReferenceSerializer(serializers.ModelSerializer):
     """Minimal Archivo data for references"""
     
     class Meta:
@@ -26,7 +16,7 @@ class ArchivoReferenceSerializer(BaseElasticSearchSerializer):
         fields = ['archivo_id', 'nombre', 'archivo_idno']
 
 
-class DocumentoReferenceSerializer(BaseElasticSearchSerializer):
+class DocumentoReferenceSerializer(serializers.ModelSerializer):
     """Minimal Documento data for references"""
     
     class Meta:
@@ -34,7 +24,7 @@ class DocumentoReferenceSerializer(BaseElasticSearchSerializer):
         fields = ['documento_id', 'documento_idno', 'titulo']
 
 
-class PersonaReferenceSerializer(BaseElasticSearchSerializer):
+class PersonaReferenceSerializer(serializers.ModelSerializer):
     """Minimal Persona data for references"""
     
     class Meta:
@@ -42,7 +32,7 @@ class PersonaReferenceSerializer(BaseElasticSearchSerializer):
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'polymorphic_ctype']
 
 
-class LugarReferenceSerializer(BaseElasticSearchSerializer):
+class LugarReferenceSerializer(serializers.ModelSerializer):
     """Minimal Lugar data for references"""
     
     class Meta:
@@ -50,7 +40,7 @@ class LugarReferenceSerializer(BaseElasticSearchSerializer):
         fields = ['lugar_id', 'nombre_lugar', 'tipo']
 
 
-class CorporacionReferenceSerializer(BaseElasticSearchSerializer):
+class CorporacionReferenceSerializer(serializers.ModelSerializer):
     """Minimal Corporacion data for references"""
     
     class Meta:
@@ -59,7 +49,7 @@ class CorporacionReferenceSerializer(BaseElasticSearchSerializer):
 
 
 # List Serializers - For table views and lightweight listings
-class ArchivoListSerializer(BaseElasticSearchSerializer):
+class ArchivoListSerializer(serializers.ModelSerializer):
     """Archivo data for list views"""
     nombre_abreviado = serializers.CharField(read_only=True)
     documento_count = serializers.SerializerMethodField()
@@ -72,7 +62,7 @@ class ArchivoListSerializer(BaseElasticSearchSerializer):
         return obj.documento_set.count()
 
 
-class DocumentoListSerializer(BaseElasticSearchSerializer):
+class DocumentoListSerializer(serializers.ModelSerializer):
     """Documento data for list views"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
@@ -84,7 +74,7 @@ class DocumentoListSerializer(BaseElasticSearchSerializer):
                   'fecha_inicial', 'fecha_final', 'lugar_de_produccion_id', 'created_at', 'updated_at']
 
 
-class PersonaListSerializer(BaseElasticSearchSerializer):
+class PersonaListSerializer(serializers.ModelSerializer):
     """Base Persona list serializer"""
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
     documento_count = serializers.SerializerMethodField()
@@ -114,7 +104,7 @@ class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
         model = PersonaNoEsclavizada
 
 
-class LugarListSerializer(BaseElasticSearchSerializer):
+class LugarListSerializer(serializers.ModelSerializer):
     """Lugar data for list views"""
     persona_count = serializers.SerializerMethodField()
 
@@ -127,7 +117,7 @@ class LugarListSerializer(BaseElasticSearchSerializer):
         return Persona.objects.filter(p_x_l_pere__lugar=obj).distinct().count()
 
 
-class CorporacionListSerializer(BaseElasticSearchSerializer):
+class CorporacionListSerializer(serializers.ModelSerializer):
     """Corporacion data for list views"""
     tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
     lugar_corporacion = LugarReferenceSerializer(read_only=True)
@@ -138,7 +128,7 @@ class CorporacionListSerializer(BaseElasticSearchSerializer):
 
 
 # Detail Serializers - Full entity data with references instead of nested objects
-class ArchivoDetailSerializer(BaseElasticSearchSerializer):
+class ArchivoDetailSerializer(serializers.ModelSerializer):
     """Full Archivo details"""
     nombre_abreviado = serializers.CharField(read_only=True)
     documento_ids = serializers.SerializerMethodField()
@@ -152,7 +142,7 @@ class ArchivoDetailSerializer(BaseElasticSearchSerializer):
         return list(obj.documento_set.values_list('documento_id', flat=True))
 
 
-class DocumentoDetailSerializer(BaseElasticSearchSerializer):
+class DocumentoDetailSerializer(serializers.ModelSerializer):
     """Full Documento details"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
@@ -171,7 +161,7 @@ class DocumentoDetailSerializer(BaseElasticSearchSerializer):
         return list(obj.persona_set.values_list('persona_id', flat=True))
 
 
-class PersonaDetailSerializer(BaseElasticSearchSerializer):
+class PersonaDetailSerializer(serializers.ModelSerializer):
     """Base Persona detail serializer"""
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
     documento_ids = serializers.SerializerMethodField()
@@ -248,7 +238,7 @@ class PersonaNoEsclavizadaDetailSerializer(PersonaDetailSerializer):
         return []
 
 
-class LugarDetailSerializer(BaseElasticSearchSerializer):
+class LugarDetailSerializer(serializers.ModelSerializer):
     """Full Lugar details"""
     persona_ids = serializers.SerializerMethodField()
     documento_ids = serializers.SerializerMethodField()
@@ -267,7 +257,7 @@ class LugarDetailSerializer(BaseElasticSearchSerializer):
         return list(obj.p_x_l_lugar.values_list('documento_id', flat=True).distinct())
 
 
-class CorporacionDetailSerializer(BaseElasticSearchSerializer):
+class CorporacionDetailSerializer(serializers.ModelSerializer):
     """Full Corporacion details"""
     tipo_institucion_nombre = serializers.CharField(source='tipo_institucion.nombre', read_only=True)
     lugar_corporacion = LugarReferenceSerializer(read_only=True)
@@ -293,7 +283,7 @@ class CorporacionDetailSerializer(BaseElasticSearchSerializer):
 
 
 # Relationship Serializers - For handling M2M relationships
-class PersonaRelacionesDetailSerializer(BaseElasticSearchSerializer):
+class PersonaRelacionesDetailSerializer(serializers.ModelSerializer):
     """PersonaRelaciones with references"""
     documento = DocumentoReferenceSerializer(read_only=True)
     persona_ids = serializers.SerializerMethodField()
@@ -306,7 +296,7 @@ class PersonaRelacionesDetailSerializer(BaseElasticSearchSerializer):
         return list(obj.personas.values_list('persona_id', flat=True))
 
 
-class PersonaLugarRelDetailSerializer(BaseElasticSearchSerializer):
+class PersonaLugarRelDetailSerializer(serializers.ModelSerializer):
     """PersonaLugarRel with references"""
     documento = DocumentoReferenceSerializer(read_only=True)
     lugar = LugarReferenceSerializer(read_only=True)
@@ -321,7 +311,7 @@ class PersonaLugarRelDetailSerializer(BaseElasticSearchSerializer):
         return list(obj.personas.values_list('persona_id', flat=True))
 
 
-class PersonaRolEventoDetailSerializer(BaseElasticSearchSerializer):
+class PersonaRolEventoDetailSerializer(serializers.ModelSerializer):
     """PersonaRolEvento with references"""
     documento = DocumentoReferenceSerializer(read_only=True)
     rol_evento = serializers.CharField(source='rol_evento.rol_evento', read_only=True)
@@ -336,7 +326,7 @@ class PersonaRolEventoDetailSerializer(BaseElasticSearchSerializer):
 
 
 # Travel Trajectory Serializers - For map visualizations
-class TravelTrajectorySerializer(BaseElasticSearchSerializer):
+class TravelTrajectorySerializer(serializers.ModelSerializer):
     """Lightweight travel trajectory data for map visualization"""
     persona = PersonaReferenceSerializer(read_only=True)
     lugar = LugarReferenceSerializer(read_only=True)
@@ -399,14 +389,14 @@ class PersonaTravelTrajectorySerializer(serializers.Serializer):
 
 
 # Simple utility serializers
-class ActividadesSerializer(BaseElasticSearchSerializer):
+class ActividadesSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Actividades
         fields = ['actividad_id', 'actividad']
 
 
-class LogMessageSerializer(BaseElasticSearchSerializer):
+class LogMessageSerializer(serializers.ModelSerializer):
     level = serializers.CharField(max_length=10)
     message = serializers.CharField()
     

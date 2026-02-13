@@ -1,5 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 
 # V1beta removed - see API_MIGRATION.md for details
 
@@ -10,6 +13,18 @@ from .v1.views import (DocumentoViewSet, PersonaEsclavizadaViewSet, PersonaLugar
 
 # Import V2 views
 from .v2 import urls as v2_urls
+
+# Health check endpoint
+@api_view(['GET'])
+def health_check(request):
+    """Health check endpoint for container orchestration"""
+    from django.db import connection
+    try:
+        # Check database connection
+        connection.ensure_connection()
+        return Response({'status': 'healthy', 'database': 'connected'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'status': 'unhealthy', 'error': str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 # V1beta router removed - see API_MIGRATION.md
 
@@ -42,10 +57,12 @@ urlpatterns = [
     path('v1/logout/', api_logout, name='api_logout'),
     path('v1/whoami/', whoami, name='whoami'),
     path("v1/csrf/", get_csrf_token),
-    path('v1/bulk-ingest/', BulkIngestAPIView.as_view(), name='bulk_ingest')
+    path('v1/bulk-ingest/', BulkIngestAPIView.as_view(), name='bulk_ingest'),
+    path('v1/health/', health_check, name='health_check_v1'),
 ]
 
 # v2 paths (performance-optimized, use for new features)
 urlpatterns += [
-    path('v2/', include(v2_urls), name='v2')
+    path('v2/', include(v2_urls), name='v2'),
+    path('v2/health/', health_check, name='health_check_v2'),
 ]

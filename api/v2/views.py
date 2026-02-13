@@ -1,9 +1,10 @@
 import json
 import logging
 
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse, HttpResponse
@@ -13,22 +14,12 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action, permission_classes
-from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import MultiMatch, Q as ESQ
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 import csv
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar, PersonaRelaciones, Persona)
-
-from dbgestor.documents import (
-    DocumentoDocument,
-    PersonaNoEsclavizadaDocument,
-    PersonaEsclavizadaDocument,
-    CorporacionDocument,
-    LugarDocument,
-)
 
 from .serializers import (
     # Reference serializers
@@ -180,28 +171,40 @@ class DocumentoViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """Elasticsearch-powered search"""
+        """PostgreSQL full-text and trigram search"""
         query = request.query_params.get('q', '')
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search = DocumentoDocument.search()
-            fields = ['titulo', 'descripcion', 'documento_idno', 'notas']
-            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
-            search = search.query(multi_match)
+            # Use PostgreSQL full-text search with trigram similarity as fallback
+            search_query = SearchQuery(query, config='spanish')
             
-            page = self.paginate_queryset(search)
+            # Search using search_vector (full-text) and trigram similarity (fuzzy matching)
+            queryset = Documento.objects.annotate(
+                search_rank=SearchRank(F('search_vector'), search_query),
+                titulo_similarity=TrigramSimilarity('titulo', query),
+                descripción_similarity=TrigramSimilarity('descripcion', query)
+            ).filter(
+                Q(search_vector=search_query) |  # Full-text search match
+                Q(titulo_similarity__gt=0.3) |   # Fuzzy match on titulo (>30% similar)
+                Q(descripción_similarity__gt=0.3)  # Fuzzy match on descripcion
+            ).filter(
+                is_published=True
+            ).order_by(
+                '-search_rank',  # Best full-text matches first
+                '-titulo_similarity',  # Then best fuzzy matches
+                '-updated_at'
+            ).distinct()
+            
+            page = self.paginate_queryset(queryset)
             
             if page is not None:
-                response = search[page.start:page.end].execute()
-                results = [hit.to_dict() for hit in response.hits]
-                return self.get_paginated_response(results)
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
             
-            response = search.execute()
-            results = [hit.to_dict() for hit in response.hits]
-            
-            return Response(results)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
@@ -274,28 +277,38 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """Elasticsearch-powered search for enslaved persons"""
+        """PostgreSQL full-text and trigram search for enslaved persons"""
         query = request.query_params.get('q', '')
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search = PersonaEsclavizadaDocument.search()
-            fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
-            search = search.query(multi_match)
+            search_query = SearchQuery(query, config='spanish')
             
-            page = self.paginate_queryset(search)
+            queryset = PersonaEsclavizada.objects.annotate(
+                search_rank=SearchRank(F('search_vector'), search_query),
+                nombre_similarity=TrigramSimilarity('nombre_normalizado', query),
+                nombres_similarity=TrigramSimilarity('nombres', query)
+            ).filter(
+                Q(search_vector=search_query) |
+                Q(nombre_similarity__gt=0.3) |
+                Q(nombres_similarity__gt=0.3)
+            ).filter(
+                is_published=True
+            ).order_by(
+                '-search_rank',
+                '-nombre_similarity',
+                '-updated_at'
+            ).distinct()
+            
+            page = self.paginate_queryset(queryset)
             
             if page is not None:
-                response = search[page.start:page.end].execute()
-                results = [hit.to_dict() for hit in response.hits]
-                return self.get_paginated_response(results)
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
             
-            response = search.execute()
-            results = [hit.to_dict() for hit in response.hits]
-            
-            return Response(results)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
@@ -370,28 +383,38 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """Elasticsearch-powered search for non-enslaved persons"""
+        """PostgreSQL full-text and trigram search for non-enslaved persons"""
         query = request.query_params.get('q', '')
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search = PersonaNoEsclavizadaDocument.search()
-            fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
-            search = search.query(multi_match)
+            search_query = SearchQuery(query, config='spanish')
             
-            page = self.paginate_queryset(search)
+            queryset = PersonaNoEsclavizada.objects.annotate(
+                search_rank=SearchRank(F('search_vector'), search_query),
+                nombre_similarity=TrigramSimilarity('nombre_normalizado', query),
+                nombres_similarity=TrigramSimilarity('nombres', query)
+            ).filter(
+                Q(search_vector=search_query) |
+                Q(nombre_similarity__gt=0.3) |
+                Q(nombres_similarity__gt=0.3)
+            ).filter(
+                is_published=True
+            ).order_by(
+                '-search_rank',
+                '-nombre_similarity',
+                '-updated_at'
+            ).distinct()
+            
+            page = self.paginate_queryset(queryset)
             
             if page is not None:
-                response = search[page.start:page.end].execute()
-                results = [hit.to_dict() for hit in response.hits]
-                return self.get_paginated_response(results)
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
             
-            response = search.execute()
-            results = [hit.to_dict() for hit in response.hits]
-            
-            return Response(results)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
@@ -424,28 +447,34 @@ class LugarViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """Elasticsearch-powered search for places"""
+        """PostgreSQL full-text and trigram search for places"""
         query = request.query_params.get('q', '')
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search = LugarDocument.search()
-            fields = ['nombre_lugar', 'tipo']
-            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
-            search = search.query(multi_match)
+            search_query = SearchQuery(query, config='spanish')
             
-            page = self.paginate_queryset(search)
+            queryset = Lugar.objects.annotate(
+                search_rank=SearchRank(F('search_vector'), search_query),
+                nombre_similarity=TrigramSimilarity('nombre_lugar', query)
+            ).filter(
+                Q(search_vector=search_query) |
+                Q(nombre_similarity__gt=0.3)
+            ).order_by(
+                '-search_rank',
+                '-nombre_similarity',
+                '-updated_at'
+            ).distinct()
+            
+            page = self.paginate_queryset(queryset)
             
             if page is not None:
-                response = search[page.start:page.end].execute()
-                results = [hit.to_dict() for hit in response.hits]
-                return self.get_paginated_response(results)
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
             
-            response = search.execute()
-            results = [hit.to_dict() for hit in response.hits]
-            
-            return Response(results)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
@@ -479,28 +508,36 @@ class CorporacionViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """Elasticsearch-powered search for corporations"""
+        """PostgreSQL full-text and trigram search for corporations"""
         query = request.query_params.get('q', '')
         if not query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search = CorporacionDocument.search()
-            fields = ['nombre_institucion', 'descripcion']
-            multi_match = MultiMatch(query=query, fields=fields, type="best_fields", fuzziness="AUTO")
-            search = search.query(multi_match)
+            search_query = SearchQuery(query, config='spanish')
             
-            page = self.paginate_queryset(search)
+            queryset = Corporacion.objects.annotate(
+                search_rank=SearchRank(F('search_vector'), search_query),
+                nombre_similarity=TrigramSimilarity('nombre_institucion', query)
+            ).filter(
+                Q(search_vector=search_query) |
+                Q(nombre_similarity__gt=0.3)
+            ).filter(
+                is_published=True
+            ).order_by(
+                '-search_rank',
+                '-nombre_similarity',
+                '-updated_at'
+            ).distinct()
+            
+            page = self.paginate_queryset(queryset)
             
             if page is not None:
-                response = search[page.start:page.end].execute()
-                results = [hit.to_dict() for hit in response.hits]
-                return self.get_paginated_response(results)
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
             
-            response = search.execute()
-            results = [hit.to_dict() for hit in response.hits]
-            
-            return Response(results)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
         except Exception as e:
             logger.error(f"Error executing search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
@@ -542,7 +579,7 @@ class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
 # Global Search API
 class SearchAPIView(APIView):
     """
-    Global search across all entity types using Elasticsearch
+    Global search across all entity types using PostgreSQL full-text search
     """
     permission_classes = [APIPerm]
 
@@ -556,44 +593,67 @@ class SearchAPIView(APIView):
         results = {}
         
         try:
+            search_query = SearchQuery(query, config='spanish')
+            
             if entity_type in ['all', 'documentos']:
-                doc_search = DocumentoDocument.search()
-                doc_fields = ['titulo', 'descripcion', 'documento_idno', 'notas']
-                doc_multi_match = MultiMatch(query=query, fields=doc_fields, type="best_fields", fuzziness="AUTO")
-                doc_results = doc_search.query(doc_multi_match)[:10].execute()
-                results['documentos'] = [hit.to_dict() for hit in doc_results.hits]
+                doc_queryset = Documento.objects.annotate(
+                    search_rank=SearchRank(F('search_vector'), search_query),
+                    titulo_similarity=TrigramSimilarity('titulo', query)
+                ).filter(
+                    Q(search_vector=search_query) | Q(titulo_similarity__gt=0.3)
+                ).filter(
+                    is_published=True
+                ).order_by('-search_rank', '-titulo_similarity')[:10]
+                
+                results['documentos'] = DocumentoListSerializer(doc_queryset, many=True).data
 
             if entity_type in ['all', 'personas']:
                 # Search enslaved persons
-                pe_search = PersonaEsclavizadaDocument.search()
-                pe_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-                pe_multi_match = MultiMatch(query=query, fields=pe_fields, type="best_fields", fuzziness="AUTO")
-                pe_results = pe_search.query(pe_multi_match)[:5].execute()
+                pe_queryset = PersonaEsclavizada.objects.annotate(
+                    search_rank=SearchRank(F('search_vector'), search_query),
+                    nombre_similarity=TrigramSimilarity('nombre_normalizado', query)
+                ).filter(
+                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                ).filter(
+                    is_published=True
+                ).order_by('-search_rank', '-nombre_similarity')[:5]
                 
                 # Search non-enslaved persons
-                pne_search = PersonaNoEsclavizadaDocument.search()
-                pne_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-                pne_multi_match = MultiMatch(query=query, fields=pne_fields, type="best_fields", fuzziness="AUTO")
-                pne_results = pne_search.query(pne_multi_match)[:5].execute()
+                pne_queryset = PersonaNoEsclavizada.objects.annotate(
+                    search_rank=SearchRank(F('search_vector'), search_query),
+                    nombre_similarity=TrigramSimilarity('nombre_normalizado', query)
+                ).filter(
+                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                ).filter(
+                    is_published=True
+                ).order_by('-search_rank', '-nombre_similarity')[:5]
                 
                 results['personas'] = {
-                    'esclavizadas': [hit.to_dict() for hit in pe_results.hits],
-                    'no_esclavizadas': [hit.to_dict() for hit in pne_results.hits]
+                    'esclavizadas': PersonaEsclavizadaListSerializer(pe_queryset, many=True).data,
+                    'no_esclavizadas': PersonaNoEsclavizadaListSerializer(pne_queryset, many=True).data
                 }
 
             if entity_type in ['all', 'lugares']:
-                lugar_search = LugarDocument.search()
-                lugar_fields = ['nombre_lugar', 'tipo']
-                lugar_multi_match = MultiMatch(query=query, fields=lugar_fields, type="best_fields", fuzziness="AUTO")
-                lugar_results = lugar_search.query(lugar_multi_match)[:10].execute()
-                results['lugares'] = [hit.to_dict() for hit in lugar_results.hits]
+                lugar_queryset = Lugar.objects.annotate(
+                    search_rank=SearchRank(F('search_vector'), search_query),
+                    nombre_similarity=TrigramSimilarity('nombre_lugar', query)
+                ).filter(
+                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                ).order_by('-search_rank', '-nombre_similarity')[:10]
+                
+                results['lugares'] = LugarListSerializer(lugar_queryset, many=True).data
 
             if entity_type in ['all', 'corporaciones']:
-                corp_search = CorporacionDocument.search()
-                corp_fields = ['nombre_institucion', 'descripcion']
-                corp_multi_match = MultiMatch(query=query, fields=corp_fields, type="best_fields", fuzziness="AUTO")
-                corp_results = corp_search.query(corp_multi_match)[:10].execute()
-                results['corporaciones'] = [hit.to_dict() for hit in corp_results.hits]
+                corp_queryset = Corporacion.objects.annotate(
+                    search_rank=SearchRank(F('search_vector'), search_query),
+                    nombre_similarity=TrigramSimilarity('nombre_institucion', query)
+                ).filter(
+                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                ).filter(
+                    is_published=True
+                ).order_by('-search_rank', '-nombre_similarity')[:10]
+                
+                results['corporaciones'] = CorporacionListSerializer(corp_queryset, many=True).data
 
             return Response(results)
             
