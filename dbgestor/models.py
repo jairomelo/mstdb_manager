@@ -120,8 +120,8 @@ class Lugar(models.Model):
     
     class Meta:
         indexes = [
-            GinIndex(fields=['search_vector']),
-            GinIndex(fields=['nombre_lugar'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['search_vector'], name='lugar_search_vector_idx'),
+            GinIndex(fields=['nombre_lugar'], opclasses=['gin_trgm_ops'], name='lugar_nombre_trgm_idx'),
         ]
 
     def type_to_string(self):
@@ -262,9 +262,9 @@ class Documento(models.Model):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
-            GinIndex(fields=['search_vector']),
-            GinIndex(fields=['titulo'], opclasses=['gin_trgm_ops']),
-            GinIndex(fields=['descripcion'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['search_vector'], name='documento_search_vector_idx'),
+            GinIndex(fields=['titulo'], opclasses=['gin_trgm_ops'], name='documento_titulo_trgm_idx'),
+            GinIndex(fields=['descripcion'], opclasses=['gin_trgm_ops'], name='documento_desc_trgm_idx'),
         ]
 
     def save(self, *args, **kwargs):
@@ -429,10 +429,10 @@ class Persona(PolymorphicModel):
 
     class Meta:
         indexes = [
-            GinIndex(fields=['search_vector']),
-            GinIndex(fields=['nombres'], opclasses=['gin_trgm_ops']),
-            GinIndex(fields=['apellidos'], opclasses=['gin_trgm_ops']),
-            GinIndex(fields=['nombre_normalizado'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['search_vector'], name='persona_search_vector_idx'),
+            GinIndex(fields=['nombres'], opclasses=['gin_trgm_ops'], name='persona_nombres_trgm_idx'),
+            GinIndex(fields=['apellidos'], opclasses=['gin_trgm_ops'], name='persona_apellidos_trgm_idx'),
+            GinIndex(fields=['nombre_normalizado'], opclasses=['gin_trgm_ops'], name='persona_nombre_norm_trgm_idx'),
         ]
 
     def capitalize_name(self, name):
@@ -779,9 +779,9 @@ class Corporacion(PolymorphicModel):
 
     class Meta:
         indexes = [
-            GinIndex(fields=['search_vector']),
-            GinIndex(fields=['nombre_institucion'], opclasses=['gin_trgm_ops']),
-            GinIndex(fields=['nombres_alternativos'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['search_vector'], name='corporacion_search_vector_idx'),
+            GinIndex(fields=['nombre_institucion'], opclasses=['gin_trgm_ops'], name='corporacion_nombre_trgm_idx'),
+            GinIndex(fields=['nombres_alternativos'], opclasses=['gin_trgm_ops'], name='corporacion_alt_trgm_idx'),
         ]
 
     def save(self, *args, **kwargs):
