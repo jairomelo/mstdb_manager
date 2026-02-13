@@ -33,12 +33,12 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^5(lt(57sz1#_u*j29dlphi*_cv81l&7ew^u@or08z0li1ov39'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
 
@@ -52,8 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
+    'django.contrib.postgres',  # PostgreSQL-specific features
     'rest_framework',
     'corsheaders',
     'import_export',
@@ -103,15 +102,14 @@ WSGI_APPLICATION = 'mdb.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv('DATABASE_NAME'),
-        "USER": os.getenv('DATABASE_USER'),
-        "PASSWORD": os.getenv('DATABASE_PASSWORD'),
-        "HOST": os.getenv('DATABASE_HOST'),
-        "PORT": '3306',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgresql://trayectorias_user:changeme@postgres:5432/trayectorias'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -174,11 +172,21 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-logdir = os.path.join(BASE_DIR, 'appslogs')
-genLogFile = os.path.join(logdir, 'general.log')
-appLogFile = os.path.join(logdir, 'apps.log')
-elasticsearchLogFile = os.path.join(logdir, 'elasticsearch.log')
-ensure_log_files = [CustomScripts.FileManager().createLogsFiles(file, logdir) for file in [genLogFile, appLogFile, elasticsearchLogFile]]
+# Logging configuration
+# In Docker/production, use console logging (captured by Docker logs)
+# In development with file system, use file logging
+USE_FILE_LOGGING = os.getenv('USE_FILE_LOGGING', 'False') == 'True'
+
+if USE_FILE_LOGGING:
+    logdir = os.path.join(BASE_DIR, 'appslogs')
+    genLogFile = os.path.join(logdir, 'general.log')
+    appLogFile = os.path.join(logdir, 'apps.log')
+    # Only try to create log files with www-data permissions when not in Docker
+    try:
+        ensure_log_files = [CustomScripts.FileManager().createLogsFiles(file, logdir) for file in [genLogFile, appLogFile]]
+    except (KeyError, PermissionError):
+        # If www-data user doesn't exist or permission denied, just create the directory
+        os.makedirs(logdir, exist_ok=True)
 
 LOGGING = {
     'version': 1,
@@ -192,76 +200,59 @@ LOGGING = {
             'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
-        'elasticsearch': {
-            'format': '{levelname} {asctime} {message}',
-            'style': '{',
-        },
     },
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'when': 'W6',
-            'interval': 1,
-            'backupCount': 7,
-            'filename': genLogFile,
-            'formatter': 'simple',
-        },
-        'appsfile': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'when': 'W6',
-            'interval': 1,
-            'backupCount': 7,
-            'filename': appLogFile,
-            'formatter': 'verbose',
-        },
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-        'elasticsearch': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'when': 'W6',
-            'interval': 1,
-            'backupCount': 7,
-            'filename': elasticsearchLogFile,
             'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': True,
+            'handlers': ['console'],
+            'level': os.getenv('LOG_LEVEL', 'INFO'),
+            'propagate': False,
         },
         'dbgestor': {
-            'handlers': ['appsfile', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'elasticsearch': {
-            'handlers': ['elasticsearch'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'handlers': ['console'],
+            'level': os.getenv('LOG_LEVEL', 'DEBUG'),
+            'propagate': False,
         },
     },
 }
 
+# Add file handlers if enabled (for non-Docker environments)
+if USE_FILE_LOGGING:
+    LOGGING['handlers']['file'] = {
+        'level': 'DEBUG',
+        'class': 'logging.handlers.TimedRotatingFileHandler',
+        'when': 'W6',
+        'interval': 1,
+        'backupCount': 7,
+        'filename': genLogFile,
+        'formatter': 'simple',
+    }
+    LOGGING['handlers']['appsfile'] = {
+        'level': 'DEBUG',
+        'class': 'logging.handlers.TimedRotatingFileHandler',
+        'when': 'W6',
+        'interval': 1,
+        'backupCount': 7,
+        'filename': appLogFile,
+        'formatter': 'verbose',
+    }
+    # Add file handler to loggers
+    LOGGING['loggers']['django']['handlers'].append('file')
+    LOGGING['loggers']['dbgestor']['handlers'].append('appsfile')
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
-EMAIL_HOST = 'smtp.sendgrid.net' 
-EMAIL_PORT = 587 
-EMAIL_USE_TLS = True 
-EMAIL_HOST_USER = 'apikey'  
-EMAIL_HOST_PASSWORD = os.getenv('SMTP_API_KEY')
-DEFAULT_FROM_EMAIL = os.getenv('FROM_EMAIL', default='noreply@abcng.org')
+EMAIULT_FROM_EMAIL = os.getenv('FROM_EMAIL', default='noreply@abcng.org')
 LOGIN_REDIRECT_URL = 'success'
 DEFAULT_HTTP_PROTOCOL = 'https'
 DEFAULT_DOMAIN = 'msdb.abcng.org'
 
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS').split(',')
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS').split(',')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_HTTPONLY = False
@@ -272,14 +263,9 @@ CSRF_COOKIE_NAME = 'csrftoken'
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20, 
+    'PAGE_SIZE': int(os.getenv('REST_FRAMEWORK_PAGE_SIZE', '20')), 
 }
 
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': (os.getenv('ELASTICSEARCH_PROTOCOL', 'https') + '://') + os.getenv('ELASTICSEARCH_HOST') + ':' + os.getenv('ELASTICSEARCH_PORT') if os.getenv('ELASTICSEARCH_PORT') else '',
-        'http_auth': (os.getenv('ELASTICSEARCH_USER'), os.getenv('ELASTICSEARCH_PASSWORD')),
-        'verify_certs': os.getenv('ELASTICSEARCH_VERIFY_CERTS') if os.getenv('ELASTICSEARCH_VERIFY_CERTS') else True,
-    },
-}
+# PostgreSQL Full-Text Search Configuration
+# Extensions enabled via migration: pg_trgm, unaccent
 

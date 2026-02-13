@@ -3,6 +3,8 @@ from django.db import models, transaction
 from simple_history.models import HistoricalRecords
 from polymorphic.models import PolymorphicModel
 from datetime import timezone
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 
 import logging
 
@@ -109,9 +111,18 @@ class Lugar(models.Model):
 
     tipo = models.CharField(max_length=50, choices=PLACE_TYPE_CHOICES)
     
+    # PostgreSQL full-text search
+    search_vector = SearchVectorField(null=True, blank=True)
+    
     is_published = models.BooleanField(default=False, help_text="Indicates if the place is published in the API")
 
     history = HistoricalRecords()
+    
+    class Meta:
+        indexes = [
+            GinIndex(fields=['search_vector']),
+            GinIndex(fields=['nombre_lugar'], opclasses=['gin_trgm_ops']),
+        ]
 
     def type_to_string(self):
         if self.tipo == 'ciudad':
@@ -234,14 +245,12 @@ class Documento(models.Model):
         Lugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='%(class)s_lugar_doc')
 
     folio_inicial = models.CharField(max_length=50)
-    folio_final = models.CharField(max_length=50, null=True, blank=True)
-
-    evento_valor_sp = models.CharField(max_length=50, null=True, blank=True)
-    evento_forma_de_pago = models.CharField(
-        max_length=100, null=True, blank=True)
-    evento_total = models.CharField(max_length=100, null=True, blank=True)
+    folio_final = models.CharField(max_length=50, blank=True, null=True)
 
     notas = models.TextField(max_length=500, null=True, blank=True)
+    
+    # PostgreSQL full-text search field
+    search_vector = SearchVectorField(null=True, blank=True)
     
     is_published = models.BooleanField(default=False, help_text="Indicates if the document is published in the API")
 
@@ -252,6 +261,11 @@ class Documento(models.Model):
 
     class Meta:
         ordering = ['-updated_at']
+        indexes = [
+            GinIndex(fields=['search_vector']),
+            GinIndex(fields=['titulo'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['descripcion'], opclasses=['gin_trgm_ops']),
+        ]
 
     def save(self, *args, **kwargs):
         creating = self.pk is None
@@ -409,6 +423,17 @@ class Persona(PolymorphicModel):
     updated_at = models.DateTimeField(auto_now=True)
 
     history = HistoricalRecords(inherit=True)
+
+    # PostgreSQL full-text search field
+    search_vector = SearchVectorField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            GinIndex(fields=['search_vector']),
+            GinIndex(fields=['nombres'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['apellidos'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['nombre_normalizado'], opclasses=['gin_trgm_ops']),
+        ]
 
     def capitalize_name(self, name):
 
@@ -748,6 +773,16 @@ class Corporacion(PolymorphicModel):
     updated_at = models.DateTimeField(auto_now=True)
 
     history = HistoricalRecords()
+
+    # PostgreSQL full-text search field
+    search_vector = SearchVectorField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            GinIndex(fields=['search_vector']),
+            GinIndex(fields=['nombre_institucion'], opclasses=['gin_trgm_ops']),
+            GinIndex(fields=['nombres_alternativos'], opclasses=['gin_trgm_ops']),
+        ]
 
     def save(self, *args, **kwargs):
 
