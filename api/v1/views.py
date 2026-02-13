@@ -13,8 +13,9 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action, permission_classes
-from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import MultiMatch, Q as ESQ
+# Elasticsearch imports removed - v1 API is deprecated, use v2 instead
+# from elasticsearch_dsl import Search
+# from elasticsearch_dsl.query import MultiMatch, Q as ESQ
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 
@@ -23,13 +24,14 @@ from .resolvers import ingest_row
 from dbgestor.models import (Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
                              PersonaLugarRel, Lugar, PersonaRelaciones, Persona)
 
-from dbgestor.documents import (
-    DocumentoDocument,
-    PersonaNoEsclavizadaDocument,
-    PersonaEsclavizadaDocument,
-    CorporacionDocument,
-    LugarDocument,
-)
+# Elasticsearch document models removed - v1 API is deprecated, use v2 instead
+# from dbgestor.documents import (
+#     DocumentoDocument,
+#     PersonaNoEsclavizadaDocument,
+#     PersonaEsclavizadaDocument,
+#     CorporacionDocument,
+#     LugarDocument,
+# )
 
 from .serializers import (LogMessageSerializer, DocumentoSerializer, PersonaEsclavizadaSerializer, 
                           PersonaNoEsclavizadaSerializer, CorporacionSerializer, PersonaLugarRelSerializer,

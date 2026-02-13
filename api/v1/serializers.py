@@ -6,7 +6,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
 
 from django.db.models import Manager
 
-from django_elasticsearch_dsl.registries import registry
+#from django_elasticsearch_dsl.registries import registry
 
 class BaseElasticSearchSerializer(serializers.ModelSerializer):
     class Meta:
