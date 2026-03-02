@@ -1,6 +1,6 @@
-VERSION = (0, 20, 0)
+VERSION = (0, 99, 0)
 VERSION_STRING = '.'.join(str(x) for x in VERSION)
-VERSION_DATE = '2025-06-25'
+VERSION_DATE = '2026-03-01'
 
 def get_version():
     """Returns the version string"""
