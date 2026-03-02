@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from django.db.models import Count, F, Q
 from django.db.models.functions import ExtractYear
@@ -49,6 +50,15 @@ from .serializers import (
 
 
 logger = logging.getLogger('dbgestor')
+
+
+def parse_search_query(raw_query):
+    """Detect quoted queries and return (clean_query, is_exact).
+    Quoted input (single or double) triggers phrase search with no fuzzy fallback."""
+    match = re.fullmatch(r'["\'](.+)["\']', raw_query.strip())
+    if match:
+        return match.group(1), True
+    return raw_query, False
 
 
 class APIPerm(BasePermission):
@@ -171,29 +181,36 @@ class DocumentoViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """PostgreSQL full-text and trigram search"""
-        query = request.query_params.get('q', '')
-        if not query:
+        """PostgreSQL full-text and trigram search. Wrap query in quotes for exact match."""
+        raw_query = request.query_params.get('q', '')
+        if not raw_query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            # Use PostgreSQL full-text search with trigram similarity as fallback
-            search_query = SearchQuery(query, config='spanish')
-            
-            # Search using search_vector (full-text) and trigram similarity (fuzzy matching)
+            query, is_exact = parse_search_query(raw_query)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+
             queryset = Documento.objects.annotate(
                 search_rank=SearchRank(F('search_vector'), search_query),
                 titulo_similarity=TrigramSimilarity('titulo', query),
-                descripción_similarity=TrigramSimilarity('descripcion', query)
-            ).filter(
-                Q(search_vector=search_query) |  # Full-text search match
-                Q(titulo_similarity__gt=0.3) |   # Fuzzy match on titulo (>30% similar)
-                Q(descripción_similarity__gt=0.3)  # Fuzzy match on descripcion
-            ).filter(
+                descripcion_similarity=TrigramSimilarity('descripcion', query)
+            )
+
+            if is_exact:
+                queryset = queryset.filter(search_vector=search_query)
+            else:
+                queryset = queryset.filter(
+                    Q(search_vector=search_query) |
+                    Q(titulo_similarity__gt=0.3) |
+                    Q(descripcion_similarity__gt=0.3)
+                )
+
+            queryset = queryset.filter(
                 is_published=True
             ).order_by(
-                '-search_rank',  # Best full-text matches first
-                '-titulo_similarity',  # Then best fuzzy matches
+                '-search_rank',
+                '-titulo_similarity',
                 '-updated_at'
             ).distinct()
             
@@ -277,23 +294,32 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """PostgreSQL full-text and trigram search for enslaved persons"""
-        query = request.query_params.get('q', '')
-        if not query:
+        """PostgreSQL full-text and trigram search for enslaved persons. Quotes for exact match."""
+        raw_query = request.query_params.get('q', '')
+        if not raw_query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search_query = SearchQuery(query, config='spanish')
-            
+            query, is_exact = parse_search_query(raw_query)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+
             queryset = PersonaEsclavizada.objects.annotate(
                 search_rank=SearchRank(F('search_vector'), search_query),
                 nombre_similarity=TrigramSimilarity('nombre_normalizado', query),
                 nombres_similarity=TrigramSimilarity('nombres', query)
-            ).filter(
-                Q(search_vector=search_query) |
-                Q(nombre_similarity__gt=0.3) |
-                Q(nombres_similarity__gt=0.3)
-            ).filter(
+            )
+
+            if is_exact:
+                queryset = queryset.filter(search_vector=search_query)
+            else:
+                queryset = queryset.filter(
+                    Q(search_vector=search_query) |
+                    Q(nombre_similarity__gt=0.3) |
+                    Q(nombres_similarity__gt=0.3)
+                )
+
+            queryset = queryset.filter(
                 is_published=True
             ).order_by(
                 '-search_rank',
@@ -383,23 +409,32 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """PostgreSQL full-text and trigram search for non-enslaved persons"""
-        query = request.query_params.get('q', '')
-        if not query:
+        """PostgreSQL full-text and trigram search for non-enslaved persons. Quotes for exact match."""
+        raw_query = request.query_params.get('q', '')
+        if not raw_query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search_query = SearchQuery(query, config='spanish')
-            
+            query, is_exact = parse_search_query(raw_query)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+
             queryset = PersonaNoEsclavizada.objects.annotate(
                 search_rank=SearchRank(F('search_vector'), search_query),
                 nombre_similarity=TrigramSimilarity('nombre_normalizado', query),
                 nombres_similarity=TrigramSimilarity('nombres', query)
-            ).filter(
-                Q(search_vector=search_query) |
-                Q(nombre_similarity__gt=0.3) |
-                Q(nombres_similarity__gt=0.3)
-            ).filter(
+            )
+
+            if is_exact:
+                queryset = queryset.filter(search_vector=search_query)
+            else:
+                queryset = queryset.filter(
+                    Q(search_vector=search_query) |
+                    Q(nombre_similarity__gt=0.3) |
+                    Q(nombres_similarity__gt=0.3)
+                )
+
+            queryset = queryset.filter(
                 is_published=True
             ).order_by(
                 '-search_rank',
@@ -447,21 +482,30 @@ class LugarViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """PostgreSQL full-text and trigram search for places"""
-        query = request.query_params.get('q', '')
-        if not query:
+        """PostgreSQL full-text and trigram search for places. Quotes for exact match."""
+        raw_query = request.query_params.get('q', '')
+        if not raw_query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search_query = SearchQuery(query, config='spanish')
-            
+            query, is_exact = parse_search_query(raw_query)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+
             queryset = Lugar.objects.annotate(
                 search_rank=SearchRank(F('search_vector'), search_query),
                 nombre_similarity=TrigramSimilarity('nombre_lugar', query)
-            ).filter(
-                Q(search_vector=search_query) |
-                Q(nombre_similarity__gt=0.3)
-            ).order_by(
+            )
+
+            if is_exact:
+                queryset = queryset.filter(search_vector=search_query)
+            else:
+                queryset = queryset.filter(
+                    Q(search_vector=search_query) |
+                    Q(nombre_similarity__gt=0.3)
+                )
+
+            queryset = queryset.order_by(
                 '-search_rank',
                 '-nombre_similarity',
                 '-updated_at'
@@ -508,21 +552,30 @@ class CorporacionViewSet(BaseV2ViewSet):
 
     @action(detail=False, methods=['get'])
     def search(self, request):
-        """PostgreSQL full-text and trigram search for corporations"""
-        query = request.query_params.get('q', '')
-        if not query:
+        """PostgreSQL full-text and trigram search for corporations. Quotes for exact match."""
+        raw_query = request.query_params.get('q', '')
+        if not raw_query:
             return Response({'error': 'No query provided'}, status=400)
 
         try:
-            search_query = SearchQuery(query, config='spanish')
-            
+            query, is_exact = parse_search_query(raw_query)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+
             queryset = Corporacion.objects.annotate(
                 search_rank=SearchRank(F('search_vector'), search_query),
                 nombre_similarity=TrigramSimilarity('nombre_institucion', query)
-            ).filter(
-                Q(search_vector=search_query) |
-                Q(nombre_similarity__gt=0.3)
-            ).filter(
+            )
+
+            if is_exact:
+                queryset = queryset.filter(search_vector=search_query)
+            else:
+                queryset = queryset.filter(
+                    Q(search_vector=search_query) |
+                    Q(nombre_similarity__gt=0.3)
+                )
+
+            queryset = queryset.filter(
                 is_published=True
             ).order_by(
                 '-search_rank',
@@ -593,38 +646,53 @@ class SearchAPIView(APIView):
         results = {}
         
         try:
-            search_query = SearchQuery(query, config='spanish')
-            
+            query, is_exact = parse_search_query(query)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+
             if entity_type in ['all', 'documentos']:
                 doc_queryset = Documento.objects.annotate(
                     search_rank=SearchRank(F('search_vector'), search_query),
                     titulo_similarity=TrigramSimilarity('titulo', query)
-                ).filter(
-                    Q(search_vector=search_query) | Q(titulo_similarity__gt=0.3)
-                ).filter(
+                )
+                if is_exact:
+                    doc_queryset = doc_queryset.filter(search_vector=search_query)
+                else:
+                    doc_queryset = doc_queryset.filter(
+                        Q(search_vector=search_query) | Q(titulo_similarity__gt=0.3)
+                    )
+                doc_queryset = doc_queryset.filter(
                     is_published=True
                 ).order_by('-search_rank', '-titulo_similarity')[:10]
                 
                 results['documentos'] = DocumentoListSerializer(doc_queryset, many=True).data
 
             if entity_type in ['all', 'personas']:
-                # Search enslaved persons
                 pe_queryset = PersonaEsclavizada.objects.annotate(
                     search_rank=SearchRank(F('search_vector'), search_query),
                     nombre_similarity=TrigramSimilarity('nombre_normalizado', query)
-                ).filter(
-                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                ).filter(
+                )
+                if is_exact:
+                    pe_queryset = pe_queryset.filter(search_vector=search_query)
+                else:
+                    pe_queryset = pe_queryset.filter(
+                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                    )
+                pe_queryset = pe_queryset.filter(
                     is_published=True
                 ).order_by('-search_rank', '-nombre_similarity')[:5]
-                
-                # Search non-enslaved persons
+
                 pne_queryset = PersonaNoEsclavizada.objects.annotate(
                     search_rank=SearchRank(F('search_vector'), search_query),
                     nombre_similarity=TrigramSimilarity('nombre_normalizado', query)
-                ).filter(
-                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                ).filter(
+                )
+                if is_exact:
+                    pne_queryset = pne_queryset.filter(search_vector=search_query)
+                else:
+                    pne_queryset = pne_queryset.filter(
+                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                    )
+                pne_queryset = pne_queryset.filter(
                     is_published=True
                 ).order_by('-search_rank', '-nombre_similarity')[:5]
                 
@@ -637,9 +705,14 @@ class SearchAPIView(APIView):
                 lugar_queryset = Lugar.objects.annotate(
                     search_rank=SearchRank(F('search_vector'), search_query),
                     nombre_similarity=TrigramSimilarity('nombre_lugar', query)
-                ).filter(
-                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                ).order_by('-search_rank', '-nombre_similarity')[:10]
+                )
+                if is_exact:
+                    lugar_queryset = lugar_queryset.filter(search_vector=search_query)
+                else:
+                    lugar_queryset = lugar_queryset.filter(
+                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                    )
+                lugar_queryset = lugar_queryset.order_by('-search_rank', '-nombre_similarity')[:10]
                 
                 results['lugares'] = LugarListSerializer(lugar_queryset, many=True).data
 
@@ -647,9 +720,14 @@ class SearchAPIView(APIView):
                 corp_queryset = Corporacion.objects.annotate(
                     search_rank=SearchRank(F('search_vector'), search_query),
                     nombre_similarity=TrigramSimilarity('nombre_institucion', query)
-                ).filter(
-                    Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                ).filter(
+                )
+                if is_exact:
+                    corp_queryset = corp_queryset.filter(search_vector=search_query)
+                else:
+                    corp_queryset = corp_queryset.filter(
+                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
+                    )
+                corp_queryset = corp_queryset.filter(
                     is_published=True
                 ).order_by('-search_rank', '-nombre_similarity')[:10]
                 
