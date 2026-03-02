@@ -632,109 +632,99 @@ class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
 # Global Search API
 class SearchAPIView(APIView):
     """
-    Global search across all entity types using PostgreSQL full-text search
+    Global search across all entity types using PostgreSQL full-text search.
+    Returns a flat, paginated result list compatible with the frontend store:
+    {results: [{type, source}], count, next, previous, typeCounts}
     """
     permission_classes = [APIPerm]
+    PAGE_SIZE = 20
+
+    def _build_queryset(self, model, search_query, similarity_field, query_text, is_exact):
+        """Build an annotated & filtered queryset for a given model."""
+        qs = model.objects.annotate(
+            search_rank=SearchRank(F('search_vector'), search_query),
+            name_similarity=TrigramSimilarity(similarity_field, query_text),
+        )
+        if is_exact:
+            qs = qs.filter(search_vector=search_query)
+        else:
+            qs = qs.filter(
+                Q(search_vector=search_query) | Q(name_similarity__gt=0.3)
+            )
+        return qs.order_by('-search_rank', '-name_similarity')
 
     def get(self, request):
-        query = request.query_params.get('q', '')
-        entity_type = request.query_params.get('type', 'all')  # all, documentos, personas, lugares, corporaciones
-        
-        if not query:
+        query_text = request.query_params.get('q', '')
+        entity_type = request.query_params.get('type', 'all')
+        page_number = int(request.query_params.get('page', 1))
+
+        if not query_text:
             return Response({'error': 'No query provided'}, status=400)
 
-        results = {}
-        
         try:
-            query, is_exact = parse_search_query(query)
+            clean_query, is_exact = parse_search_query(query_text)
             search_type = 'phrase' if is_exact else 'plain'
-            search_query = SearchQuery(query, config='spanish', search_type=search_type)
+            search_query = SearchQuery(clean_query, config='spanish', search_type=search_type)
 
-            if entity_type in ['all', 'documentos']:
-                doc_queryset = Documento.objects.annotate(
-                    search_rank=SearchRank(F('search_vector'), search_query),
-                    titulo_similarity=TrigramSimilarity('titulo', query)
-                )
-                if is_exact:
-                    doc_queryset = doc_queryset.filter(search_vector=search_query)
-                else:
-                    doc_queryset = doc_queryset.filter(
-                        Q(search_vector=search_query) | Q(titulo_similarity__gt=0.3)
-                    )
-                doc_queryset = doc_queryset.filter(
-                    is_published=True
-                ).order_by('-search_rank', '-titulo_similarity')[:10]
-                
-                results['documentos'] = DocumentoListSerializer(doc_queryset, many=True).data
+            # ── Collect querysets per type ──────────────────────────
+            type_configs = {
+                'documento': (Documento, 'titulo', DocumentoListSerializer),
+                'personaesclavizada': (PersonaEsclavizada, 'nombre_normalizado', PersonaEsclavizadaListSerializer),
+                'personanoesclavizada': (PersonaNoEsclavizada, 'nombre_normalizado', PersonaNoEsclavizadaListSerializer),
+                'lugar': (Lugar, 'nombre_lugar', LugarListSerializer),
+                'corporacion': (Corporacion, 'nombre_institucion', CorporacionListSerializer),
+            }
 
-            if entity_type in ['all', 'personas']:
-                pe_queryset = PersonaEsclavizada.objects.annotate(
-                    search_rank=SearchRank(F('search_vector'), search_query),
-                    nombre_similarity=TrigramSimilarity('nombre_normalizado', query)
-                )
-                if is_exact:
-                    pe_queryset = pe_queryset.filter(search_vector=search_query)
-                else:
-                    pe_queryset = pe_queryset.filter(
-                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                    )
-                pe_queryset = pe_queryset.filter(
-                    is_published=True
-                ).order_by('-search_rank', '-nombre_similarity')[:5]
+            # Always compute counts for ALL types (used by filter chips)
+            type_counts = {}
+            for type_key, (model, sim_field, _) in type_configs.items():
+                qs = self._build_queryset(model, search_query, sim_field, clean_query, is_exact)
+                type_counts[type_key] = qs.count()
 
-                pne_queryset = PersonaNoEsclavizada.objects.annotate(
-                    search_rank=SearchRank(F('search_vector'), search_query),
-                    nombre_similarity=TrigramSimilarity('nombre_normalizado', query)
-                )
-                if is_exact:
-                    pne_queryset = pne_queryset.filter(search_vector=search_query)
-                else:
-                    pne_queryset = pne_queryset.filter(
-                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                    )
-                pne_queryset = pne_queryset.filter(
-                    is_published=True
-                ).order_by('-search_rank', '-nombre_similarity')[:5]
-                
-                results['personas'] = {
-                    'esclavizadas': PersonaEsclavizadaListSerializer(pe_queryset, many=True).data,
-                    'no_esclavizadas': PersonaNoEsclavizadaListSerializer(pne_queryset, many=True).data
-                }
+            # ── Build flat result list for requested type(s) ───────
+            all_items = []
+            active_types = (
+                [entity_type] if entity_type != 'all' and entity_type in type_configs
+                else type_configs.keys()
+            )
+            for type_key in active_types:
+                model, sim_field, serializer_cls = type_configs[type_key]
+                qs = self._build_queryset(model, search_query, sim_field, clean_query, is_exact)
+                for obj in qs:
+                    all_items.append({
+                        'type': type_key,
+                        'score': (obj.search_rank or 0) + (obj.name_similarity or 0),
+                        'source': serializer_cls(obj).data,
+                    })
 
-            if entity_type in ['all', 'lugares']:
-                lugar_queryset = Lugar.objects.annotate(
-                    search_rank=SearchRank(F('search_vector'), search_query),
-                    nombre_similarity=TrigramSimilarity('nombre_lugar', query)
-                )
-                if is_exact:
-                    lugar_queryset = lugar_queryset.filter(search_vector=search_query)
-                else:
-                    lugar_queryset = lugar_queryset.filter(
-                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                    )
-                lugar_queryset = lugar_queryset.order_by('-search_rank', '-nombre_similarity')[:10]
-                
-                results['lugares'] = LugarListSerializer(lugar_queryset, many=True).data
+            # Sort merged list by combined relevance score
+            all_items.sort(key=lambda x: x['score'], reverse=True)
 
-            if entity_type in ['all', 'corporaciones']:
-                corp_queryset = Corporacion.objects.annotate(
-                    search_rank=SearchRank(F('search_vector'), search_query),
-                    nombre_similarity=TrigramSimilarity('nombre_institucion', query)
-                )
-                if is_exact:
-                    corp_queryset = corp_queryset.filter(search_vector=search_query)
-                else:
-                    corp_queryset = corp_queryset.filter(
-                        Q(search_vector=search_query) | Q(nombre_similarity__gt=0.3)
-                    )
-                corp_queryset = corp_queryset.filter(
-                    is_published=True
-                ).order_by('-search_rank', '-nombre_similarity')[:10]
-                
-                results['corporaciones'] = CorporacionListSerializer(corp_queryset, many=True).data
+            # ── Paginate ───────────────────────────────────────────
+            total = len(all_items)
+            start = (page_number - 1) * self.PAGE_SIZE
+            end = start + self.PAGE_SIZE
+            page_items = all_items[start:end]
 
-            return Response(results)
-            
+            # Strip internal score before responding
+            for item in page_items:
+                item.pop('score', None)
+
+            base_url = request.build_absolute_uri().split('?')[0]
+            params = request.query_params.copy()
+
+            def build_page_url(p):
+                params['page'] = p
+                return f"{base_url}?{urlencode(params)}"
+
+            return Response({
+                'count': total,
+                'next': build_page_url(page_number + 1) if end < total else None,
+                'previous': build_page_url(page_number - 1) if page_number > 1 else None,
+                'typeCounts': type_counts,
+                'results': page_items,
+            })
+
         except Exception as e:
             logger.error(f"Error executing global search: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
