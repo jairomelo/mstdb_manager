@@ -1,8 +1,8 @@
 """
 PostgreSQL full-text search signal handlers.
 
-These signals automatically update search_vector fields when models are saved,
-enabling full-text search across key text fields.
+Auto-update search_vector fields on model save.
+Skips raw saves (loaddata/fixtures) — use populate_search_vectors command instead.
 """
 
 from django.contrib.postgres.search import SearchVector
@@ -13,38 +13,36 @@ from .models import Lugar, Documento, Persona, Corporacion
 
 
 @receiver(post_save, sender=Lugar)
-def update_lugar_search_vector(sender, instance, **kwargs):
-    """Update search_vector for Lugar after save."""
-    # Use SearchVector with weights: A (highest) to D (lowest)
-    # This allows prioritizing certain fields in search results
+def update_lugar_search_vector(sender, instance, raw=False, **kwargs):
+    if raw:
+        return
     Lugar.objects.filter(pk=instance.pk).update(
         search_vector=(
             SearchVector('nombre_lugar', weight='A', config='spanish') +
-            SearchVector('nombre_pais', weight='B', config='spanish') +
-            SearchVector('nombre_region', weight='B', config='spanish') +
-            SearchVector('sinonimos', weight='C', config='spanish') +
-            SearchVector('notas', weight='D', config='spanish')
+            SearchVector('otros_nombres', weight='B', config='spanish') +
+            SearchVector('tipo', weight='C', config='spanish')
         )
     )
 
 
 @receiver(post_save, sender=Documento)
-def update_documento_search_vector(sender, instance, **kwargs):
-    """Update search_vector for Documento after save."""
+def update_documento_search_vector(sender, instance, raw=False, **kwargs):
+    if raw:
+        return
     Documento.objects.filter(pk=instance.pk).update(
         search_vector=(
             SearchVector('titulo', weight='A', config='spanish') +
             SearchVector('descripcion', weight='B', config='spanish') +
-            SearchVector('tipo_documento__nombre', weight='C', config='spanish') +
-            SearchVector('folio', weight='D', config='spanish')
+            SearchVector('notas', weight='C', config='spanish') +
+            SearchVector('sigla_documento', weight='D', config='spanish')
         )
     )
 
 
 @receiver(post_save, sender=Persona)
-def update_persona_search_vector(sender, instance, **kwargs):
-    """Update search_vector for Persona after save."""
-    # Handle both base Persona and subclasses (PersonaEsclavizada, PersonaNoEsclavizada)
+def update_persona_search_vector(sender, instance, raw=False, **kwargs):
+    if raw:
+        return
     instance.__class__.objects.filter(pk=instance.pk).update(
         search_vector=(
             SearchVector('nombre_normalizado', weight='A', config='spanish') +
@@ -57,8 +55,9 @@ def update_persona_search_vector(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Corporacion)
-def update_corporacion_search_vector(sender, instance, **kwargs):
-    """Update search_vector for Corporacion after save."""
+def update_corporacion_search_vector(sender, instance, raw=False, **kwargs):
+    if raw:
+        return
     instance.__class__.objects.filter(pk=instance.pk).update(
         search_vector=(
             SearchVector('nombre_institucion', weight='A', config='spanish') +

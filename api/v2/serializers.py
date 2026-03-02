@@ -107,14 +107,22 @@ class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
 class LugarListSerializer(serializers.ModelSerializer):
     """Lugar data for list views"""
     persona_count = serializers.SerializerMethodField()
+    persona_lugar_rel = serializers.SerializerMethodField()
 
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon', 'persona_count']
+        fields = ['lugar_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
+                  'persona_count', 'persona_lugar_rel']
 
     def get_persona_count(self, obj):
-        # Count personas through PersonaLugarRel intermediate model
         return Persona.objects.filter(p_x_l_pere__lugar=obj).distinct().count()
+
+    def get_persona_lugar_rel(self, obj):
+        from dbgestor.models import PersonaLugarRel
+        return list(
+            PersonaLugarRel.objects.filter(lugar=obj)
+            .values_list('persona_x_lugares', flat=True)
+        )
 
 
 class CorporacionListSerializer(serializers.ModelSerializer):

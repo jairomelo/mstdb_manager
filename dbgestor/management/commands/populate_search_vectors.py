@@ -56,10 +56,8 @@ class Command(BaseCommand):
         Lugar.objects.update(
             search_vector=(
                 SearchVector('nombre_lugar', weight='A', config='spanish') +
-                SearchVector('nombre_pais', weight='B', config='spanish') +
-                SearchVector('nombre_region', weight='B', config='spanish') +
-                SearchVector('sinonimos', weight='C', config='spanish') +
-                SearchVector('notas', weight='D', config='spanish')
+                SearchVector('otros_nombres', weight='B', config='spanish') +
+                SearchVector('tipo', weight='C', config='spanish')
             )
         )
         
@@ -75,8 +73,8 @@ class Command(BaseCommand):
             search_vector=(
                 SearchVector('titulo', weight='A', config='spanish') +
                 SearchVector('descripcion', weight='B', config='spanish') +
-                SearchVector('tipo_documento__nombre', weight='C', config='spanish') +
-                SearchVector('folio', weight='D', config='spanish')
+                SearchVector('notas', weight='C', config='spanish') +
+                SearchVector('sigla_documento', weight='D', config='spanish')
             )
         )
         

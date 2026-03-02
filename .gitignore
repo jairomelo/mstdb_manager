@@ -8,3 +8,4 @@ appslogs/general.log
 *.log
 temp/
 DEV.md
+fixture.json

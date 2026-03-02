@@ -28,12 +28,10 @@ echo "✓ Migrations complete"
 echo "Setting up cache table..."
 python manage.py createcachetable 2>/dev/null || echo "Cache table already exists"
 
-# Collect static files (if not already done)
-if [ "$DJANGO_SETTINGS_MODULE" != "mdb.settings.dev" ]; then
-    echo "Collecting static files..."
-    python manage.py collectstatic --noinput --clear
-    echo "✓ Static files collected"
-fi
+# Collect static files
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+echo "✓ Static files collected"
 
 echo "======================================"
 echo "Starting application..."
