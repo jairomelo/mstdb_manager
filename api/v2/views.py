@@ -632,15 +632,38 @@ class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
 # Global Search API
 class SearchAPIView(APIView):
     """
-    Global search across all entity types using PostgreSQL full-text search.
-    Returns a flat, paginated result list compatible with the frontend store:
-    {results: [{type, source}], count, next, previous, typeCounts}
+    Faceted search across all entity types using PostgreSQL full-text search.
+
+    Returns:
+        {results, count, next, previous, typeCounts, facets}
+
+    Filter params (all multi-valued via comma-separated strings):
+        type            – entity type(s): documento, personaesclavizada, etc.
+        lugar_id        – Lugar PKs
+        archivo_id      – Archivo PKs
+        year            – individual years
+        etnonimo        – etnónimo labels
+        calidad         – calidad labels
+        hispanizacion   – hispanización labels
+        ocupacion       – ocupación labels
     """
     permission_classes = [APIPerm]
     PAGE_SIZE = 20
 
-    def _build_queryset(self, model, search_query, similarity_field, query_text, is_exact):
-        """Build an annotated & filtered queryset for a given model."""
+    # ── helpers ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _csv_ints(request, key):
+        raw = request.query_params.get(key, '')
+        return [int(v) for v in raw.split(',') if v.strip().isdigit()] if raw else []
+
+    @staticmethod
+    def _csv_strs(request, key):
+        raw = request.query_params.get(key, '')
+        return [v.strip() for v in raw.split(',') if v.strip()] if raw else []
+
+    def _text_match(self, model, search_query, similarity_field, query_text, is_exact):
+        """Return annotated queryset with text-match filter applied."""
         qs = model.objects.annotate(
             search_rank=SearchRank(F('search_vector'), search_query),
             name_similarity=TrigramSimilarity(similarity_field, query_text),
@@ -648,10 +671,164 @@ class SearchAPIView(APIView):
         if is_exact:
             qs = qs.filter(search_vector=search_query)
         else:
-            qs = qs.filter(
-                Q(search_vector=search_query) | Q(name_similarity__gt=0.3)
-            )
-        return qs.order_by('-search_rank', '-name_similarity')
+            qs = qs.filter(Q(search_vector=search_query) | Q(name_similarity__gt=0.3))
+        return qs
+
+    def _apply_filters(self, qs, type_key, filters):
+        """Apply sidebar filters to a queryset (type-aware)."""
+        lugar_ids = filters.get('lugar_id', [])
+        archivo_ids = filters.get('archivo_id', [])
+        years = filters.get('year', [])
+        etnonimos = filters.get('etnonimo', [])
+        calidades = filters.get('calidad', [])
+        hispanizaciones = filters.get('hispanizacion', [])
+        ocupaciones = filters.get('ocupacion', [])
+
+        if type_key == 'documento':
+            if lugar_ids:
+                qs = qs.filter(lugar_de_produccion__lugar_id__in=lugar_ids)
+            if archivo_ids:
+                qs = qs.filter(archivo__archivo_id__in=archivo_ids)
+            if years:
+                qs = qs.filter(fecha_inicial__year__in=years)
+        elif type_key in ('personaesclavizada', 'personanoesclavizada'):
+            if lugar_ids:
+                qs = qs.filter(p_x_l_pere__lugar__lugar_id__in=lugar_ids).distinct()
+            if archivo_ids:
+                qs = qs.filter(documentos__archivo__archivo_id__in=archivo_ids).distinct()
+            if years:
+                qs = qs.filter(documentos__fecha_inicial__year__in=years).distinct()
+            if calidades:
+                qs = qs.filter(calidades__calidad__in=calidades).distinct()
+            if ocupaciones:
+                qs = qs.filter(ocupaciones__actividad__in=ocupaciones).distinct()
+            if type_key == 'personaesclavizada':
+                if etnonimos:
+                    qs = qs.filter(etnonimos__etonimo__in=etnonimos).distinct()
+                if hispanizaciones:
+                    qs = qs.filter(hispanizacion__hispanizacion__in=hispanizaciones).distinct()
+        elif type_key == 'lugar':
+            if lugar_ids:
+                qs = qs.filter(lugar_id__in=lugar_ids)
+        elif type_key == 'corporacion':
+            if lugar_ids:
+                qs = qs.filter(lugar_corporacion__lugar_id__in=lugar_ids)
+            if archivo_ids:
+                qs = qs.filter(documentos__archivo__archivo_id__in=archivo_ids).distinct()
+
+        return qs
+
+    # ── facets ─────────────────────────────────────────────────────────
+
+    def _collect_facets(self, querysets_by_type):
+        """
+        Build facet buckets from the *full* (unfiltered-by-sidebar) querysets
+        so the user always sees what is available.
+        """
+        lugar_counts = {}
+        archivo_counts = {}
+        year_set = set()
+        etnonimo_counts = {}
+        calidad_counts = {}
+        hispanizacion_counts = {}
+        ocupacion_counts = {}
+
+        for type_key, qs in querysets_by_type.items():
+            # ── Lugares ───
+            if type_key == 'documento':
+                for row in qs.filter(lugar_de_produccion__isnull=False).values(
+                        'lugar_de_produccion__lugar_id', 'lugar_de_produccion__nombre_lugar'
+                ).annotate(c=Count('documento_id')):
+                    lid = row['lugar_de_produccion__lugar_id']
+                    lugar_counts.setdefault(lid, {'id': lid, 'nombre': row['lugar_de_produccion__nombre_lugar'], 'count': 0})
+                    lugar_counts[lid]['count'] += row['c']
+            elif type_key in ('personaesclavizada', 'personanoesclavizada'):
+                for row in qs.filter(p_x_l_pere__lugar__isnull=False).values(
+                        'p_x_l_pere__lugar__lugar_id', 'p_x_l_pere__lugar__nombre_lugar'
+                ).annotate(c=Count('persona_id', distinct=True)):
+                    lid = row['p_x_l_pere__lugar__lugar_id']
+                    lugar_counts.setdefault(lid, {'id': lid, 'nombre': row['p_x_l_pere__lugar__nombre_lugar'], 'count': 0})
+                    lugar_counts[lid]['count'] += row['c']
+
+            # ── Archivos ──
+            if type_key == 'documento':
+                for row in qs.values('archivo__archivo_id', 'archivo__nombre').annotate(c=Count('documento_id')):
+                    aid = row['archivo__archivo_id']
+                    archivo_counts.setdefault(aid, {'id': aid, 'nombre': row['archivo__nombre'], 'count': 0})
+                    archivo_counts[aid]['count'] += row['c']
+            elif type_key in ('personaesclavizada', 'personanoesclavizada'):
+                for row in qs.filter(documentos__isnull=False).values(
+                        'documentos__archivo__archivo_id', 'documentos__archivo__nombre'
+                ).annotate(c=Count('persona_id', distinct=True)):
+                    aid = row['documentos__archivo__archivo_id']
+                    if aid:
+                        archivo_counts.setdefault(aid, {'id': aid, 'nombre': row['documentos__archivo__nombre'], 'count': 0})
+                        archivo_counts[aid]['count'] += row['c']
+
+            # ── Años ──
+            if type_key == 'documento':
+                for row in qs.filter(fecha_inicial__isnull=False).annotate(
+                        y=ExtractYear('fecha_inicial')).values('y').annotate(c=Count('documento_id')):
+                    year_set.add(row['y'])
+            elif type_key in ('personaesclavizada', 'personanoesclavizada'):
+                for row in qs.filter(documentos__fecha_inicial__isnull=False).annotate(
+                        y=ExtractYear('documentos__fecha_inicial')).values('y').annotate(
+                        c=Count('persona_id', distinct=True)):
+                    year_set.add(row['y'])
+
+            # ── Persona-specific facets ──
+            if type_key in ('personaesclavizada', 'personanoesclavizada'):
+                for row in qs.filter(calidades__isnull=False).values(
+                        'calidades__calidad').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['calidades__calidad']
+                    calidad_counts[label] = calidad_counts.get(label, 0) + row['c']
+
+                for row in qs.filter(ocupaciones__isnull=False).values(
+                        'ocupaciones__actividad').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['ocupaciones__actividad']
+                    ocupacion_counts[label] = ocupacion_counts.get(label, 0) + row['c']
+
+            if type_key == 'personaesclavizada':
+                for row in qs.filter(etnonimos__isnull=False).values(
+                        'etnonimos__etonimo').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['etnonimos__etonimo']
+                    etnonimo_counts[label] = etnonimo_counts.get(label, 0) + row['c']
+
+                for row in qs.filter(hispanizacion__isnull=False).values(
+                        'hispanizacion__hispanizacion').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['hispanizacion__hispanizacion']
+                    hispanizacion_counts[label] = hispanizacion_counts.get(label, 0) + row['c']
+
+        # ── Build hierarchical year tree (century → decade → year) ────
+        century_labels = {16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX'}
+        years_tree = {}
+        for y in sorted(year_set):
+            c = y // 100 + 1
+            century = f"Siglo {century_labels.get(c, str(c))}"
+            decade = (y // 10) * 10
+            years_tree.setdefault(century, {})
+            years_tree[century].setdefault(decade, [])
+            years_tree[century][decade].append(y)
+
+        return {
+            'lugares': sorted(lugar_counts.values(), key=lambda x: -x['count']),
+            'archivos': sorted(archivo_counts.values(), key=lambda x: -x['count']),
+            'fechas': years_tree,
+            'etnonimos': sorted(
+                [{'label': k, 'count': v} for k, v in etnonimo_counts.items()],
+                key=lambda x: -x['count']),
+            'calidades': sorted(
+                [{'label': k, 'count': v} for k, v in calidad_counts.items()],
+                key=lambda x: -x['count']),
+            'hispanizaciones': sorted(
+                [{'label': k, 'count': v} for k, v in hispanizacion_counts.items()],
+                key=lambda x: -x['count']),
+            'ocupaciones': sorted(
+                [{'label': k, 'count': v} for k, v in ocupacion_counts.items()],
+                key=lambda x: -x['count']),
+        }
+
+    # ── main handler ──────────────────────────────────────────────────
 
     def get(self, request):
         query_text = request.query_params.get('q', '')
@@ -666,7 +843,18 @@ class SearchAPIView(APIView):
             search_type = 'phrase' if is_exact else 'plain'
             search_query = SearchQuery(clean_query, config='spanish', search_type=search_type)
 
-            # ── Collect querysets per type ──────────────────────────
+            # Parse sidebar filter params
+            filters = {
+                'lugar_id': self._csv_ints(request, 'lugar_id'),
+                'archivo_id': self._csv_ints(request, 'archivo_id'),
+                'year': self._csv_ints(request, 'year'),
+                'etnonimo': self._csv_strs(request, 'etnonimo'),
+                'calidad': self._csv_strs(request, 'calidad'),
+                'hispanizacion': self._csv_strs(request, 'hispanizacion'),
+                'ocupacion': self._csv_strs(request, 'ocupacion'),
+            }
+            has_filters = any(v for v in filters.values())
+
             type_configs = {
                 'documento': (Documento, 'titulo', DocumentoListSerializer),
                 'personaesclavizada': (PersonaEsclavizada, 'nombre_normalizado', PersonaEsclavizadaListSerializer),
@@ -675,29 +863,38 @@ class SearchAPIView(APIView):
                 'corporacion': (Corporacion, 'nombre_institucion', CorporacionListSerializer),
             }
 
-            # Always compute counts for ALL types (used by filter chips)
-            type_counts = {}
-            for type_key, (model, sim_field, _) in type_configs.items():
-                qs = self._build_queryset(model, search_query, sim_field, clean_query, is_exact)
-                type_counts[type_key] = qs.count()
+            # Text-match querysets (before sidebar filters — used for facets)
+            base_querysets = {}
+            for tk, (model, sim_field, _) in type_configs.items():
+                base_querysets[tk] = self._text_match(model, search_query, sim_field, clean_query, is_exact)
 
-            # ── Build flat result list for requested type(s) ───────
-            all_items = []
+            # Collect facets from unfiltered base querysets
+            facets = self._collect_facets(base_querysets)
+
+            # Type counts (unfiltered — for the sidebar type section)
+            type_counts = {tk: qs.count() for tk, qs in base_querysets.items()}
+
+            # ── Apply sidebar filters and build result list ────────
+            requested_types = [t.strip() for t in entity_type.split(',') if t.strip()] if entity_type != 'all' else []
             active_types = (
-                [entity_type] if entity_type != 'all' and entity_type in type_configs
-                else type_configs.keys()
+                [t for t in requested_types if t in type_configs]
+                if requested_types
+                else list(type_configs.keys())
             )
+
+            all_items = []
             for type_key in active_types:
                 model, sim_field, serializer_cls = type_configs[type_key]
-                qs = self._build_queryset(model, search_query, sim_field, clean_query, is_exact)
-                for obj in qs:
+                qs = base_querysets[type_key]
+                if has_filters:
+                    qs = self._apply_filters(qs, type_key, filters)
+                for obj in qs.order_by('-search_rank', '-name_similarity'):
                     all_items.append({
                         'type': type_key,
                         'score': (obj.search_rank or 0) + (obj.name_similarity or 0),
                         'source': serializer_cls(obj).data,
                     })
 
-            # Sort merged list by combined relevance score
             all_items.sort(key=lambda x: x['score'], reverse=True)
 
             # ── Paginate ───────────────────────────────────────────
@@ -706,7 +903,6 @@ class SearchAPIView(APIView):
             end = start + self.PAGE_SIZE
             page_items = all_items[start:end]
 
-            # Strip internal score before responding
             for item in page_items:
                 item.pop('score', None)
 
@@ -722,6 +918,7 @@ class SearchAPIView(APIView):
                 'next': build_page_url(page_number + 1) if end < total else None,
                 'previous': build_page_url(page_number - 1) if page_number > 1 else None,
                 'typeCounts': type_counts,
+                'facets': facets,
                 'results': page_items,
             })
 
