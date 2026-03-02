@@ -795,3 +795,87 @@ def get_csrf_token(request):
         'csrfToken': token,
         'detail': 'CSRF cookie set'
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def whoami(request):
+    user = request.user
+    return Response({
+        'username': user.username,
+        'email': user.email,
+        'is_staff': user.is_staff,
+        'groups': [g.name for g in user.groups.all()]
+    })
+
+
+def api_login(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    data = json.loads(request.body)
+    user = authenticate(request, username=data.get('username'), password=data.get('password'))
+    if user is not None:
+        login(request, user)
+        return JsonResponse({
+            'username': user.username,
+            'email': user.email,
+            'is_staff': user.is_staff
+        })
+    return JsonResponse({'error': 'Invalid credentials'}, status=401)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_logout(request):
+    logout(request)
+    return Response({'success': 'Logged out successfully'})
+
+
+@api_view(['POST'])
+def log_message(request):
+    try:
+        serializer = LogMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            level = serializer.validated_data['level'].upper()
+            message = serializer.validated_data['message']
+            log_method = getattr(logger, level.lower(), logger.info)
+            log_method(f'Client log: {message}')
+            return Response({'status': 'success'})
+        return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+    except Exception as e:
+        logger.exception(f'Error processing log message: {e}')
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ── Data Visualization endpoints ──────────────────────────────────────
+
+@api_view(['GET'])
+def gender_status_distribution(request):
+    data = (
+        PersonaEsclavizada.objects
+        .values('sexo', 'hispanizacion__hispanizacion')
+        .annotate(count=Count('persona_idno'))
+        .order_by('-count')
+    )
+    return Response(data)
+
+
+class PlacesPeopleDistribution(APIView):
+    def get(self, request):
+        data = (
+            PersonaEsclavizada.objects
+            .annotate(
+                year=ExtractYear('p_x_l_pere__documento__fecha_inicial'),
+                lugar=F('p_x_l_pere__lugar__nombre_lugar'),
+                tipo=F('p_x_l_pere__lugar__tipo'),
+            )
+            .values('lugar', 'tipo', 'year')
+            .annotate(count=Count('persona_id', distinct=True))
+            .filter(lugar__isnull=False, year__isnull=False)
+            .order_by('year', 'lugar')
+        )
+        return Response([
+            {"lugar": item['lugar'], "tipo": item['tipo'],
+             "year": item['year'], "count": item['count']}
+            for item in data
+        ])
