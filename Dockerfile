@@ -1,24 +1,5 @@
 # ================================
-# Stage 1: Build Svelte Frontend
-# ================================
-FROM node:22-alpine AS frontend-builder
-
-WORKDIR /frontend
-
-# Copy package files
-COPY mstdb_theme/package*.json ./
-
-# Install dependencies
-RUN npm ci --prefer-offline --no-audit
-
-# Copy source files
-COPY mstdb_theme/ ./
-
-# Build static files
-RUN npm run build
-
-# ================================
-# Stage 2: Development
+# Stage 1: Development
 # ================================
 FROM python:3.11-slim AS development
 
@@ -49,9 +30,6 @@ RUN pip install --upgrade pip && \
 # Copy application code
 COPY mstdb_manager/ .
 
-# Copy frontend build (for development with mounted volumes)
-COPY --from=frontend-builder /frontend/build /app/staticfiles/frontend
-
 # Create necessary directories
 RUN mkdir -p /app/staticfiles /app/media /app/logs
 
@@ -62,7 +40,7 @@ EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # ================================
-# Stage 3: Production
+# Stage 2: Production
 # ================================
 FROM python:3.11-slim AS production
 
@@ -94,9 +72,6 @@ RUN pip install --upgrade pip && \
 
 # Copy application code
 COPY --chown=appuser:appuser mstdb_manager/ .
-
-# Copy frontend build from builder stage
-COPY --from=frontend-builder --chown=appuser:appuser /frontend/build /app/staticfiles/frontend
 
 # Copy entrypoint script
 COPY --chown=appuser:appuser mstdb_manager/docker-entrypoint.sh /usr/local/bin/
