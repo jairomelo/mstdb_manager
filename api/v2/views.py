@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, Prefetch
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
@@ -268,6 +268,17 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
+        # Optimize detail view with nested data prefetching
+        if self.action == 'retrieve':
+            queryset = queryset.prefetch_related(
+                'documentos__archivo',
+                'relaciones__personas',
+                Prefetch('p_x_l_pere',
+                         queryset=PersonaLugarRel.objects.select_related(
+                             'lugar', 'situacion_lugar', 'documento'
+                         ).order_by('ordinal')),
+            )
         
         # Filtering
         sexo = self.request.query_params.get('sexo', None)
@@ -368,6 +379,96 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
+    def network(self, request, persona_id=None):
+        """
+        Build a Cytoscape-ready ego-network graph for this persona.
+        Returns {nodes, edges} filtered to people connected via shared relaciones.
+        """
+        persona = self.get_object()
+        relaciones = persona.relaciones.prefetch_related('personas').all()
+
+        # Collect every persona that shares a relacion with the current one
+        node_map = {}
+        edges = []
+
+        for rel in relaciones:
+            rel_personas = list(rel.personas.all())
+            persona_ids_in_rel = [p.persona_id for p in rel_personas]
+
+            for p in rel_personas:
+                if p.persona_id not in node_map:
+                    node_map[p.persona_id] = {
+                        'data': {
+                            'id': f'p{p.persona_id}',
+                            'label': p.nombre_normalizado or str(p.persona_id),
+                            'type': p.polymorphic_ctype_id,
+                        }
+                    }
+
+            # Create edges between all pairs in this relacion
+            nat = rel.naturaleza_relacion or ''
+            rel_type = 'fam' if 'fam' in nat.lower() else (
+                        'aso' if 'aso' in nat.lower() else 'tmp')
+            for i, pid_a in enumerate(persona_ids_in_rel):
+                for pid_b in persona_ids_in_rel[i + 1:]:
+                    edges.append({
+                        'data': {
+                            'source': f'p{pid_a}',
+                            'target': f'p{pid_b}',
+                            'relation': rel_type,
+                            'label': rel.descripcion_relacion or nat,
+                        }
+                    })
+
+        return Response({
+            'nodes': list(node_map.values()),
+            'edges': edges,
+        })
+
+    @action(detail=True, methods=['get'])
+    def trajectory(self, request, persona_id=None):
+        """
+        Return ordered trajectory arcs for map visualization.
+        Each arc has from/to coordinates and a date.
+        """
+        persona = self.get_object()
+        places = (persona.p_x_l_pere
+                  .select_related('lugar', 'documento')
+                  .order_by('ordinal'))
+
+        points = []
+        for rel in places:
+            lugar = rel.lugar
+            if lugar and lugar.lat and lugar.lon:
+                points.append({
+                    'nombre': lugar.nombre_lugar,
+                    'lat': float(lugar.lat),
+                    'lon': float(lugar.lon),
+                    'fecha': (rel.fecha_inicial_lugar
+                              or (rel.documento.fecha_inicial if rel.documento else None)),
+                    'ordinal': rel.ordinal,
+                })
+
+        # Build arcs between consecutive points
+        arcs = []
+        for i in range(len(points) - 1):
+            arcs.append({
+                'from': {
+                    'name': points[i]['nombre'],
+                    'lat': points[i]['lat'],
+                    'lon': points[i]['lon'],
+                },
+                'to': {
+                    'name': points[i + 1]['nombre'],
+                    'lat': points[i + 1]['lat'],
+                    'lon': points[i + 1]['lon'],
+                },
+                'date': str(points[i]['fecha'] or ''),
+            })
+
+        return Response(arcs)
+
+    @action(detail=True, methods=['get'])
     def history(self, request, persona_id=None):
         """Get change history for this persona"""
         persona = self.get_object()
@@ -394,6 +495,17 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
+        # Optimize detail view with nested data prefetching
+        if self.action == 'retrieve':
+            queryset = queryset.prefetch_related(
+                'documentos__archivo',
+                'relaciones__personas',
+                Prefetch('p_x_l_pere',
+                         queryset=PersonaLugarRel.objects.select_related(
+                             'lugar', 'situacion_lugar', 'documento'
+                         ).order_by('ordinal')),
+            )
         
         # Filtering
         sexo = self.request.query_params.get('sexo', None)

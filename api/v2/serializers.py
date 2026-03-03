@@ -169,33 +169,62 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
         return list(obj.persona_set.values_list('persona_id', flat=True))
 
 
+# Nested serializers for detail views (map + network visualizations)
+class LugarNestedSerializer(serializers.ModelSerializer):
+    """Lugar with coordinates for map rendering"""
+    class Meta:
+        model = Lugar
+        fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon']
+
+
+class PersonaLugarRelNestedSerializer(serializers.ModelSerializer):
+    """PersonaLugarRel with nested Lugar for the detail map"""
+    lugar = LugarNestedSerializer(read_only=True)
+    situacion_lugar = serializers.StringRelatedField()
+
+    class Meta:
+        model = PersonaLugarRel
+        fields = ['persona_x_lugares', 'lugar', 'situacion_lugar', 'ordinal',
+                  'fecha_inicial_lugar']
+
+
+class PersonaRelacionesNestedSerializer(serializers.ModelSerializer):
+    """PersonaRelaciones with nested persona refs for network graph"""
+    personas = PersonaReferenceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PersonaRelaciones
+        fields = ['persona_relacion_id', 'personas', 'naturaleza_relacion',
+                  'descripcion_relacion']
+
+
+class DocumentoNestedSerializer(serializers.ModelSerializer):
+    """Documento with archivo ref for the detail documents section"""
+    archivo = ArchivoReferenceSerializer(read_only=True)
+    tipo_documento = serializers.StringRelatedField()
+
+    class Meta:
+        model = Documento
+        fields = ['documento_id', 'documento_idno', 'archivo', 'titulo',
+                  'tipo_documento', 'fecha_inicial', 'fecha_final']
+
+
 class PersonaDetailSerializer(serializers.ModelSerializer):
     """Base Persona detail serializer"""
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
-    documento_ids = serializers.SerializerMethodField()
-    lugar_ids = serializers.SerializerMethodField()
-    relacion_ids = serializers.SerializerMethodField()
+    documentos = DocumentoNestedSerializer(many=True, read_only=True)
+    relaciones = PersonaRelacionesNestedSerializer(many=True, read_only=True)
+    lugares = PersonaLugarRelNestedSerializer(source='p_x_l_pere', many=True, read_only=True)
 
     class Meta:
         model = Persona
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
-                  'sexo', 'polymorphic_ctype', 'documento_ids', 'lugar_ids', 'relacion_ids',
+                  'sexo', 'polymorphic_ctype', 'documentos', 'relaciones', 'lugares',
                   'created_at', 'updated_at']
-
-    def get_documento_ids(self, obj):
-        return list(obj.documentos.values_list('documento_id', flat=True))
-
-    def get_lugar_ids(self, obj):
-        if hasattr(obj, 'p_x_l_pere'):
-            return list(obj.p_x_l_pere.values_list('lugar_id', flat=True))
-        return []
-
-    def get_relacion_ids(self, obj):
-        return list(obj.relaciones.values_list('persona_relacion_id', flat=True))
 
 
 class PersonaEsclavizadaDetailSerializer(PersonaDetailSerializer):
-    """Full PersonaEsclavizada details"""
+    """Full PersonaEsclavizada details with nested relations for visualization"""
     hispanizacion = serializers.SerializerMethodField()
     etnonimos = serializers.SerializerMethodField()
     procedencia = serializers.SerializerMethodField()
