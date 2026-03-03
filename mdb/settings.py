@@ -246,11 +246,19 @@ if USE_FILE_LOGGING:
     LOGGING['loggers']['django']['handlers'].append('file')
     LOGGING['loggers']['dbgestor']['handlers'].append('appsfile')
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
-EMAIULT_FROM_EMAIL = os.getenv('FROM_EMAIL', default='noreply@abcng.org')
+# Email configuration (AWS SES)
+
+EMAIL_BACKEND = 'django_ses.SESBackend'
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
+AWS_SES_REGION_NAME = os.getenv('AWS_SES_REGION_NAME', 'us-east-1')
+AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
+AWS_SES_AUTO_THROTTLE = None  # disables GetSendQuota call
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@trayectoriasafro.org')
+
 LOGIN_REDIRECT_URL = 'success'
 DEFAULT_HTTP_PROTOCOL = 'https'
-DEFAULT_DOMAIN = 'msdb.abcng.org'
+DEFAULT_DOMAIN = 'db.trayectoriasafro.org'
 
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')

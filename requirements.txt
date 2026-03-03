@@ -58,6 +58,8 @@ xlrd==2.0.1
 xlwt==1.3.0
 
 whitenoise==6.7.0
+django-ses==4.3.0
+boto3==1.37.5
 
 # PostgreSQL adapter (replacing mysqlclient)
 psycopg[binary]==3.1.18
