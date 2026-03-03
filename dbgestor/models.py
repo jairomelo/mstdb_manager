@@ -247,6 +247,10 @@ class Documento(models.Model):
     folio_inicial = models.CharField(max_length=50)
     folio_final = models.CharField(max_length=50, blank=True, null=True)
 
+    evento_valor_sp = models.CharField(max_length=50, blank=True, null=True)
+    evento_forma_de_pago = models.CharField(max_length=100, blank=True, null=True)
+    evento_total = models.CharField(max_length=100, blank=True, null=True)
+
     notas = models.TextField(max_length=500, null=True, blank=True)
     
     # PostgreSQL full-text search field

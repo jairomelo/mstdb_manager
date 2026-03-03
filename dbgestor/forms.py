@@ -56,19 +56,22 @@ class CustomValidators:
 
     def validate_folios(self, folio_inicial, folio_final):
         
-        if folio_inicial == "None":
+        if not folio_inicial or folio_inicial == "None":
             return True
         
         if not folio_final:
             return True
         
         folio_inicial = str(folio_inicial)
-        folio_final = str(folio_final) if folio_final else folio_inicial
+        folio_final = str(folio_final)
         
         fininum = re.findall(r'^[1-9]\d*', folio_inicial)
         ffinnum = re.findall(r'^[1-9]\d*', folio_final)
         
-        # Extract the first element from the list and convert to integer
+        # If either folio lacks a numeric prefix (e.g. "[ilegible]", "0r"), skip numeric comparison
+        if not fininum or not ffinnum:
+            return True
+        
         fininum = int(fininum[0])
         ffinnum = int(ffinnum[0])
 
@@ -78,7 +81,7 @@ class CustomValidators:
             folium_orientation_ini = re.findall(r"\w$", folio_inicial)
             folium_orientation_fin = re.findall(r"\w$", folio_final)
             if folium_orientation_ini != folium_orientation_fin:
-                if folium_orientation_ini[0].lower() != 'r':
+                if folium_orientation_ini and folium_orientation_ini[0].lower() != 'r':
                     raise forms.ValidationError(f"La orientación de los folios ({folio_inicial} - {folio_final}) es incorrecta")
 
 
@@ -235,8 +238,10 @@ class DocumentoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(DocumentoForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
-            if isinstance(field, forms.fields.TypedChoiceField):
+            if isinstance(field, (forms.fields.ChoiceField, forms.ModelChoiceField, forms.ModelMultipleChoiceField)):
                 field.widget.attrs['class'] = 'form-select'
+            elif isinstance(field, forms.BooleanField):
+                field.widget.attrs['class'] = 'form-check-input'
             else:
                 field.widget.attrs['class'] = 'form-control'
 
