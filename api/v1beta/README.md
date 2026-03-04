@@ -21,5 +21,3 @@ These files are kept for reference only and are not loaded by the application:
 
 ## Migration
 No migration is needed since V1beta was not in use.
-
-See `/API_MIGRATION.md` for complete details about API changes.
