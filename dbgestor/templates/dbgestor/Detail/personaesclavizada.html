@@ -46,7 +46,7 @@
                     <p><strong>Edad:</strong> {{ personaesclavizada.edad }} {% if personaesclavizada.unidad_temporal_edad %} {{ personaesclavizada.get_unidad_temporal_edad_display }} {% else %} años {% endif %}</p>
                     {% endif %}
                     {% if personaesclavizada.estado_civil %}
-                        <p><strong>Estado Civil:</strong>
+                        <p><strong>Estado Matrimonial:</strong>
                         {% for estado in personaesclavizada.estado_civil.all %}
                             {{ estado.estado_civil }}
                         {% endfor %}

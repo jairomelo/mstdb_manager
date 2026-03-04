@@ -44,7 +44,7 @@
                     <p><strong>Sexo:</strong> {{ personanoesclavizada.get_sexo_display }}</p>
                     {% display_field personanoesclavizada "edad" "Edad" %}
                     {% if personanoesclavizada.estado_civil %}
-                        <p><strong>Estado Civil:</strong>
+                        <p><strong>Estado Matrimonial:</strong>
                         {% for estado in personanoesclavizada.estado_civil.all %}
                             {{ estado.estado_civil }}
                         {% endfor %}
