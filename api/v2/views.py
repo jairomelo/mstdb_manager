@@ -1128,16 +1128,16 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
 # Utility Views
 
 class EntityCountsView(APIView):
-    """Lightweight endpoint returning published counts for all entity types."""
+    """Lightweight endpoint returning record counts for all entity types."""
     permission_classes = [APIPerm]
 
     def get(self, request):
         return Response({
-            'personaesclavizada': PersonaEsclavizada.objects.filter(is_published=True).count(),
-            'personanoesclavizada': PersonaNoEsclavizada.objects.filter(is_published=True).count(),
-            'documento': Documento.objects.filter(is_published=True).count(),
+            'personaesclavizada': PersonaEsclavizada.objects.count(),
+            'personanoesclavizada': PersonaNoEsclavizada.objects.count(),
+            'documento': Documento.objects.count(),
             'lugar': Lugar.objects.count(),
-            'corporacion': Corporacion.objects.filter(is_published=True).count(),
+            'corporacion': Corporacion.objects.count(),
         })
 
 
