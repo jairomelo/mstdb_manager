@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',  # PostgreSQL-specific features
     'rest_framework',
+    'drf_spectacular', # API documentation
     'django_filters',
     'corsheaders',
     'import_export',
@@ -287,6 +288,7 @@ SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': int(os.getenv('REST_FRAMEWORK_PAGE_SIZE', '20')), 
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # PostgreSQL Full-Text Search Configuration

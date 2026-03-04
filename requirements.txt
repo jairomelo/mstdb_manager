@@ -64,3 +64,6 @@ boto3==1.37.5
 # PostgreSQL adapter (replacing mysqlclient)
 psycopg[binary]==3.1.18
 dj-database-url==2.1.0
+
+# enhance API documentation
+drf-spectacular
