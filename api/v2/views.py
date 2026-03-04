@@ -784,23 +784,70 @@ class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
 # Global Search API
 class SearchAPIView(APIView):
     """
-    Faceted search across all entity types using PostgreSQL full-text search.
+    Unified search + browse endpoint.
+
+    When ``q`` is provided, performs PostgreSQL full-text search with relevance
+    ranking.  When ``q`` is absent, returns *all* published records (browse mode)
+    with server-side ordering, filtering, and pagination.
 
     Returns:
         {results, count, next, previous, typeCounts, facets}
 
-    Filter params (all multi-valued via comma-separated strings):
-        type            – entity type(s): documento, personaesclavizada, etc.
-        lugar_id        – Lugar PKs
-        archivo_id      – Archivo PKs
-        year            – individual years
-        etnonimo        – etnónimo labels
-        calidad         – calidad labels
-        hispanizacion   – hispanización labels
-        ocupacion       – ocupación labels
+    Query params:
+        q               – search query (optional; omit for browse mode)
+        type            – entity type: documento, personaesclavizada, … (default: all)
+        page            – page number (default: 1)
+        page_size       – results per page (default: 30, max: 300)
+        ordering        – field name, prefix with ``-`` for descending
+        search          – simple text filter (icontains) for browse mode
+
+    Filter params (comma-separated):
+        lugar_id, archivo_id, year, etnonimo, calidad, hispanizacion, ocupacion
+
+    Form-based filter params (DRF-style per-entity fields):
+        sexo, honorifico, edad__gte, edad__lte, tipo,
+        tipo_documento__tipo_documental__icontains,
+        etnonimos__etonimo__icontains, hispanizacion__hispanizacion__icontains,
+        fecha_inicial__gte, fecha_inicial__lte, fecha_final__gte, fecha_final__lte,
+        tipo_institucion__tipo__icontains
     """
     permission_classes = [APIPerm]
-    PAGE_SIZE = 20
+    DEFAULT_PAGE_SIZE = 30
+    MAX_PAGE_SIZE = 300
+
+    # Allowed ordering fields per entity type (whitelist)
+    ORDERING_FIELDS = {
+        'documento': {'titulo', 'fecha_inicial', 'fecha_final', 'created_at', 'updated_at'},
+        'personaesclavizada': {'nombre_normalizado', 'edad', 'created_at', 'updated_at'},
+        'personanoesclavizada': {'nombre_normalizado', 'created_at', 'updated_at'},
+        'lugar': {'nombre_lugar', 'tipo', 'created_at', 'updated_at'},
+        'corporacion': {'nombre_institucion', 'created_at', 'updated_at'},
+    }
+
+    DEFAULT_ORDERING = {
+        'documento': '-created_at',
+        'personaesclavizada': '-created_at',
+        'personanoesclavizada': '-created_at',
+        'lugar': 'nombre_lugar',
+        'corporacion': '-created_at',
+    }
+
+    TYPE_CONFIGS = {
+        'documento': (Documento, 'titulo', DocumentoListSerializer),
+        'personaesclavizada': (PersonaEsclavizada, 'nombre_normalizado', PersonaEsclavizadaListSerializer),
+        'personanoesclavizada': (PersonaNoEsclavizada, 'nombre_normalizado', PersonaNoEsclavizadaListSerializer),
+        'lugar': (Lugar, 'nombre_lugar', LugarListSerializer),
+        'corporacion': (Corporacion, 'nombre_institucion', CorporacionListSerializer),
+    }
+
+    # DRF-style search fields per entity type (for the `search` param)
+    SEARCH_FIELDS = {
+        'documento': ['titulo', 'descripcion', 'documento_idno'],
+        'personaesclavizada': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno'],
+        'personanoesclavizada': ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno'],
+        'lugar': ['nombre_lugar', 'otros_nombres'],
+        'corporacion': ['nombre_institucion'],
+    }
 
     # ── helpers ────────────────────────────────────────────────────────
 
@@ -869,6 +916,67 @@ class SearchAPIView(APIView):
                 qs = qs.filter(documentos__archivo__archivo_id__in=archivo_ids).distinct()
 
         return qs
+
+    def _apply_form_filters(self, qs, type_key, request):
+        """Apply DRF-style form-based filter params (from BrowseFilters sidebar)."""
+        p = request.query_params
+
+        if type_key in ('personaesclavizada', 'personanoesclavizada'):
+            if p.get('sexo'):
+                qs = qs.filter(sexo=p['sexo'])
+            if type_key == 'personanoesclavizada' and p.get('honorifico'):
+                qs = qs.filter(honorifico=p['honorifico'])
+            if type_key == 'personaesclavizada':
+                if p.get('edad__gte'):
+                    qs = qs.filter(edad__gte=int(p['edad__gte']))
+                if p.get('edad__lte'):
+                    qs = qs.filter(edad__lte=int(p['edad__lte']))
+                if p.get('etnonimos__etonimo__icontains'):
+                    qs = qs.filter(etnonimos__etonimo__icontains=p['etnonimos__etonimo__icontains']).distinct()
+                if p.get('hispanizacion__hispanizacion__icontains'):
+                    qs = qs.filter(hispanizacion__hispanizacion__icontains=p['hispanizacion__hispanizacion__icontains']).distinct()
+
+        elif type_key == 'documento':
+            if p.get('tipo_documento__tipo_documental__icontains'):
+                qs = qs.filter(tipo_documento__tipo_documental__icontains=p['tipo_documento__tipo_documental__icontains'])
+            if p.get('fecha_inicial__gte'):
+                qs = qs.filter(fecha_inicial__gte=p['fecha_inicial__gte'])
+            if p.get('fecha_inicial__lte'):
+                qs = qs.filter(fecha_inicial__lte=p['fecha_inicial__lte'])
+            if p.get('fecha_final__gte'):
+                qs = qs.filter(fecha_final__gte=p['fecha_final__gte'])
+            if p.get('fecha_final__lte'):
+                qs = qs.filter(fecha_final__lte=p['fecha_final__lte'])
+
+        elif type_key == 'lugar':
+            if p.get('tipo'):
+                qs = qs.filter(tipo=p['tipo'])
+
+        elif type_key == 'corporacion':
+            if p.get('tipo_institucion__tipo__icontains'):
+                qs = qs.filter(tipo_institucion__tipo__icontains=p['tipo_institucion__tipo__icontains'])
+
+        return qs
+
+    def _apply_simple_search(self, qs, type_key, text):
+        """Apply simple icontains search (browse-mode text filter in sidebar)."""
+        fields = self.SEARCH_FIELDS.get(type_key, [])
+        if not fields:
+            return qs
+        q_objects = Q()
+        for field in fields:
+            q_objects |= Q(**{f'{field}__icontains': text})
+        return qs.filter(q_objects).distinct()
+
+    def _validate_ordering(self, ordering_param, type_key):
+        """Return validated ordering string or default for the entity type."""
+        if not ordering_param:
+            return self.DEFAULT_ORDERING.get(type_key, '-created_at')
+        field = ordering_param.lstrip('-')
+        allowed = self.ORDERING_FIELDS.get(type_key, set())
+        if field in allowed:
+            return ordering_param
+        return self.DEFAULT_ORDERING.get(type_key, '-created_at')
 
     # ── facets ─────────────────────────────────────────────────────────
 
@@ -983,17 +1091,29 @@ class SearchAPIView(APIView):
     # ── main handler ──────────────────────────────────────────────────
 
     def get(self, request):
-        query_text = request.query_params.get('q', '')
+        query_text = request.query_params.get('q', '').strip()
         entity_type = request.query_params.get('type', 'all')
-        page_number = int(request.query_params.get('page', 1))
+        page_number = max(int(request.query_params.get('page', 1)), 1)
+        page_size = min(
+            max(int(request.query_params.get('page_size', self.DEFAULT_PAGE_SIZE)), 1),
+            self.MAX_PAGE_SIZE,
+        )
+        ordering_param = request.query_params.get('ordering', '')
+        search_text = request.query_params.get('search', '').strip()
 
-        if not query_text:
-            return Response({'error': 'No query provided'}, status=400)
+        is_search = bool(query_text)
 
         try:
-            clean_query, is_exact = parse_search_query(query_text)
-            search_type = 'phrase' if is_exact else 'plain'
-            search_query = SearchQuery(clean_query, config='spanish', search_type=search_type)
+            # ── Determine which entity types to query ──────────────
+            requested_types = (
+                [t.strip() for t in entity_type.split(',') if t.strip()]
+                if entity_type != 'all' else []
+            )
+            active_types = (
+                [t for t in requested_types if t in self.TYPE_CONFIGS]
+                if requested_types
+                else list(self.TYPE_CONFIGS.keys())
+            )
 
             # Parse sidebar filter params
             filters = {
@@ -1007,57 +1127,117 @@ class SearchAPIView(APIView):
             }
             has_filters = any(v for v in filters.values())
 
-            type_configs = {
-                'documento': (Documento, 'titulo', DocumentoListSerializer),
-                'personaesclavizada': (PersonaEsclavizada, 'nombre_normalizado', PersonaEsclavizadaListSerializer),
-                'personanoesclavizada': (PersonaNoEsclavizada, 'nombre_normalizado', PersonaNoEsclavizadaListSerializer),
-                'lugar': (Lugar, 'nombre_lugar', LugarListSerializer),
-                'corporacion': (Corporacion, 'nombre_institucion', CorporacionListSerializer),
-            }
+            if is_search:
+                # ── FTS mode: annotate + rank ──────────────────────
+                clean_query, is_exact = parse_search_query(query_text)
+                search_type = 'phrase' if is_exact else 'plain'
+                search_query = SearchQuery(clean_query, config='spanish', search_type=search_type)
 
-            # Text-match querysets (before sidebar filters — used for facets)
-            base_querysets = {}
-            for tk, (model, sim_field, _) in type_configs.items():
-                base_querysets[tk] = self._text_match(model, search_query, sim_field, clean_query, is_exact)
+                base_querysets = {}
+                for tk, (model, sim_field, _) in self.TYPE_CONFIGS.items():
+                    base_querysets[tk] = self._text_match(
+                        model, search_query, sim_field, clean_query, is_exact)
+            else:
+                # ── Browse mode: all records ───────────────────────
+                base_querysets = {}
+                for tk, (model, _, _) in self.TYPE_CONFIGS.items():
+                    base_querysets[tk] = model.objects.all()
 
-            # Collect facets from unfiltered base querysets
-            facets = self._collect_facets(base_querysets)
+            # ── Facets (from unfiltered base querysets) ────────────
+            facets = self._collect_facets(
+                {tk: qs for tk, qs in base_querysets.items() if tk in active_types})
 
-            # Type counts (unfiltered — for the sidebar type section)
-            type_counts = {tk: qs.count() for tk, qs in base_querysets.items()}
+            # ── Type counts (unfiltered) ──────────────────────────
+            type_counts = {tk: base_querysets[tk].count() for tk in active_types}
 
-            # ── Apply sidebar filters and build result list ────────
-            requested_types = [t.strip() for t in entity_type.split(',') if t.strip()] if entity_type != 'all' else []
-            active_types = (
-                [t for t in requested_types if t in type_configs]
-                if requested_types
-                else list(type_configs.keys())
-            )
+            # ── Apply all filters per entity type + paginate ──────
+            # In unified mode we query one entity type at a time (the
+            # active tab) so we can do proper DB-level pagination.
+            # When multiple types are active, we merge across types.
+            results_data = []
+            total_count = 0
 
-            all_items = []
-            for type_key in active_types:
-                model, sim_field, serializer_cls = type_configs[type_key]
-                qs = base_querysets[type_key]
+            if len(active_types) == 1:
+                # ── Single entity type → efficient DB pagination ───
+                tk = active_types[0]
+                _, _, serializer_cls = self.TYPE_CONFIGS[tk]
+                qs = base_querysets[tk]
+
+                # Sidebar facet filters
                 if has_filters:
-                    qs = self._apply_filters(qs, type_key, filters)
-                for obj in qs.order_by('-search_rank', '-name_similarity'):
-                    all_items.append({
-                        'type': type_key,
-                        'score': (obj.search_rank or 0) + (obj.name_similarity or 0),
-                        'source': serializer_cls(obj).data,
-                    })
+                    qs = self._apply_filters(qs, tk, filters)
 
-            all_items.sort(key=lambda x: x['score'], reverse=True)
+                # Form-based filters
+                qs = self._apply_form_filters(qs, tk, request)
 
-            # ── Paginate ───────────────────────────────────────────
-            total = len(all_items)
-            start = (page_number - 1) * self.PAGE_SIZE
-            end = start + self.PAGE_SIZE
-            page_items = all_items[start:end]
+                # Simple text search (browse mode sidebar)
+                if search_text:
+                    qs = self._apply_simple_search(qs, tk, search_text)
 
-            for item in page_items:
-                item.pop('score', None)
+                # Ordering
+                if is_search:
+                    if ordering_param:
+                        validated = self._validate_ordering(ordering_param, tk)
+                        qs = qs.order_by(validated)
+                    else:
+                        qs = qs.order_by('-search_rank', '-name_similarity')
+                else:
+                    validated = self._validate_ordering(ordering_param, tk)
+                    qs = qs.order_by(validated)
 
+                total_count = qs.count()
+                start = (page_number - 1) * page_size
+                end = start + page_size
+                page_qs = qs[start:end]
+
+                results_data = [
+                    {'type': tk, 'source': serializer_cls(obj).data}
+                    for obj in page_qs
+                ]
+            else:
+                # ── Multiple entity types → in-memory merge ────────
+                all_items = []
+                for tk in active_types:
+                    _, _, serializer_cls = self.TYPE_CONFIGS[tk]
+                    qs = base_querysets[tk]
+
+                    if has_filters:
+                        qs = self._apply_filters(qs, tk, filters)
+                    qs = self._apply_form_filters(qs, tk, request)
+                    if search_text:
+                        qs = self._apply_simple_search(qs, tk, search_text)
+
+                    if is_search:
+                        qs = qs.order_by('-search_rank', '-name_similarity')
+                    else:
+                        validated = self._validate_ordering(ordering_param, tk)
+                        qs = qs.order_by(validated)
+
+                    for obj in qs[:500]:  # cap per type to prevent memory issues
+                        score = 0
+                        if is_search:
+                            score = (getattr(obj, 'search_rank', 0) or 0) + (getattr(obj, 'name_similarity', 0) or 0)
+                        all_items.append({
+                            'type': tk,
+                            'score': score,
+                            'source': serializer_cls(obj).data,
+                        })
+
+                if is_search:
+                    all_items.sort(key=lambda x: x['score'], reverse=True)
+
+                total_count = len(all_items)
+                start = (page_number - 1) * page_size
+                end = start + page_size
+                page_items = all_items[start:end]
+
+                results_data = [
+                    {'type': item['type'], 'source': item['source']}
+                    for item in page_items
+                ]
+
+            # ── Build pagination URLs ─────────────────────────────
+            total_pages = max((total_count + page_size - 1) // page_size, 1)
             base_url = request.build_absolute_uri().split('?')[0]
             params = request.query_params.copy()
 
@@ -1066,16 +1246,18 @@ class SearchAPIView(APIView):
                 return f"{base_url}?{urlencode(params)}"
 
             return Response({
-                'count': total,
-                'next': build_page_url(page_number + 1) if end < total else None,
+                'count': total_count,
+                'page_size': page_size,
+                'total_pages': total_pages,
+                'next': build_page_url(page_number + 1) if page_number < total_pages else None,
                 'previous': build_page_url(page_number - 1) if page_number > 1 else None,
                 'typeCounts': type_counts,
                 'facets': facets,
-                'results': page_items,
+                'results': results_data,
             })
 
         except Exception as e:
-            logger.error(f"Error executing global search: {str(e)}")
+            logger.error(f"Error in search/browse: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
 
 
