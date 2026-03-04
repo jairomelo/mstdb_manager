@@ -15,6 +15,8 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action, permission_classes
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 import csv
@@ -75,10 +77,39 @@ class CustomPagination(PageNumberPagination):
     max_page_size = 100
 
 
+class BrowsePagination(PageNumberPagination):
+    """Pagination for browse/table views — allows larger page sizes."""
+    page_size = 30
+    page_size_query_param = 'page_size'
+    max_page_size = 300
+
+
 # Base ViewSet with common functionality
 class BaseV2ViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = []
+    search_fields = []
+    ordering_fields = []
+    ordering = ['-created_at']
+
+    def get_pagination_class(self):
+        """Use BrowsePagination when client requests page_size > 100."""
+        page_size = self.request.query_params.get('page_size')
+        if page_size and int(page_size) > 100:
+            return BrowsePagination
+        return self.pagination_class
+
+    @property
+    def paginator(self):
+        if not hasattr(self, '_paginator'):
+            pagination_class = self.get_pagination_class()
+            if pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = pagination_class()
+        return self._paginator
 
     def get_serializer_class(self):
         """
@@ -175,6 +206,16 @@ class DocumentoViewSet(BaseV2ViewSet):
     list_serializer_class = DocumentoListSerializer
     detail_serializer_class = DocumentoDetailSerializer
     lookup_field = 'documento_id'
+    filterset_fields = {
+        'archivo__archivo_id': ['exact'],
+        'tipo_documento__tipo_documental': ['exact', 'icontains'],
+        'lugar_de_produccion__lugar_id': ['exact'],
+        'fecha_inicial': ['exact', 'gte', 'lte'],
+        'fecha_final': ['exact', 'gte', 'lte'],
+    }
+    search_fields = ['titulo', 'descripcion', 'documento_idno']
+    ordering_fields = ['titulo', 'fecha_inicial', 'fecha_final', 'created_at', 'updated_at']
+    ordering = ['-created_at']
 
     def get_export_filename(self):
         return "documentos_export.csv"
@@ -262,6 +303,17 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
     list_serializer_class = PersonaEsclavizadaListSerializer
     detail_serializer_class = PersonaEsclavizadaDetailSerializer
     lookup_field = 'persona_id'
+    filterset_fields = {
+        'sexo': ['exact'],
+        'edad': ['exact', 'gte', 'lte'],
+        'hispanizacion__hispanizacion': ['exact', 'icontains'],
+        'etnonimos__etonimo': ['exact', 'icontains'],
+        'calidades__calidad': ['exact', 'icontains'],
+        'ocupaciones__actividad': ['exact', 'icontains'],
+    }
+    search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
+    ordering_fields = ['nombre_normalizado', 'edad', 'created_at', 'updated_at']
+    ordering = ['-created_at']
 
     def get_export_filename(self):
         return "personas_esclavizadas_export.csv"
@@ -279,27 +331,6 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
                              'lugar', 'situacion_lugar', 'documento'
                          ).order_by('ordinal')),
             )
-        
-        # Filtering
-        sexo = self.request.query_params.get('sexo', None)
-        if sexo:
-            queryset = queryset.filter(sexo=sexo)
-        
-        edad_min = self.request.query_params.get('edad_min', None)
-        if edad_min:
-            queryset = queryset.filter(edad__gte=edad_min)
-        
-        edad_max = self.request.query_params.get('edad_max', None)
-        if edad_max:
-            queryset = queryset.filter(edad__lte=edad_max)
-        
-        # Sorting
-        sort_by = self.request.query_params.get('sort_by', None)
-        if sort_by:
-            if sort_by.startswith('-'):
-                queryset = queryset.order_by(sort_by)
-            else:
-                queryset = queryset.order_by(sort_by)
         
         return queryset
 
@@ -489,6 +520,13 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
     list_serializer_class = PersonaNoEsclavizadaListSerializer
     detail_serializer_class = PersonaNoEsclavizadaDetailSerializer
     lookup_field = 'persona_id'
+    filterset_fields = {
+        'sexo': ['exact'],
+        'honorifico': ['exact'],
+    }
+    search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
+    ordering_fields = ['nombre_normalizado', 'created_at', 'updated_at']
+    ordering = ['-created_at']
 
     def get_export_filename(self):
         return "personas_no_esclavizadas_export.csv"
@@ -506,16 +544,6 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
                              'lugar', 'situacion_lugar', 'documento'
                          ).order_by('ordinal')),
             )
-        
-        # Filtering
-        sexo = self.request.query_params.get('sexo', None)
-        if sexo:
-            queryset = queryset.filter(sexo=sexo)
-        
-        # Sorting
-        sort_by = self.request.query_params.get('sort_by', None)
-        if sort_by:
-            queryset = queryset.order_by(sort_by)
         
         return queryset
 
@@ -588,6 +616,12 @@ class LugarViewSet(BaseV2ViewSet):
     list_serializer_class = LugarListSerializer
     detail_serializer_class = LugarDetailSerializer
     lookup_field = 'lugar_id'
+    filterset_fields = {
+        'tipo': ['exact'],
+    }
+    search_fields = ['nombre_lugar', 'otros_nombres']
+    ordering_fields = ['nombre_lugar', 'tipo', 'created_at', 'updated_at']
+    ordering = ['nombre_lugar']
 
     def get_export_filename(self):
         return "lugares_export.csv"
@@ -658,6 +692,12 @@ class CorporacionViewSet(BaseV2ViewSet):
     list_serializer_class = CorporacionListSerializer
     detail_serializer_class = CorporacionDetailSerializer
     lookup_field = 'corporacion_id'
+    filterset_fields = {
+        'tipo_institucion__tipo': ['exact', 'icontains'],
+    }
+    search_fields = ['nombre_institucion', 'nombres_alternativos']
+    ordering_fields = ['nombre_institucion', 'created_at', 'updated_at']
+    ordering = ['nombre_institucion']
 
     def get_export_filename(self):
         return "corporaciones_export.csv"
@@ -1086,6 +1126,21 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # Utility Views
+
+class EntityCountsView(APIView):
+    """Lightweight endpoint returning published counts for all entity types."""
+    permission_classes = [APIPerm]
+
+    def get(self, request):
+        return Response({
+            'personaesclavizada': PersonaEsclavizada.objects.filter(is_published=True).count(),
+            'personanoesclavizada': PersonaNoEsclavizada.objects.filter(is_published=True).count(),
+            'documento': Documento.objects.filter(is_published=True).count(),
+            'lugar': Lugar.objects.count(),
+            'corporacion': Corporacion.objects.filter(is_published=True).count(),
+        })
+
+
 @ensure_csrf_cookie
 def get_csrf_token(request):
     """Get CSRF token for the current session."""

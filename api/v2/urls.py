@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ArchivoViewSet, DocumentoViewSet, PersonaEsclavizadaViewSet, PersonaNoEsclavizadaViewSet,
     LugarViewSet, CorporacionViewSet, PersonaRelacionesViewSet, PersonaLugarRelViewSet,
-    PersonaTravelTrajectoryViewSet, SearchAPIView, get_csrf_token,
+    PersonaTravelTrajectoryViewSet, SearchAPIView, EntityCountsView, get_csrf_token,
     whoami, api_login, api_logout, log_message,
     gender_status_distribution, PlacesPeopleDistribution,
 )
@@ -30,6 +30,7 @@ urlpatterns = [
     
     # Custom endpoints
     path('search/', SearchAPIView.as_view(), name='search_api_v2'),
+    path('counts/', EntityCountsView.as_view(), name='entity_counts_v2'),
     path('csrf/', get_csrf_token, name='csrf_token_v2'),
     path('whoami/', whoami, name='whoami_v2'),
     path('login/', api_login, name='login_v2'),

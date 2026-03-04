@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',  # PostgreSQL-specific features
     'rest_framework',
+    'django_filters',
     'corsheaders',
     'import_export',
     'django_bootstrap5',
