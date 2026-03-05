@@ -96,12 +96,14 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     has_relaciones = serializers.SerializerMethodField()
     has_lugares = serializers.SerializerMethodField()
     documento_list = serializers.SerializerMethodField()
+    calidades = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaEsclavizada
         fields = PersonaListSerializer.Meta.fields + [
             'edad', 'unidad_temporal_edad',
-            'etnonimos', 'hispanizacion', 'has_relaciones', 'has_lugares', 'documento_list',
+            'etnonimos', 'hispanizacion', 'calidades',
+            'has_relaciones', 'has_lugares', 'documento_list',
         ]
 
     def get_etnonimos(self, obj):
@@ -121,6 +123,9 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
             {'documento_id': d.documento_id, 'documento_idno': d.documento_idno, 'titulo': d.titulo}
             for d in obj.documentos.all()
         ]
+
+    def get_calidades(self, obj):
+        return [c.calidad for c in obj.calidades.all()]
 
 
 class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):

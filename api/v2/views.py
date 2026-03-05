@@ -323,7 +323,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
 
         if self.action == 'list':
             queryset = queryset.prefetch_related(
-                'etnonimos', 'hispanizacion', 'relaciones', 'p_x_l_pere',
+                'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
             )
         elif self.action == 'retrieve':
             queryset = queryset.prefetch_related(
@@ -932,11 +932,11 @@ class SearchAPIView(APIView):
                 qs = qs.filter(sexo=p['sexo'])
             if type_key == 'personanoesclavizada' and p.get('honorifico'):
                 qs = qs.filter(honorifico=p['honorifico'])
+            if p.get('calidades__calidad__icontains'):
+                qs = qs.filter(calidades__calidad__icontains=p['calidades__calidad__icontains']).distinct()
             if type_key == 'personanoesclavizada':
                 if p.get('ocupaciones__actividad__icontains'):
                     qs = qs.filter(ocupaciones__actividad__icontains=p['ocupaciones__actividad__icontains']).distinct()
-                if p.get('calidades__calidad__icontains'):
-                    qs = qs.filter(calidades__calidad__icontains=p['calidades__calidad__icontains']).distinct()
             if type_key == 'personaesclavizada':
                 if p.get('edad__gte'):
                     qs = qs.filter(edad__gte=int(p['edad__gte']))
@@ -1157,7 +1157,7 @@ class SearchAPIView(APIView):
             # ── Prefetch for list serializer fields ──────────────
             if 'personaesclavizada' in base_querysets:
                 base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].prefetch_related(
-                    'documentos', 'etnonimos', 'hispanizacion', 'relaciones', 'p_x_l_pere',
+                    'documentos', 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
                 )
             if 'personanoesclavizada' in base_querysets:
                 base_querysets['personanoesclavizada'] = base_querysets['personanoesclavizada'].prefetch_related(
