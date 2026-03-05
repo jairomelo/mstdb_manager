@@ -91,10 +91,36 @@ class PersonaListSerializer(serializers.ModelSerializer):
 class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     """PersonaEsclavizada data for list views"""
     unidad_temporal_edad = serializers.CharField(source='get_unidad_temporal_edad_display', read_only=True)
+    etnonimos = serializers.SerializerMethodField()
+    hispanizacion = serializers.SerializerMethodField()
+    has_relaciones = serializers.SerializerMethodField()
+    has_lugares = serializers.SerializerMethodField()
+    documento_list = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaEsclavizada
-        fields = PersonaListSerializer.Meta.fields + ['edad', 'unidad_temporal_edad']
+        fields = PersonaListSerializer.Meta.fields + [
+            'edad', 'unidad_temporal_edad',
+            'etnonimos', 'hispanizacion', 'has_relaciones', 'has_lugares', 'documento_list',
+        ]
+
+    def get_etnonimos(self, obj):
+        return [str(e) for e in obj.etnonimos.all()]
+
+    def get_hispanizacion(self, obj):
+        return [str(h) for h in obj.hispanizacion.all()]
+
+    def get_has_relaciones(self, obj):
+        return obj.relaciones.exists()
+
+    def get_has_lugares(self, obj):
+        return obj.p_x_l_pere.exists()
+
+    def get_documento_list(self, obj):
+        return [
+            {'documento_id': d.documento_id, 'documento_idno': d.documento_idno, 'titulo': d.titulo}
+            for d in obj.documentos.all()
+        ]
 
 
 class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):

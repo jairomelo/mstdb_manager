@@ -321,8 +321,11 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        # Optimize detail view with nested data prefetching
-        if self.action == 'retrieve':
+        if self.action == 'list':
+            queryset = queryset.prefetch_related(
+                'etnonimos', 'hispanizacion', 'relaciones', 'p_x_l_pere',
+            )
+        elif self.action == 'retrieve':
             queryset = queryset.prefetch_related(
                 'documentos__archivo',
                 'relaciones__personas',
@@ -1142,6 +1145,12 @@ class SearchAPIView(APIView):
                 base_querysets = {}
                 for tk, (model, _, _) in self.TYPE_CONFIGS.items():
                     base_querysets[tk] = model.objects.all()
+
+            # ── Prefetch for list serializer fields ──────────────
+            if 'personaesclavizada' in base_querysets:
+                base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].prefetch_related(
+                    'documentos', 'etnonimos', 'hispanizacion', 'relaciones', 'p_x_l_pere',
+                )
 
             # ── Facets (from unfiltered base querysets) ────────────
             facets = self._collect_facets(
