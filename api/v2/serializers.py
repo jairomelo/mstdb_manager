@@ -125,9 +125,27 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
 
 class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
     """PersonaNoEsclavizada data for list views"""
+    has_relaciones = serializers.SerializerMethodField()
+    has_lugares = serializers.SerializerMethodField()
+    documento_list = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaNoEsclavizada
+        fields = PersonaListSerializer.Meta.fields + [
+            'has_relaciones', 'has_lugares', 'documento_list',
+        ]
+
+    def get_has_relaciones(self, obj):
+        return obj.relaciones.exists()
+
+    def get_has_lugares(self, obj):
+        return obj.p_x_l_pere.exists()
+
+    def get_documento_list(self, obj):
+        return [
+            {'documento_id': d.documento_id, 'documento_idno': d.documento_idno, 'titulo': d.titulo}
+            for d in obj.documentos.all()
+        ]
 
 
 class LugarListSerializer(serializers.ModelSerializer):
