@@ -38,6 +38,6 @@ urlpatterns = [
     path('v2/', include(v2_urls), name='v2'),
     path('v2/health/', health_check, name='health_check_v2'),
     path('v2/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('v2/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger'),
+    path('v2/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger'),
     path('v2/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

@@ -291,6 +291,12 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Trayectorias Afro API',
+    'VERSION': '2.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
 # PostgreSQL Full-Text Search Configuration
 # Extensions enabled via migration: pg_trgm, unaccent
 
