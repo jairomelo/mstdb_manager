@@ -539,7 +539,7 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
 
         if self.action == 'list':
             queryset = queryset.prefetch_related(
-                'relaciones', 'p_x_l_pere',
+                'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades',
             )
         elif self.action == 'retrieve':
             queryset = queryset.prefetch_related(
@@ -932,6 +932,11 @@ class SearchAPIView(APIView):
                 qs = qs.filter(sexo=p['sexo'])
             if type_key == 'personanoesclavizada' and p.get('honorifico'):
                 qs = qs.filter(honorifico=p['honorifico'])
+            if type_key == 'personanoesclavizada':
+                if p.get('ocupaciones__actividad__icontains'):
+                    qs = qs.filter(ocupaciones__actividad__icontains=p['ocupaciones__actividad__icontains']).distinct()
+                if p.get('calidades__calidad__icontains'):
+                    qs = qs.filter(calidades__calidad__icontains=p['calidades__calidad__icontains']).distinct()
             if type_key == 'personaesclavizada':
                 if p.get('edad__gte'):
                     qs = qs.filter(edad__gte=int(p['edad__gte']))
@@ -1156,7 +1161,7 @@ class SearchAPIView(APIView):
                 )
             if 'personanoesclavizada' in base_querysets:
                 base_querysets['personanoesclavizada'] = base_querysets['personanoesclavizada'].prefetch_related(
-                    'documentos', 'relaciones', 'p_x_l_pere',
+                    'documentos', 'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades',
                 )
 
             # ── Facets (from unfiltered base querysets) ────────────
