@@ -176,6 +176,7 @@ class DocumentoForm(forms.ModelForm):
     class Meta:
         model = Documento
         fields = '__all__'
+        exclude = ['documento_idno', 'search_vector', 'is_published']
         widgets = {
             'archivo': ArchivoAutocomplete()
         }
@@ -251,6 +252,7 @@ class PersonaEsclavizadaForm(forms.ModelForm):
     class Meta:
         model = PersonaEsclavizada
         fields = '__all__'
+        exclude = ['persona_idno', 'search_vector']
         widgets = {
             'fecha_nacimiento_factual': forms.CheckboxInput(),
         }
@@ -339,6 +341,7 @@ class PersonaNoEsclavizadaForm(forms.ModelForm):
     class Meta:
         model = PersonaNoEsclavizada
         fields = '__all__'
+        exclude = ['persona_idno', 'search_vector']
         widgets = {
             'fecha_nacimiento_factual': forms.CheckboxInput(),
         }
