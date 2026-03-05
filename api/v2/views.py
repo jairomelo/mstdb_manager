@@ -1148,7 +1148,10 @@ class SearchAPIView(APIView):
                 {tk: qs for tk, qs in base_querysets.items() if tk in active_types})
 
             # ── Type counts (unfiltered) ──────────────────────────
-            type_counts = {tk: base_querysets[tk].count() for tk in active_types}
+            # In search mode, return counts for ALL entity types so the
+            # frontend can show badges like enslaved.org does.
+            count_types = list(self.TYPE_CONFIGS.keys()) if is_search else active_types
+            type_counts = {tk: base_querysets[tk].count() for tk in count_types}
 
             # ── Apply all filters per entity type + paginate ──────
             # In unified mode we query one entity type at a time (the
