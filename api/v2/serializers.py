@@ -335,21 +335,27 @@ class PersonaNoEsclavizadaDetailSerializer(PersonaDetailSerializer):
 
 class LugarDetailSerializer(serializers.ModelSerializer):
     """Full Lugar details"""
-    persona_ids = serializers.SerializerMethodField()
-    documento_ids = serializers.SerializerMethodField()
+    procedencia_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon', 
-                  'persona_ids', 'documento_ids']
+        fields = ['lugar_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
+                  'procedencia_count']
 
-    def get_persona_ids(self, obj):
-        # Get personas through PersonaLugarRel intermediate model
-        return list(Persona.objects.filter(p_x_l_pere__lugar=obj).distinct().values_list('persona_id', flat=True))
+    def get_procedencia_count(self, obj):
+        return obj.procedencia_persona_esclavizada.count()
 
-    def get_documento_ids(self, obj):
-        # Get documents through PersonaLugarRel
-        return list(obj.p_x_l_lugar.values_list('documento_id', flat=True).distinct())
+
+class LugarPersonasRelSerializer(serializers.ModelSerializer):
+    """PersonaLugarRel records for a lugar's personas view."""
+    personas = PersonaReferenceSerializer(many=True, read_only=True)
+    documento = DocumentoReferenceSerializer(read_only=True)
+    situacion_lugar = serializers.StringRelatedField()
+
+    class Meta:
+        model = PersonaLugarRel
+        fields = ['persona_x_lugares', 'personas', 'documento', 'situacion_lugar',
+                  'ordinal', 'fecha_inicial_lugar_raw', 'fecha_final_lugar_raw']
 
 
 class CorporacionDetailSerializer(serializers.ModelSerializer):

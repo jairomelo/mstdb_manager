@@ -38,6 +38,7 @@ from .serializers import (
     ArchivoDetailSerializer, DocumentoDetailSerializer, PersonaDetailSerializer,
     PersonaEsclavizadaDetailSerializer, PersonaNoEsclavizadaDetailSerializer,
     LugarDetailSerializer, CorporacionDetailSerializer,
+    LugarPersonasRelSerializer,
     
     # Relationship serializers
     PersonaRelacionesDetailSerializer, PersonaLugarRelDetailSerializer,
@@ -677,16 +678,31 @@ class LugarViewSet(BaseV2ViewSet):
 
     @action(detail=True, methods=['get'])
     def personas(self, request, lugar_id=None):
-        """Get all personas associated with this lugar"""
+        """Get PersonaLugarRel records for this lugar, with nested personas and documento."""
         lugar = self.get_object()
-        # Get personas through PersonaLugarRel relationship
-        personas = Persona.objects.filter(p_x_l_pere__lugar=lugar).distinct()
+        rels = (
+            PersonaLugarRel.objects
+            .filter(lugar=lugar)
+            .select_related('documento', 'situacion_lugar')
+            .prefetch_related('personas')
+            .order_by('ordinal', 'fecha_inicial_lugar')
+        )
+        page = self.paginate_queryset(rels)
+        if page is not None:
+            serializer = LugarPersonasRelSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = LugarPersonasRelSerializer(rels, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def procedencia(self, request, lugar_id=None):
+        """Get PersonaEsclavizada whose procedencia is this lugar."""
+        lugar = self.get_object()
+        personas = lugar.procedencia_persona_esclavizada.select_related().all()
         page = self.paginate_queryset(personas)
-        
         if page is not None:
             serializer = PersonaListSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
         serializer = PersonaListSerializer(personas, many=True)
         return Response(serializer.data)
 
