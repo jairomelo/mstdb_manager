@@ -272,7 +272,7 @@ class DocumentoViewSet(BaseV2ViewSet):
     def personas(self, request, documento_id=None):
         """Get all personas for this documento"""
         documento = self.get_object()
-        personas = documento.personas.all()
+        personas = documento.persona_set.all()
         page = self.paginate_queryset(personas)
         
         if page is not None:

@@ -197,15 +197,15 @@ class CorporacionListSerializer(serializers.ModelSerializer):
 class ArchivoDetailSerializer(serializers.ModelSerializer):
     """Full Archivo details"""
     nombre_abreviado = serializers.CharField(read_only=True)
-    documento_ids = serializers.SerializerMethodField()
+    documento_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Archivo
         fields = ['archivo_id', 'nombre', 'nombre_abreviado', 'archivo_idno', 
-                  'documento_ids', 'created_at', 'updated_at']
+                  'documento_count', 'created_at', 'updated_at']
 
-    def get_documento_ids(self, obj):
-        return list(obj.documento_set.values_list('documento_id', flat=True))
+    def get_documento_count(self, obj):
+        return obj.documento_set.count()
 
 
 class DocumentoDetailSerializer(serializers.ModelSerializer):
@@ -213,7 +213,7 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
     lugar_de_produccion = LugarReferenceSerializer(read_only=True)
-    persona_ids = serializers.SerializerMethodField()
+    persona_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Documento
@@ -221,10 +221,10 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
                   'tipo_udc', 'unidad_documental_compuesta', 'tipo_documento', 'sigla_documento',
                   'titulo', 'descripcion', 'deteriorado', 'fecha_inicial', 'fecha_inicial_raw', 'fecha_final',
                   'fecha_final_raw', 'lugar_de_produccion', 'folio_inicial', 'folio_final', 'notas', 
-                  'persona_ids', 'created_at', 'updated_at']
+                  'persona_count', 'created_at', 'updated_at']
 
-    def get_persona_ids(self, obj):
-        return list(obj.persona_set.values_list('persona_id', flat=True))
+    def get_persona_count(self, obj):
+        return obj.persona_set.count()
 
 
 # Nested serializers for detail views (map + network visualizations)
