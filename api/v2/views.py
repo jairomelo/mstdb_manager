@@ -99,6 +99,29 @@ class BrowsePagination(PageNumberPagination):
     max_page_size = 300
 
 
+class DocumentoLinkMixin:
+    """Adds vincular/desvincular @actions so the cataloguer hub can manage
+    the Persona/Corporacion ↔ Documento M2M without a full PATCH."""
+
+    @action(detail=True, methods=['post'], url_path='vincular')
+    def vincular(self, request, **kwargs):
+        obj = self.get_object()
+        doc_id = request.data.get('documento_id')
+        if not doc_id:
+            return Response({'error': 'documento_id requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        obj.documentos.add(doc_id)
+        return Response({'status': 'vinculado'})
+
+    @action(detail=True, methods=['post'], url_path='desvincular')
+    def desvincular(self, request, **kwargs):
+        obj = self.get_object()
+        doc_id = request.data.get('documento_id')
+        if not doc_id:
+            return Response({'error': 'documento_id requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        obj.documentos.remove(doc_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 # Base ViewSet with common functionality
 class BaseV2ViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
@@ -106,7 +129,7 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy',
-                           'bulk_update_ordinal'):
+                           'bulk_update_ordinal', 'vincular', 'desvincular'):
             return [IsAuthenticated()]
         return super().get_permissions()
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -322,7 +345,7 @@ class DocumentoViewSet(BaseV2ViewSet):
 
 
 # Persona ViewSets
-class PersonaEsclavizadaViewSet(BaseV2ViewSet):
+class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
     queryset = PersonaEsclavizada.objects.prefetch_related('documentos', 'ocupaciones').all()
     serializer_class = PersonaEsclavizadaListSerializer
     list_serializer_class = PersonaEsclavizadaListSerializer
@@ -336,6 +359,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
         'etnonimos__etonimo': ['exact', 'icontains'],
         'calidades__calidad': ['exact', 'icontains'],
         'ocupaciones__actividad': ['exact', 'icontains'],
+        'documentos__documento_id': ['exact'],
     }
     search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
     ordering_fields = ['nombre_normalizado', 'edad', 'created_at', 'updated_at']
@@ -543,7 +567,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
         return Response(serializer.data)
 
 
-class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
+class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
     queryset = PersonaNoEsclavizada.objects.prefetch_related('documentos').all()
     serializer_class = PersonaNoEsclavizadaListSerializer
     list_serializer_class = PersonaNoEsclavizadaListSerializer
@@ -553,6 +577,7 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
     filterset_fields = {
         'sexo': ['exact'],
         'honorifico': ['exact'],
+        'documentos__documento_id': ['exact'],
     }
     search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
     ordering_fields = ['nombre_normalizado', 'created_at', 'updated_at']
@@ -735,7 +760,7 @@ class LugarViewSet(BaseV2ViewSet):
 
 
 # Corporacion ViewSet
-class CorporacionViewSet(BaseV2ViewSet):
+class CorporacionViewSet(DocumentoLinkMixin, BaseV2ViewSet):
     queryset = Corporacion.objects.select_related('lugar_corporacion', 'tipo_institucion').prefetch_related('documentos', 'personas_asociadas').all()
     serializer_class = CorporacionListSerializer
     list_serializer_class = CorporacionListSerializer
@@ -744,6 +769,7 @@ class CorporacionViewSet(BaseV2ViewSet):
     lookup_field = 'corporacion_id'
     filterset_fields = {
         'tipo_institucion__tipo': ['exact', 'icontains'],
+        'documentos__documento_id': ['exact'],
     }
     search_fields = ['nombre_institucion', 'nombres_alternativos']
     ordering_fields = ['nombre_institucion', 'created_at', 'updated_at']
