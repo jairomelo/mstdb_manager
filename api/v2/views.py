@@ -820,6 +820,8 @@ class PersonaRelacionesViewSet(viewsets.ModelViewSet):
     write_serializer_class = PersonaRelacionesWriteSerializer
     pagination_class = CustomPagination
     lookup_field = 'persona_relacion_id'
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {'documento__documento_id': ['exact']}
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy'):
@@ -839,6 +841,8 @@ class PersonaLugarRelViewSet(viewsets.ModelViewSet):
     write_serializer_class = PersonaLugarRelWriteSerializer
     pagination_class = CustomPagination
     lookup_field = 'persona_x_lugares'
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {'documento__documento_id': ['exact']}
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy',
