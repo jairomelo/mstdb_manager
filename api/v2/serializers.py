@@ -1,8 +1,12 @@
+import re
+from datetime import datetime
+
 from api.models import LogMessage
 from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion, InstitucionRolEvento,
                              PersonaLugarRel, Lugar, PersonaRelaciones, Actividades, Persona,
-                             PersonaRolEvento)
+                             PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
+                             SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion)
 
 from django.db.models import Manager
 
@@ -560,3 +564,261 @@ class CorporacionHistorySerializer(BaseHistorySerializer):
         fields = BaseHistorySerializer.Meta.fields + [
             'corporacion_id', 'nombre_institucion', 'nombres_alternativos', 'is_published'
         ]
+
+
+# ── Write Serializers ─────────────────────────────────────────────────────────
+# Used for POST / PUT / PATCH.  Validation ported from dbgestor/forms.py.
+
+def _parse_flexible_date(value):
+    """
+    Accept DD-MM-YYYY, MM-YYYY, or YYYY.  Returns a date object.
+    Raises serializers.ValidationError on failure.
+    """
+    if not isinstance(value, str):
+        return value
+    value = value.strip().replace('/', '-')
+    for fmt in ('%Y-%m-%d', '%d-%m-%Y'):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            pass
+    parts = value.split('-')
+    if len(parts) == 1 and len(parts[0]) == 4:
+        try:
+            return datetime.strptime(value, '%Y').date()
+        except ValueError:
+            pass
+    if len(parts) == 2:
+        try:
+            return datetime.strptime(value, '%m-%Y').date()
+        except ValueError:
+            pass
+    raise serializers.ValidationError(
+        f"Formato de fecha incorrecto: '{value}'. Use DD-MM-AAAA, MM-AAAA, o AAAA."
+    )
+
+
+def _validate_folios(folio_inicial, folio_final):
+    if not folio_inicial or folio_inicial == 'None':
+        return
+    if not folio_final:
+        return
+    ini_nums = re.findall(r'^[1-9]\d*', str(folio_inicial))
+    fin_nums = re.findall(r'^[1-9]\d*', str(folio_final))
+    if not ini_nums or not fin_nums:
+        return
+    ini, fin = int(ini_nums[0]), int(fin_nums[0])
+    if fin < ini:
+        raise serializers.ValidationError(
+            f"El folio final ({folio_final}) no puede ser menor que el inicial ({folio_inicial})."
+        )
+    if fin == ini:
+        ori_ini = re.findall(r'\w$', str(folio_inicial))
+        ori_fin = re.findall(r'\w$', str(folio_final))
+        if ori_ini and ori_fin and ori_ini != ori_fin:
+            if ori_ini[0].lower() != 'r':
+                raise serializers.ValidationError(
+                    f"La orientación de los folios ({folio_inicial} - {folio_final}) es incorrecta."
+                )
+
+
+class ArchivoWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Archivo
+        fields = ['nombre', 'nombre_abreviado', 'ubicacion_archivo']
+        extra_kwargs = {'nombre_abreviado': {'required': False}}
+
+
+class LugarWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lugar
+        fields = ['nombre_lugar', 'otros_nombres', 'es_parte_de', 'lat', 'lon', 'tipo']
+        extra_kwargs = {
+            'otros_nombres': {'required': False},
+            'es_parte_de': {'required': False},
+            'lat': {'required': False},
+            'lon': {'required': False},
+        }
+
+    def validate(self, data):
+        lat, lon = data.get('lat'), data.get('lon')
+        if (lat is None) != (lon is None):
+            raise serializers.ValidationError(
+                'Latitud y longitud deben proporcionarse juntas.'
+            )
+        return data
+
+
+class DocumentoWriteSerializer(serializers.ModelSerializer):
+    fecha_inicial = serializers.CharField()
+    fecha_final = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = Documento
+        exclude = ['documento_idno', 'search_vector', 'is_published',
+                   'fecha_inicial_raw', 'fecha_final_raw']
+
+    def validate(self, data):
+        raw_ini = data.get('fecha_inicial', '').strip()
+        raw_fin = (data.get('fecha_final') or '').strip()
+
+        data['fecha_inicial_raw'] = raw_ini
+        data['fecha_final_raw'] = raw_fin if raw_fin else raw_ini
+
+        parsed_ini = _parse_flexible_date(raw_ini)
+        parsed_fin = _parse_flexible_date(raw_fin) if raw_fin else parsed_ini
+
+        if parsed_ini > parsed_fin:
+            raise serializers.ValidationError(
+                'La fecha final no puede ser anterior a la fecha inicial.'
+            )
+        data['fecha_inicial'] = parsed_ini
+        data['fecha_final'] = parsed_fin
+
+        folio_ini = data.get('folio_inicial')
+        folio_fin = data.get('folio_final')
+        if data.get('deteriorado') and not folio_ini:
+            data['folio_inicial'] = '[ilegible]'
+        else:
+            _validate_folios(folio_ini, folio_fin)
+
+        return data
+
+    def create(self, validated_data):
+        validated_data.setdefault('fecha_final_raw', validated_data.get('fecha_inicial_raw', ''))
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.setdefault('fecha_final_raw', validated_data.get('fecha_inicial_raw', ''))
+        return super().update(instance, validated_data)
+
+
+class PersonaEsclavizadaWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonaEsclavizada
+        exclude = ['persona_idno', 'search_vector']
+
+
+class PersonaNoEsclavizadaWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonaNoEsclavizada
+        exclude = ['persona_idno', 'search_vector']
+
+
+class CorporacionWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Corporacion
+        exclude = ['corporacion_idno', 'search_vector']
+
+
+class PersonaLugarRelWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonaLugarRel
+        fields = '__all__'
+
+    def validate_ordinal(self, value):
+        if value == 0:
+            raise serializers.ValidationError('0 no es un valor permitido para el ordinal.')
+        return value
+
+
+class PersonaRelacionesWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonaRelaciones
+        fields = '__all__'
+
+
+class PersonaRolEventoWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonaRolEvento
+        fields = '__all__'
+
+
+class InstitucionRolEventoWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstitucionRolEvento
+        fields = '__all__'
+
+
+# ── Vocabulary Write Serializers (update_or_create with title-casing) ─────────
+
+class _VocabUpsertMixin:
+    """Mixin that implements update_or_create with title-casing for the main text field."""
+    vocab_field: str = ''
+
+    def create(self, validated_data):
+        validated_data[self.vocab_field] = validated_data[self.vocab_field].title()
+        obj, _ = self.Meta.model.objects.update_or_create(
+            **{self.vocab_field: validated_data[self.vocab_field]},
+            defaults=validated_data,
+        )
+        return obj
+
+    def update(self, instance, validated_data):
+        validated_data[self.vocab_field] = validated_data[self.vocab_field].title()
+        return super().update(instance, validated_data)
+
+
+class TipoDocumentalWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+    vocab_field = 'tipo_documental'
+
+    class Meta:
+        model = TipoDocumental
+        fields = ['tipo_documental']
+
+
+class CalidadesWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+    vocab_field = 'calidad'
+
+    class Meta:
+        model = Calidades
+        fields = ['calidad']
+
+
+class HispanizacionesWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+    vocab_field = 'hispanizacion'
+
+    class Meta:
+        model = Hispanizaciones
+        fields = ['hispanizacion']
+
+
+class EtnonimosWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+    vocab_field = 'etonimo'
+
+    class Meta:
+        model = Etonimos
+        fields = ['etonimo']
+
+
+class EstadoCivilWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EstadoCivil
+        fields = ['estado_civil']
+
+
+class ActividadesWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Actividades
+        fields = ['actividad']
+
+
+class SituacionLugarWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SituacionLugar
+        fields = ['situacion', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False}}
+
+
+class RolEventoWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RolEvento
+        fields = ['rol_evento', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False}}
+
+
+class TiposInstitucionWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TiposInstitucion
+        fields = ['tipo', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False}}

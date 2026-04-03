@@ -22,33 +22,47 @@ from rest_framework.pagination import PageNumberPagination
 import csv
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
-                             PersonaLugarRel, Lugar, PersonaRelaciones, Persona)
+                             PersonaLugarRel, Lugar, PersonaRelaciones, Persona,
+                             PersonaRolEvento, InstitucionRolEvento,
+                             Calidades, Hispanizaciones, Etonimos, EstadoCivil,
+                             Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
+                             RolEvento, TiposInstitucion)
 
 from .serializers import (
     # Reference serializers
     ArchivoReferenceSerializer, DocumentoReferenceSerializer, PersonaReferenceSerializer,
     LugarReferenceSerializer, CorporacionReferenceSerializer,
-    
+
     # List serializers
     ArchivoListSerializer, DocumentoListSerializer, PersonaListSerializer,
     PersonaEsclavizadaListSerializer, PersonaNoEsclavizadaListSerializer,
     LugarListSerializer, CorporacionListSerializer,
-    
+
     # Detail serializers
     ArchivoDetailSerializer, DocumentoDetailSerializer, PersonaDetailSerializer,
     PersonaEsclavizadaDetailSerializer, PersonaNoEsclavizadaDetailSerializer,
     LugarDetailSerializer, CorporacionDetailSerializer,
     LugarPersonasRelSerializer,
-    
+
     # Relationship serializers
     PersonaRelacionesDetailSerializer, PersonaLugarRelDetailSerializer,
     PersonaRolEventoDetailSerializer, ActividadesSerializer, LogMessageSerializer,
-    
+
     # Travel trajectory serializers
     TravelTrajectorySerializer, PersonaTravelTrajectorySerializer,
-    
+
     # History serializers
-    DocumentoHistorySerializer, PersonaHistorySerializer, CorporacionHistorySerializer
+    DocumentoHistorySerializer, PersonaHistorySerializer, CorporacionHistorySerializer,
+
+    # Write serializers
+    ArchivoWriteSerializer, LugarWriteSerializer, DocumentoWriteSerializer,
+    PersonaEsclavizadaWriteSerializer, PersonaNoEsclavizadaWriteSerializer,
+    CorporacionWriteSerializer,
+    PersonaLugarRelWriteSerializer, PersonaRelacionesWriteSerializer,
+    PersonaRolEventoWriteSerializer, InstitucionRolEventoWriteSerializer,
+    TipoDocumentalWriteSerializer, CalidadesWriteSerializer, HispanizacionesWriteSerializer,
+    EtnonimosWriteSerializer, EstadoCivilWriteSerializer, ActividadesWriteSerializer,
+    SituacionLugarWriteSerializer, RolEventoWriteSerializer, TiposInstitucionWriteSerializer,
 )
 
 
@@ -89,6 +103,12 @@ class BrowsePagination(PageNumberPagination):
 class BaseV2ViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     pagination_class = CustomPagination
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy',
+                           'bulk_update_ordinal'):
+            return [IsAuthenticated()]
+        return super().get_permissions()
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = []
     search_fields = []
@@ -114,11 +134,13 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """
-        Return different serializers for list vs detail actions
+        Return different serializers for list vs detail vs write actions.
         """
+        if self.action in ('create', 'update', 'partial_update'):
+            return getattr(self, 'write_serializer_class', self.serializer_class)
         if self.action == 'list':
             return getattr(self, 'list_serializer_class', self.serializer_class)
-        elif self.action == 'retrieve':
+        if self.action == 'retrieve':
             return getattr(self, 'detail_serializer_class', self.serializer_class)
         return self.serializer_class
 
@@ -180,6 +202,7 @@ class ArchivoViewSet(BaseV2ViewSet):
     serializer_class = ArchivoListSerializer
     list_serializer_class = ArchivoListSerializer
     detail_serializer_class = ArchivoDetailSerializer
+    write_serializer_class = ArchivoWriteSerializer
     lookup_field = 'archivo_id'
 
     def get_export_filename(self):
@@ -206,6 +229,7 @@ class DocumentoViewSet(BaseV2ViewSet):
     serializer_class = DocumentoListSerializer
     list_serializer_class = DocumentoListSerializer
     detail_serializer_class = DocumentoDetailSerializer
+    write_serializer_class = DocumentoWriteSerializer
     lookup_field = 'documento_id'
     filterset_fields = {
         'archivo__archivo_id': ['exact'],
@@ -303,6 +327,7 @@ class PersonaEsclavizadaViewSet(BaseV2ViewSet):
     serializer_class = PersonaEsclavizadaListSerializer
     list_serializer_class = PersonaEsclavizadaListSerializer
     detail_serializer_class = PersonaEsclavizadaDetailSerializer
+    write_serializer_class = PersonaEsclavizadaWriteSerializer
     lookup_field = 'persona_id'
     filterset_fields = {
         'sexo': ['exact'],
@@ -523,6 +548,7 @@ class PersonaNoEsclavizadaViewSet(BaseV2ViewSet):
     serializer_class = PersonaNoEsclavizadaListSerializer
     list_serializer_class = PersonaNoEsclavizadaListSerializer
     detail_serializer_class = PersonaNoEsclavizadaDetailSerializer
+    write_serializer_class = PersonaNoEsclavizadaWriteSerializer
     lookup_field = 'persona_id'
     filterset_fields = {
         'sexo': ['exact'],
@@ -622,6 +648,7 @@ class LugarViewSet(BaseV2ViewSet):
     serializer_class = LugarListSerializer
     list_serializer_class = LugarListSerializer
     detail_serializer_class = LugarDetailSerializer
+    write_serializer_class = LugarWriteSerializer
     lookup_field = 'lugar_id'
     filterset_fields = {
         'tipo': ['exact'],
@@ -713,6 +740,7 @@ class CorporacionViewSet(BaseV2ViewSet):
     serializer_class = CorporacionListSerializer
     list_serializer_class = CorporacionListSerializer
     detail_serializer_class = CorporacionDetailSerializer
+    write_serializer_class = CorporacionWriteSerializer
     lookup_field = 'corporacion_id'
     filterset_fields = {
         'tipo_institucion__tipo': ['exact', 'icontains'],
@@ -785,22 +813,156 @@ class CorporacionViewSet(BaseV2ViewSet):
 
 
 # Relationship ViewSets
-class PersonaRelacionesViewSet(viewsets.ReadOnlyModelViewSet):
+class PersonaRelacionesViewSet(viewsets.ModelViewSet):
     """ViewSet for persona relationships"""
-    permission_classes = [APIPerm]
     queryset = PersonaRelaciones.objects.select_related('documento').prefetch_related('personas').all()
     serializer_class = PersonaRelacionesDetailSerializer
+    write_serializer_class = PersonaRelacionesWriteSerializer
     pagination_class = CustomPagination
     lookup_field = 'persona_relacion_id'
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated()]
+        return [APIPerm()]
 
-class PersonaLugarRelViewSet(viewsets.ReadOnlyModelViewSet):
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return self.write_serializer_class
+        return self.serializer_class
+
+
+class PersonaLugarRelViewSet(viewsets.ModelViewSet):
     """ViewSet for persona-lugar relationships"""
-    permission_classes = [APIPerm]
     queryset = PersonaLugarRel.objects.select_related('documento', 'lugar').prefetch_related('personas').all()
     serializer_class = PersonaLugarRelDetailSerializer
+    write_serializer_class = PersonaLugarRelWriteSerializer
     pagination_class = CustomPagination
     lookup_field = 'persona_x_lugares'
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy',
+                           'bulk_update_ordinal'):
+            return [IsAuthenticated()]
+        return [APIPerm()]
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return self.write_serializer_class
+        return self.serializer_class
+
+    @action(detail=False, methods=['patch'], url_path='bulk-ordinal')
+    def bulk_update_ordinal(self, request):
+        """
+        PATCH /api/v2/relaciones-lugares/bulk-ordinal/
+        Body: [{"persona_x_lugares": 1, "ordinal": -1}, ...]
+        Updates ordinals in bulk for swimlane drag-and-drop.
+        """
+        items = request.data
+        if not isinstance(items, list):
+            return Response({'error': 'Expected a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        errors = []
+        for item in items:
+            pk = item.get('persona_x_lugares')
+            ordinal = item.get('ordinal')
+            if pk is None or ordinal is None:
+                errors.append({'item': item, 'error': 'persona_x_lugares and ordinal are required.'})
+                continue
+            if ordinal == 0:
+                errors.append({'item': item, 'error': '0 no es un valor permitido para el ordinal.'})
+                continue
+            try:
+                PersonaLugarRel.objects.filter(persona_x_lugares=pk).update(ordinal=ordinal)
+            except Exception as e:
+                errors.append({'item': item, 'error': str(e)})
+        if errors:
+            return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'status': 'updated'})
+
+
+# ── Vocabulary ViewSets ───────────────────────────────────────────────────────
+
+class VocabBaseViewSet(viewsets.ModelViewSet):
+    """Base for simple vocabulary (lookup table) ViewSets.
+
+    List/retrieve are public; writes require authentication.
+    """
+    pagination_class = None  # return full list — these are small tables
+    filter_backends = [SearchFilter]
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated()]
+        return [APIPerm()]
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return getattr(self, 'write_serializer_class', self.serializer_class)
+        return self.serializer_class
+
+
+class TipoDocumentalViewSet(VocabBaseViewSet):
+    from dbgestor.models import TipoDocumental as _TipoDocumental
+    queryset = TipoDocumental.objects.all()
+    serializer_class = TipoDocumentalWriteSerializer
+    search_fields = ['tipo_documental']
+    lookup_field = 'pk'
+
+
+class CalidadesViewSet(VocabBaseViewSet):
+    queryset = Calidades.objects.all()
+    serializer_class = CalidadesWriteSerializer
+    search_fields = ['calidad']
+    lookup_field = 'calidad_id'
+
+
+class HispanizacionesViewSet(VocabBaseViewSet):
+    queryset = Hispanizaciones.objects.all()
+    serializer_class = HispanizacionesWriteSerializer
+    search_fields = ['hispanizacion']
+    lookup_field = 'hispanizacion_id'
+
+
+class EtnonimosViewSet(VocabBaseViewSet):
+    queryset = Etonimos.objects.all()
+    serializer_class = EtnonimosWriteSerializer
+    search_fields = ['etonimo']
+    lookup_field = 'etonimo_id'
+
+
+class EstadoCivilViewSet(VocabBaseViewSet):
+    queryset = EstadoCivil.objects.all()
+    serializer_class = EstadoCivilWriteSerializer
+    search_fields = ['estado_civil']
+    lookup_field = 'estado_civil_id'
+
+
+class ActividadesViewSet(VocabBaseViewSet):
+    queryset = ActividadesModel.objects.all()
+    serializer_class = ActividadesWriteSerializer
+    search_fields = ['actividad']
+    lookup_field = 'actividad_id'
+
+
+class SituacionLugarViewSet(VocabBaseViewSet):
+    queryset = SituacionLugar.objects.all()
+    serializer_class = SituacionLugarWriteSerializer
+    search_fields = ['situacion']
+    lookup_field = 'situacion_id'
+
+
+class RolEventoViewSet(VocabBaseViewSet):
+    queryset = RolEvento.objects.all()
+    serializer_class = RolEventoWriteSerializer
+    search_fields = ['rol_evento']
+    lookup_field = 'pk'
+
+
+class TiposInstitucionViewSet(VocabBaseViewSet):
+    queryset = TiposInstitucion.objects.all()
+    serializer_class = TiposInstitucionWriteSerializer
+    search_fields = ['tipo']
+    lookup_field = 'tipo_id'
 
 
 # Global Search API
@@ -1381,7 +1543,8 @@ def whoami(request):
         'username': user.username,
         'email': user.email,
         'is_staff': user.is_staff,
-        'groups': [g.name for g in user.groups.all()]
+        'groups': [g.name for g in user.groups.all()],
+        'permissions': list(user.get_all_permissions()),
     })
 
 
