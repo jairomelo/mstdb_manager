@@ -375,8 +375,10 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
             queryset = queryset.prefetch_related(
                 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
             )
-        elif self.action == 'retrieve':
-            queryset = queryset.prefetch_related(
+        elif self.action in ('retrieve', 'trajectory'):
+            queryset = queryset.select_related(
+                'procedencia', 'lugar_nacimiento', 'lugar_defuncion',
+            ).prefetch_related(
                 'documentos__archivo',
                 'relaciones__personas',
                 Prefetch('p_x_l_pere',
@@ -514,24 +516,75 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         """
         Return ordered trajectory arcs for map visualization.
         Each arc has from/to coordinates and a date.
+        Includes direct FK places: lugar_nacimiento, procedencia, lugar_defuncion.
         """
         persona = self.get_object()
         places = (persona.p_x_l_pere
                   .select_related('lugar', 'documento')
                   .order_by('ordinal'))
 
-        points = []
+        # Collect persona_x_lugares points
+        rel_points = []
         for rel in places:
             lugar = rel.lugar
             if lugar and lugar.lat and lugar.lon:
-                points.append({
+                rel_points.append({
                     'nombre': lugar.nombre_lugar,
                     'lat': float(lugar.lat),
                     'lon': float(lugar.lon),
                     'fecha': (rel.fecha_inicial_lugar
                               or (rel.documento.fecha_inicial if rel.documento else None)),
                     'ordinal': rel.ordinal,
+                    'situacion': str(rel.situacion_lugar) if rel.situacion_lugar else None,
                 })
+
+        # Determine ordinal bounds for FK places
+        min_ordinal = min((p['ordinal'] for p in rel_points), default=1)
+        max_ordinal = max((p['ordinal'] for p in rel_points), default=0)
+
+        # Inject direct FK places (nacimiento, procedencia, defuncion)
+        fk_points = []
+        seen_lugar_ids = set()
+
+        # lugar_nacimiento → before everything
+        nac = getattr(persona, 'lugar_nacimiento', None)
+        if nac and nac.lat and nac.lon:
+            fk_points.append({
+                'nombre': nac.nombre_lugar,
+                'lat': float(nac.lat),
+                'lon': float(nac.lon),
+                'fecha': None,
+                'ordinal': min_ordinal - 2,
+                'situacion': 'Nacimiento',
+            })
+            seen_lugar_ids.add(nac.lugar_id)
+
+        # procedencia → origin, right before existing trajectory
+        proc = getattr(persona, 'procedencia', None)
+        if proc and proc.lat and proc.lon and proc.lugar_id not in seen_lugar_ids:
+            fk_points.append({
+                'nombre': proc.nombre_lugar,
+                'lat': float(proc.lat),
+                'lon': float(proc.lon),
+                'fecha': None,
+                'ordinal': min_ordinal - 1,
+                'situacion': 'Procedencia',
+            })
+
+        # lugar_defuncion → after everything
+        defn = getattr(persona, 'lugar_defuncion', None)
+        if defn and defn.lat and defn.lon:
+            fk_points.append({
+                'nombre': defn.nombre_lugar,
+                'lat': float(defn.lat),
+                'lon': float(defn.lon),
+                'fecha': None,
+                'ordinal': max_ordinal + 1,
+                'situacion': 'Defunción',
+            })
+
+        # Merge and sort all points by ordinal
+        points = sorted(fk_points + rel_points, key=lambda p: p['ordinal'])
 
         # Build arcs between consecutive points
         arcs = []
@@ -541,11 +594,13 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     'name': points[i]['nombre'],
                     'lat': points[i]['lat'],
                     'lon': points[i]['lon'],
+                    'situacion': points[i].get('situacion'),
                 },
                 'to': {
                     'name': points[i + 1]['nombre'],
                     'lat': points[i + 1]['lat'],
                     'lon': points[i + 1]['lon'],
+                    'situacion': points[i + 1].get('situacion'),
                 },
                 'date': str(points[i]['fecha'] or ''),
             })
@@ -1504,8 +1559,14 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'persona_id'
 
     def get_queryset(self):
-        # Only return personas that have travel trajectories (place relationships)
-        return Persona.objects.filter(p_x_l_pere__isnull=False).distinct()
+        # Return personas that have any place association:
+        # persona_x_lugares, procedencia, lugar_nacimiento, or lugar_defuncion
+        return Persona.objects.filter(
+            Q(p_x_l_pere__isnull=False) |
+            Q(lugar_nacimiento__isnull=False) |
+            Q(lugar_defuncion__isnull=False) |
+            Q(personaesclavizada__procedencia__isnull=False)
+        ).distinct()
 
     @action(detail=True, methods=['get'])
     def trajectory_details(self, request, persona_id=None):
@@ -1524,18 +1585,72 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'])
     def all_trajectories_summary(self, request):
-        """Get summary of all trajectories for map overview"""
-        # Get all unique places with trajectory counts
-        places_with_trajectories = PersonaLugarRel.objects.select_related('lugar').values(
+        """Get summary of all trajectories for map overview, including FK places."""
+        # Build a dict of lugar_id → aggregated counts
+        place_map = {}
+
+        def _add_place(lugar_id, nombre, tipo, lat, lon, traj_count, pers_count):
+            if lat is None or lon is None:
+                return
+            if lugar_id in place_map:
+                place_map[lugar_id]['trajectory_count'] += traj_count
+                place_map[lugar_id]['persona_count'] += pers_count
+            else:
+                place_map[lugar_id] = {
+                    'lugar__lugar_id': lugar_id,
+                    'lugar__nombre_lugar': nombre,
+                    'lugar__tipo': tipo,
+                    'lugar__lat': lat,
+                    'lugar__lon': lon,
+                    'trajectory_count': traj_count,
+                    'persona_count': pers_count,
+                }
+
+        # 1) PersonaLugarRel places (existing)
+        pxl_places = PersonaLugarRel.objects.select_related('lugar').values(
             'lugar__lugar_id', 'lugar__nombre_lugar', 'lugar__tipo', 'lugar__lat', 'lugar__lon'
         ).annotate(
             trajectory_count=Count('persona_x_lugares'),
             persona_count=Count('personas', distinct=True)
         ).filter(lugar__lat__isnull=False, lugar__lon__isnull=False)
 
+        for row in pxl_places:
+            _add_place(row['lugar__lugar_id'], row['lugar__nombre_lugar'], row['lugar__tipo'],
+                       row['lugar__lat'], row['lugar__lon'], row['trajectory_count'], row['persona_count'])
+
+        # 2) Procedencia places (PersonaEsclavizada only)
+        proc_places = (PersonaEsclavizada.objects
+                       .filter(procedencia__isnull=False, procedencia__lat__isnull=False, procedencia__lon__isnull=False)
+                       .values('procedencia__lugar_id', 'procedencia__nombre_lugar', 'procedencia__tipo',
+                               'procedencia__lat', 'procedencia__lon')
+                       .annotate(persona_count=Count('persona_id', distinct=True)))
+        for row in proc_places:
+            _add_place(row['procedencia__lugar_id'], row['procedencia__nombre_lugar'], row['procedencia__tipo'],
+                       row['procedencia__lat'], row['procedencia__lon'], 0, row['persona_count'])
+
+        # 3) lugar_nacimiento places
+        nac_places = (Persona.objects
+                      .filter(lugar_nacimiento__isnull=False, lugar_nacimiento__lat__isnull=False, lugar_nacimiento__lon__isnull=False)
+                      .values('lugar_nacimiento__lugar_id', 'lugar_nacimiento__nombre_lugar', 'lugar_nacimiento__tipo',
+                              'lugar_nacimiento__lat', 'lugar_nacimiento__lon')
+                      .annotate(persona_count=Count('persona_id', distinct=True)))
+        for row in nac_places:
+            _add_place(row['lugar_nacimiento__lugar_id'], row['lugar_nacimiento__nombre_lugar'], row['lugar_nacimiento__tipo'],
+                       row['lugar_nacimiento__lat'], row['lugar_nacimiento__lon'], 0, row['persona_count'])
+
+        # 4) lugar_defuncion places
+        def_places = (Persona.objects
+                      .filter(lugar_defuncion__isnull=False, lugar_defuncion__lat__isnull=False, lugar_defuncion__lon__isnull=False)
+                      .values('lugar_defuncion__lugar_id', 'lugar_defuncion__nombre_lugar', 'lugar_defuncion__tipo',
+                              'lugar_defuncion__lat', 'lugar_defuncion__lon')
+                      .annotate(persona_count=Count('persona_id', distinct=True)))
+        for row in def_places:
+            _add_place(row['lugar_defuncion__lugar_id'], row['lugar_defuncion__nombre_lugar'], row['lugar_defuncion__tipo'],
+                       row['lugar_defuncion__lat'], row['lugar_defuncion__lon'], 0, row['persona_count'])
+
         return Response({
-            'total_places': places_with_trajectories.count(),
-            'places': list(places_with_trajectories)
+            'total_places': len(place_map),
+            'places': list(place_map.values())
         })
 
 

@@ -277,11 +277,14 @@ class PersonaDetailSerializer(serializers.ModelSerializer):
     documentos = DocumentoNestedSerializer(many=True, read_only=True)
     relaciones = PersonaRelacionesNestedSerializer(many=True, read_only=True)
     lugares = PersonaLugarRelNestedSerializer(source='p_x_l_pere', many=True, read_only=True)
+    lugar_nacimiento = LugarNestedSerializer(read_only=True)
+    lugar_defuncion = LugarNestedSerializer(read_only=True)
 
     class Meta:
         model = Persona
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
                   'sexo', 'polymorphic_ctype', 'documentos', 'relaciones', 'lugares',
+                  'lugar_nacimiento', 'lugar_defuncion',
                   'created_at', 'updated_at']
 
 
@@ -308,7 +311,10 @@ class PersonaEsclavizadaDetailSerializer(PersonaDetailSerializer):
         return self.get_attribute_or_none(obj, 'etnonimos')
 
     def get_procedencia(self, obj):
-        return self.get_attribute_or_none(obj, 'procedencia')
+        lugar = getattr(obj, 'procedencia', None)
+        if lugar:
+            return LugarNestedSerializer(lugar).data
+        return None
 
     def get_ocupacion_ids(self, obj):
         return list(obj.ocupaciones.values_list('actividad_id', flat=True))
@@ -461,23 +467,86 @@ class PersonaTravelTrajectorySerializer(serializers.Serializer):
     def get_polymorphic_ctype(self, obj):
         return str(obj.polymorphic_ctype)
 
+    def _collect_fk_places(self, obj):
+        """Collect direct FK place fields (nacimiento, procedencia, defuncion)."""
+        fk_places = []
+        seen_ids = set()
+
+        nac = getattr(obj, 'lugar_nacimiento', None)
+        if nac:
+            fk_places.append(('Nacimiento', nac, -2))
+            seen_ids.add(nac.lugar_id)
+
+        if isinstance(obj, PersonaEsclavizada):
+            proc = getattr(obj, 'procedencia', None)
+            if proc and proc.lugar_id not in seen_ids:
+                fk_places.append(('Procedencia', proc, -1))
+
+        defn = getattr(obj, 'lugar_defuncion', None)
+        if defn:
+            fk_places.append(('Defunción', defn, None))  # ordinal set after rel points
+
+        return fk_places
+
     def get_trajectory_summary(self, obj):
         """Summary statistics for the trajectory"""
         lugares = obj.p_x_l_pere.all().order_by('ordinal')
+        fk_places = self._collect_fk_places(obj)
+        fk_count = len(fk_places)
+        fk_lugar_ids = {lugar.lugar_id for _, lugar, _ in fk_places}
+
+        rel_count = lugares.count()
+        rel_lugar_ids = set(lugares.values_list('lugar_id', flat=True).distinct())
+
+        first_rel = lugares.first()
+        last_rel = lugares.last()
+
+        earliest = first_rel.fecha_inicial_lugar or (first_rel.documento.fecha_inicial if first_rel and first_rel.documento else None) if first_rel else None
+        latest = last_rel.fecha_inicial_lugar or (last_rel.documento.fecha_inicial if last_rel and last_rel.documento else None) if last_rel else None
+
         return {
-            'total_locations': lugares.count(),
+            'total_locations': rel_count + fk_count,
             'date_range': {
-                'earliest': lugares.first().fecha_inicial_lugar or (lugares.first().documento.fecha_inicial if lugares.first() and lugares.first().documento else None),
-                'latest': lugares.last().fecha_inicial_lugar or (lugares.last().documento.fecha_inicial if lugares.last() and lugares.last().documento else None)
+                'earliest': earliest,
+                'latest': latest,
             },
-            'unique_places': lugares.values_list('lugar_id', flat=True).distinct().count()
+            'unique_places': len(rel_lugar_ids | fk_lugar_ids),
         }
 
     def get_trajectory_points(self, obj):
-        """Lightweight trajectory points for map rendering"""
+        """Lightweight trajectory points for map rendering, including FK places."""
         lugares = obj.p_x_l_pere.select_related('lugar', 'documento').all().order_by('ordinal')
-        return [
-            {
+        fk_places = self._collect_fk_places(obj)
+
+        # Determine ordinal bounds
+        ordinals = [rel.ordinal for rel in lugares]
+        min_ordinal = min(ordinals) if ordinals else 1
+        max_ordinal = max(ordinals) if ordinals else 0
+
+        points = []
+
+        # Prepend FK places (nacimiento, procedencia)
+        for situacion, lugar, base_ordinal in fk_places:
+            if situacion == 'Defunción':
+                ordinal = max_ordinal + 1
+            else:
+                ordinal = base_ordinal if base_ordinal is not None else min_ordinal - 1
+            points.append({
+                'lugar_id': lugar.lugar_id,
+                'nombre_lugar': lugar.nombre_lugar,
+                'tipo_lugar': lugar.tipo,
+                'lat': float(lugar.lat) if lugar.lat else None,
+                'lon': float(lugar.lon) if lugar.lon else None,
+                'fecha': None,
+                'ordinal': ordinal,
+                'situacion': situacion,
+                'documento_id': None,
+                'documento_titulo': None,
+            })
+
+        # Add persona_x_lugares points
+        for rel in lugares:
+            points.append({
                 'lugar_id': rel.lugar.lugar_id,
                 'nombre_lugar': rel.lugar.nombre_lugar,
                 'tipo_lugar': rel.lugar.tipo,
@@ -487,10 +556,11 @@ class PersonaTravelTrajectorySerializer(serializers.Serializer):
                 'ordinal': rel.ordinal,
                 'situacion': str(rel.situacion_lugar) if rel.situacion_lugar else None,
                 'documento_id': rel.documento.documento_id if rel.documento else None,
-                'documento_titulo': rel.documento.titulo if rel.documento else None
-            }
-            for rel in lugares
-        ]
+                'documento_titulo': rel.documento.titulo if rel.documento else None,
+            })
+
+        points.sort(key=lambda p: p['ordinal'])
+        return points
 
 
 # Simple utility serializers
