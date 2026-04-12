@@ -8,7 +8,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion)
 
-from django.db.models import Manager
+from django.db.models import Manager, Q
 
 
 # Reference Serializers - Lightweight for relationships
@@ -177,7 +177,12 @@ class LugarListSerializer(serializers.ModelSerializer):
                   'persona_count', 'persona_lugar_rel']
 
     def get_persona_count(self, obj):
-        return Persona.objects.filter(p_x_l_pere__lugar=obj).distinct().count()
+        return Persona.objects.filter(
+            Q(p_x_l_pere__lugar=obj) |
+            Q(lugar_nacimiento=obj) |
+            Q(lugar_defuncion=obj) |
+            Q(personaesclavizada__procedencia=obj)
+        ).distinct().count()
 
     def get_persona_lugar_rel(self, obj):
         from dbgestor.models import PersonaLugarRel
