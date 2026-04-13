@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from collections import defaultdict
 
 from django.db.models import Count, F, Q, Prefetch
 from django.db.models.functions import ExtractYear
@@ -1652,6 +1653,241 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
             'total_places': len(place_map),
             'places': list(place_map.values())
         })
+
+    # ------------------------------------------------------------------
+    # Helpers for aggregated / route_detail
+    # ------------------------------------------------------------------
+
+    def _apply_persona_filters(self, qs, params):
+        """Apply search filters to a PersonaEsclavizada queryset."""
+        sexo = params.get('sexo')
+        if sexo:
+            qs = qs.filter(sexo=sexo)
+        etnonimo = params.get('etnonimo')
+        if etnonimo:
+            qs = qs.filter(etnonimos__etonimo__icontains=etnonimo)
+        calidad = params.get('calidad')
+        if calidad:
+            qs = qs.filter(calidades__calidad__icontains=calidad)
+        hispanizacion = params.get('hispanizacion')
+        if hispanizacion:
+            qs = qs.filter(hispanizacion__hispanizacion__icontains=hispanizacion)
+        edad_gte = params.get('edad__gte')
+        if edad_gte and edad_gte.isdigit():
+            qs = qs.filter(edad__gte=int(edad_gte))
+        edad_lte = params.get('edad__lte')
+        if edad_lte and edad_lte.isdigit():
+            qs = qs.filter(edad__lte=int(edad_lte))
+        fecha_ini = params.get('fecha_inicial__gte')
+        if fecha_ini:
+            qs = qs.filter(documentos__fecha_inicial__gte=fecha_ini)
+        fecha_fin = params.get('fecha_inicial__lte')
+        if fecha_fin:
+            qs = qs.filter(documentos__fecha_inicial__lte=fecha_fin)
+        return qs.distinct()
+
+    def _build_persona_points(self, persona):
+        """Return sorted list of trajectory dicts for one persona."""
+        rels = (persona.p_x_l_pere
+                .select_related('lugar', 'documento')
+                .order_by('ordinal'))
+        rel_points = []
+        for rel in rels:
+            lug = rel.lugar
+            if lug and lug.lat and lug.lon:
+                rel_points.append({
+                    'lugar_id': lug.lugar_id,
+                    'nombre': lug.nombre_lugar,
+                    'lat': float(lug.lat),
+                    'lon': float(lug.lon),
+                    'ordinal': rel.ordinal,
+                })
+
+        min_ord = min((p['ordinal'] for p in rel_points), default=1)
+        max_ord = max((p['ordinal'] for p in rel_points), default=0)
+
+        fk_points = []
+        seen = set()
+        nac = getattr(persona, 'lugar_nacimiento', None)
+        if nac and nac.lat and nac.lon:
+            fk_points.append({'lugar_id': nac.lugar_id, 'nombre': nac.nombre_lugar,
+                              'lat': float(nac.lat), 'lon': float(nac.lon), 'ordinal': min_ord - 2})
+            seen.add(nac.lugar_id)
+        proc = getattr(persona, 'procedencia', None) if hasattr(persona, 'procedencia') else None
+        if proc and proc.lat and proc.lon and proc.lugar_id not in seen:
+            fk_points.append({'lugar_id': proc.lugar_id, 'nombre': proc.nombre_lugar,
+                              'lat': float(proc.lat), 'lon': float(proc.lon), 'ordinal': min_ord - 1})
+        defn = getattr(persona, 'lugar_defuncion', None)
+        if defn and defn.lat and defn.lon:
+            fk_points.append({'lugar_id': defn.lugar_id, 'nombre': defn.nombre_lugar,
+                              'lat': float(defn.lat), 'lon': float(defn.lon), 'ordinal': max_ord + 1})
+
+        return sorted(fk_points + rel_points, key=lambda p: p['ordinal'])
+
+    # ------------------------------------------------------------------
+    # Aggregated trajectories
+    # ------------------------------------------------------------------
+
+    @action(detail=False, methods=['get'])
+    def aggregated(self, request):
+        """
+        Aggregate all individual trajectories into route flows.
+        Returns {routes, places} for Sankey-style map visualization.
+        Supports filters: sexo, etnonimo, calidad, hispanizacion,
+        edad__gte, edad__lte, fecha_inicial__gte, fecha_inicial__lte.
+        """
+        qs = PersonaEsclavizada.objects.select_related(
+            'procedencia', 'lugar_nacimiento', 'lugar_defuncion'
+        ).prefetch_related('p_x_l_pere__lugar', 'p_x_l_pere__documento')
+        qs = self._apply_persona_filters(qs, request.query_params)
+
+        # Only personas with at least some place data
+        qs = qs.filter(
+            Q(p_x_l_pere__isnull=False) |
+            Q(lugar_nacimiento__isnull=False) |
+            Q(lugar_defuncion__isnull=False) |
+            Q(procedencia__isnull=False)
+        ).distinct()
+
+        route_map = defaultdict(lambda: {'persona_ids': set()})
+        place_map = {}
+
+        def _touch_place(pt):
+            pid = pt['lugar_id']
+            if pid not in place_map:
+                place_map[pid] = {
+                    'lugar_id': pid,
+                    'nombre': pt['nombre'],
+                    'lat': pt['lat'],
+                    'lon': pt['lon'],
+                    'incoming': 0,
+                    'outgoing': 0,
+                    'persona_ids': set(),
+                }
+            return pid
+
+        for persona in qs.iterator(chunk_size=200):
+            points = self._build_persona_points(persona)
+            if len(points) < 2:
+                # Still register single-point personas
+                if len(points) == 1:
+                    _touch_place(points[0])
+                    place_map[points[0]['lugar_id']]['persona_ids'].add(persona.persona_id)
+                continue
+
+            for i in range(len(points) - 1):
+                fr, to = points[i], points[i + 1]
+                if fr['lugar_id'] == to['lugar_id']:
+                    continue  # skip self-loops
+                fid = _touch_place(fr)
+                tid = _touch_place(to)
+                place_map[fid]['outgoing'] += 1
+                place_map[fid]['persona_ids'].add(persona.persona_id)
+                place_map[tid]['incoming'] += 1
+                place_map[tid]['persona_ids'].add(persona.persona_id)
+                key = (fid, tid)
+                route_map[key]['persona_ids'].add(persona.persona_id)
+
+        routes = []
+        for (fid, tid), info in route_map.items():
+            fp = place_map[fid]
+            tp = place_map[tid]
+            routes.append({
+                'from_lugar_id': fid,
+                'from_nombre': fp['nombre'],
+                'from_lat': fp['lat'],
+                'from_lon': fp['lon'],
+                'to_lugar_id': tid,
+                'to_nombre': tp['nombre'],
+                'to_lat': tp['lat'],
+                'to_lon': tp['lon'],
+                'count': len(info['persona_ids']),
+            })
+
+        places = []
+        for pid, info in place_map.items():
+            places.append({
+                'lugar_id': info['lugar_id'],
+                'nombre': info['nombre'],
+                'lat': info['lat'],
+                'lon': info['lon'],
+                'incoming': info['incoming'],
+                'outgoing': info['outgoing'],
+                'persona_count': len(info['persona_ids']),
+            })
+
+        return Response({
+            'total_routes': len(routes),
+            'total_places': len(places),
+            'routes': sorted(routes, key=lambda r: r['count'], reverse=True),
+            'places': sorted(places, key=lambda p: p['persona_count'], reverse=True),
+        })
+
+    # ------------------------------------------------------------------
+    # Route detail
+    # ------------------------------------------------------------------
+
+    @action(detail=False, methods=['get'], url_path='route_detail')
+    def route_detail(self, request):
+        """
+        Return paginated persona list for a specific from→to route.
+        Query params: from_lugar_id, to_lugar_id (required).
+        Same filters as /aggregated/.
+        """
+        from_id = request.query_params.get('from_lugar_id')
+        to_id = request.query_params.get('to_lugar_id')
+        if not from_id or not to_id:
+            return Response({'detail': 'from_lugar_id and to_lugar_id are required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from_id = int(from_id)
+            to_id = int(to_id)
+        except (ValueError, TypeError):
+            return Response({'detail': 'Invalid lugar IDs.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        qs = PersonaEsclavizada.objects.select_related(
+            'procedencia', 'lugar_nacimiento', 'lugar_defuncion'
+        ).prefetch_related(
+            'p_x_l_pere__lugar', 'p_x_l_pere__documento',
+            'etnonimos', 'calidades', 'hispanizacion'
+        )
+        qs = self._apply_persona_filters(qs, request.query_params)
+        qs = qs.filter(
+            Q(p_x_l_pere__isnull=False) |
+            Q(lugar_nacimiento__isnull=False) |
+            Q(lugar_defuncion__isnull=False) |
+            Q(procedencia__isnull=False)
+        ).distinct()
+
+        matching_ids = []
+        for persona in qs.iterator(chunk_size=200):
+            points = self._build_persona_points(persona)
+            for i in range(len(points) - 1):
+                if points[i]['lugar_id'] == from_id and points[i + 1]['lugar_id'] == to_id:
+                    matching_ids.append(persona.persona_id)
+                    break
+
+        # Re-query matched personas with pagination
+        result_qs = PersonaEsclavizada.objects.filter(
+            persona_id__in=matching_ids
+        ).prefetch_related('etnonimos', 'calidades', 'hispanizacion').order_by('nombre_normalizado')
+
+        page = self.paginate_queryset(result_qs)
+        data = []
+        for p in (page if page is not None else result_qs):
+            data.append({
+                'persona_id': p.persona_id,
+                'nombre_normalizado': p.nombre_normalizado,
+                'sexo': p.get_sexo_display() if p.sexo else None,
+                'edad': p.edad,
+                'etnonimos': [str(e) for e in p.etnonimos.all()],
+                'calidades': [str(c) for c in p.calidades.all()],
+                'hispanizacion': [str(h) for h in p.hispanizacion.all()],
+            })
+
+        if page is not None:
+            return self.get_paginated_response(data)
+        return Response({'count': len(data), 'results': data})
 
 
 # Utility Views
