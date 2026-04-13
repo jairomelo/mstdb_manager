@@ -3,7 +3,7 @@ import logging
 import re
 from collections import defaultdict
 
-from django.db.models import Count, F, Q, Prefetch
+from django.db.models import Count, F, Q, Prefetch, Min, Max
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
@@ -363,7 +363,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         'documentos__documento_id': ['exact'],
     }
     search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-    ordering_fields = ['nombre_normalizado', 'edad', 'created_at', 'updated_at']
+    ordering_fields = ['nombre_normalizado', 'edad', 'created_at', 'updated_at', 'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date']
     ordering = ['-created_at']
 
     def get_export_filename(self):
@@ -375,6 +375,9 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         if self.action == 'list':
             queryset = queryset.prefetch_related(
                 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
+            ).annotate(
+                earliest_doc_date=Min('documentos__fecha_inicial'),
+                latest_doc_date=Max('documentos__fecha_inicial'),
             )
         elif self.action in ('retrieve', 'trajectory'):
             queryset = queryset.select_related(
@@ -1088,7 +1091,7 @@ class SearchAPIView(APIView):
     # Allowed ordering fields per entity type (whitelist)
     ORDERING_FIELDS = {
         'documento': {'titulo', 'fecha_inicial', 'fecha_final', 'created_at', 'updated_at'},
-        'personaesclavizada': {'nombre_normalizado', 'edad', 'created_at', 'updated_at'},
+        'personaesclavizada': {'nombre_normalizado', 'edad', 'created_at', 'updated_at', 'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date'},
         'personanoesclavizada': {'nombre_normalizado', 'created_at', 'updated_at'},
         'lugar': {'nombre_lugar', 'tipo', 'created_at', 'updated_at'},
         'corporacion': {'nombre_institucion', 'created_at', 'updated_at'},
@@ -1210,6 +1213,10 @@ class SearchAPIView(APIView):
                     qs = qs.filter(etnonimos__etonimo__icontains=p['etnonimos__etonimo__icontains']).distinct()
                 if p.get('hispanizacion__hispanizacion__icontains'):
                     qs = qs.filter(hispanizacion__hispanizacion__icontains=p['hispanizacion__hispanizacion__icontains']).distinct()
+                if p.get('fecha_documento__gte'):
+                    qs = qs.filter(documentos__fecha_inicial__gte=p['fecha_documento__gte']).distinct()
+                if p.get('fecha_documento__lte'):
+                    qs = qs.filter(documentos__fecha_inicial__lte=p['fecha_documento__lte']).distinct()
 
         elif type_key == 'documento':
             if p.get('tipo_documento__tipo_documental__icontains'):
@@ -1422,6 +1429,9 @@ class SearchAPIView(APIView):
             if 'personaesclavizada' in base_querysets:
                 base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].prefetch_related(
                     'documentos', 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
+                ).annotate(
+                    earliest_doc_date=Min('documentos__fecha_inicial'),
+                    latest_doc_date=Max('documentos__fecha_inicial'),
                 )
             if 'personanoesclavizada' in base_querysets:
                 base_querysets['personanoesclavizada'] = base_querysets['personanoesclavizada'].prefetch_related(
