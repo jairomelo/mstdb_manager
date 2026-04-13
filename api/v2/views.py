@@ -376,7 +376,8 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
             queryset = queryset.select_related(
                 'procedencia',
             ).prefetch_related(
-                'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
+                'etnonimos', 'hispanizacion', 'calidades', 'estado_civil',
+                'relaciones', 'p_x_l_pere',
             ).annotate(
                 earliest_doc_date=Min('documentos__fecha_inicial'),
                 latest_doc_date=Max('documentos__fecha_inicial'),
@@ -652,7 +653,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
 
         if self.action == 'list':
             queryset = queryset.prefetch_related(
-                'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades',
+                'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades', 'estado_civil',
             )
         elif self.action == 'retrieve':
             queryset = queryset.prefetch_related(
@@ -1203,6 +1204,12 @@ class SearchAPIView(APIView):
                 qs = qs.filter(honorifico=p['honorifico'])
             if p.get('calidades__calidad__icontains'):
                 qs = qs.filter(calidades__calidad__icontains=p['calidades__calidad__icontains']).distinct()
+            if p.get('estado_civil'):
+                qs = qs.filter(estado_civil__estado_civil=p['estado_civil']).distinct()
+            if p.get('tipo_documental'):
+                qs = qs.filter(documentos__tipo_documento__tipo_documental__icontains=p['tipo_documental']).distinct()
+            if p.get('archivo'):
+                qs = qs.filter(documentos__archivo__archivo_id=int(p['archivo'])).distinct()
             if p.get('trayectoria_lugar'):
                 lugar_ids = [int(x) for x in p['trayectoria_lugar'].split(',') if x.strip().isdigit()]
                 if lugar_ids:
@@ -1212,6 +1219,16 @@ class SearchAPIView(APIView):
             if type_key == 'personanoesclavizada':
                 if p.get('ocupaciones__actividad__icontains'):
                     qs = qs.filter(ocupaciones__actividad__icontains=p['ocupaciones__actividad__icontains']).distinct()
+                if p.get('fecha_documento__gte'):
+                    val = p['fecha_documento__gte']
+                    if len(val) == 4 and val.isdigit():
+                        val = f"{val}-01-01"
+                    qs = qs.filter(documentos__fecha_inicial__gte=val).distinct()
+                if p.get('fecha_documento__lte'):
+                    val = p['fecha_documento__lte']
+                    if len(val) == 4 and val.isdigit():
+                        val = f"{val}-12-31"
+                    qs = qs.filter(documentos__fecha_inicial__lte=val).distinct()
             if type_key == 'personaesclavizada':
                 if p.get('edad__gte'):
                     qs = qs.filter(edad__gte=int(p['edad__gte']))
@@ -1293,6 +1310,8 @@ class SearchAPIView(APIView):
         hispanizacion_counts = {}
         ocupacion_counts = {}
         procedencia_counts = {}
+        estado_civil_counts = {}
+        tipo_documental_counts = {}
 
         for type_key, qs in querysets_by_type.items():
             # ── Lugares ───
@@ -1349,6 +1368,16 @@ class SearchAPIView(APIView):
                     label = row['ocupaciones__actividad']
                     ocupacion_counts[label] = ocupacion_counts.get(label, 0) + row['c']
 
+                for row in qs.filter(estado_civil__isnull=False).values(
+                        'estado_civil__estado_civil').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['estado_civil__estado_civil']
+                    estado_civil_counts[label] = estado_civil_counts.get(label, 0) + row['c']
+
+                for row in qs.filter(documentos__tipo_documento__isnull=False).values(
+                        'documentos__tipo_documento__tipo_documental').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['documentos__tipo_documento__tipo_documental']
+                    tipo_documental_counts[label] = tipo_documental_counts.get(label, 0) + row['c']
+
             if type_key == 'personaesclavizada':
                 for row in qs.filter(etnonimos__isnull=False).values(
                         'etnonimos__etonimo').annotate(c=Count('persona_id', distinct=True)):
@@ -1396,6 +1425,12 @@ class SearchAPIView(APIView):
                 [{'label': k, 'count': v} for k, v in ocupacion_counts.items()],
                 key=lambda x: -x['count']),
             'procedencias': sorted(procedencia_counts.values(), key=lambda x: -x['count']),
+            'estados_civiles': sorted(
+                [{'label': k, 'count': v} for k, v in estado_civil_counts.items()],
+                key=lambda x: -x['count']),
+            'tipos_documentales': sorted(
+                [{'label': k, 'count': v} for k, v in tipo_documental_counts.items()],
+                key=lambda x: -x['count']),
         }
 
     # ── main handler ──────────────────────────────────────────────────
@@ -1458,14 +1493,15 @@ class SearchAPIView(APIView):
                 base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].select_related(
                     'procedencia',
                 ).prefetch_related(
-                    'documentos', 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
+                    'documentos', 'etnonimos', 'hispanizacion', 'calidades', 'estado_civil',
+                    'relaciones', 'p_x_l_pere',
                 ).annotate(
                     earliest_doc_date=Min('documentos__fecha_inicial'),
                     latest_doc_date=Max('documentos__fecha_inicial'),
                 )
             if 'personanoesclavizada' in base_querysets:
                 base_querysets['personanoesclavizada'] = base_querysets['personanoesclavizada'].prefetch_related(
-                    'documentos', 'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades',
+                    'documentos', 'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades', 'estado_civil',
                 )
 
             # ── Facets (from unfiltered base querysets) ────────────

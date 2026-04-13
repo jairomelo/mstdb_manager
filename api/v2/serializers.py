@@ -106,6 +106,7 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     latest_doc_date = serializers.DateField(read_only=True)
     documented_span = serializers.SerializerMethodField()
     procedencia = serializers.SerializerMethodField()
+    estado_civil = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaEsclavizada
@@ -114,7 +115,8 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
             'etnonimos', 'hispanizacion', 'calidades',
             'has_relaciones', 'has_lugares', 'documento_list',
             'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date', 'documented_span',
-            'procedencia',
+            'procedencia', 'estado_civil',
+            'altura', 'cabello', 'ojos', 'marcas_corporales', 'conducta', 'salud',
         ]
 
     def get_etnonimos(self, obj):
@@ -150,6 +152,9 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
             return obj.procedencia.nombre_lugar
         return None
 
+    def get_estado_civil(self, obj):
+        return [ec.estado_civil for ec in obj.estado_civil.all()]
+
 
 class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
     """PersonaNoEsclavizada data for list views"""
@@ -158,12 +163,13 @@ class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
     documento_list = serializers.SerializerMethodField()
     ocupaciones = serializers.SerializerMethodField()
     calidades = serializers.SerializerMethodField()
+    estado_civil = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaNoEsclavizada
         fields = PersonaListSerializer.Meta.fields + [
             'has_relaciones', 'has_lugares', 'documento_list',
-            'ocupaciones', 'calidades',
+            'ocupaciones', 'calidades', 'estado_civil',
         ]
 
     def get_has_relaciones(self, obj):
@@ -183,6 +189,9 @@ class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
 
     def get_calidades(self, obj):
         return [c.calidad for c in obj.calidades.all()]
+
+    def get_estado_civil(self, obj):
+        return [ec.estado_civil for ec in obj.estado_civil.all()]
 
 
 class LugarListSerializer(serializers.ModelSerializer):
