@@ -1214,9 +1214,15 @@ class SearchAPIView(APIView):
                 if p.get('hispanizacion__hispanizacion__icontains'):
                     qs = qs.filter(hispanizacion__hispanizacion__icontains=p['hispanizacion__hispanizacion__icontains']).distinct()
                 if p.get('fecha_documento__gte'):
-                    qs = qs.filter(documentos__fecha_inicial__gte=p['fecha_documento__gte']).distinct()
+                    val = p['fecha_documento__gte']
+                    if len(val) == 4 and val.isdigit():
+                        val = f"{val}-01-01"
+                    qs = qs.filter(documentos__fecha_inicial__gte=val).distinct()
                 if p.get('fecha_documento__lte'):
-                    qs = qs.filter(documentos__fecha_inicial__lte=p['fecha_documento__lte']).distinct()
+                    val = p['fecha_documento__lte']
+                    if len(val) == 4 and val.isdigit():
+                        val = f"{val}-12-31"
+                    qs = qs.filter(documentos__fecha_inicial__lte=val).distinct()
 
         elif type_key == 'documento':
             if p.get('tipo_documento__tipo_documental__icontains'):
@@ -1356,6 +1362,7 @@ class SearchAPIView(APIView):
             'lugares': sorted(lugar_counts.values(), key=lambda x: -x['count']),
             'archivos': sorted(archivo_counts.values(), key=lambda x: -x['count']),
             'fechas': years_tree,
+            'year_range': {'min': min(year_set), 'max': max(year_set)} if year_set else None,
             'etnonimos': sorted(
                 [{'label': k, 'count': v} for k, v in etnonimo_counts.items()],
                 key=lambda x: -x['count']),
