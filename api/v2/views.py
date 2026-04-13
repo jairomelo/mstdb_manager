@@ -373,7 +373,9 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         queryset = super().get_queryset()
 
         if self.action == 'list':
-            queryset = queryset.prefetch_related(
+            queryset = queryset.select_related(
+                'procedencia',
+            ).prefetch_related(
                 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
             ).annotate(
                 earliest_doc_date=Min('documentos__fecha_inicial'),
@@ -1453,7 +1455,9 @@ class SearchAPIView(APIView):
 
             # ── Prefetch for list serializer fields ──────────────
             if 'personaesclavizada' in base_querysets:
-                base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].prefetch_related(
+                base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].select_related(
+                    'procedencia',
+                ).prefetch_related(
                     'documentos', 'etnonimos', 'hispanizacion', 'calidades', 'relaciones', 'p_x_l_pere',
                 ).annotate(
                     earliest_doc_date=Min('documentos__fecha_inicial'),

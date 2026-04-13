@@ -105,6 +105,7 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     earliest_doc_date = serializers.DateField(read_only=True)
     latest_doc_date = serializers.DateField(read_only=True)
     documented_span = serializers.SerializerMethodField()
+    procedencia = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaEsclavizada
@@ -113,6 +114,7 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
             'etnonimos', 'hispanizacion', 'calidades',
             'has_relaciones', 'has_lugares', 'documento_list',
             'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date', 'documented_span',
+            'procedencia',
         ]
 
     def get_etnonimos(self, obj):
@@ -141,6 +143,11 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
         latest = getattr(obj, 'latest_doc_date', None)
         if earliest and latest and earliest != latest:
             return (latest.year - earliest.year) or 1
+        return None
+
+    def get_procedencia(self, obj):
+        if obj.procedencia:
+            return obj.procedencia.nombre_lugar
         return None
 
 
