@@ -1201,6 +1201,12 @@ class SearchAPIView(APIView):
                 qs = qs.filter(honorifico=p['honorifico'])
             if p.get('calidades__calidad__icontains'):
                 qs = qs.filter(calidades__calidad__icontains=p['calidades__calidad__icontains']).distinct()
+            if p.get('trayectoria_lugar'):
+                lugar_ids = [int(x) for x in p['trayectoria_lugar'].split(',') if x.strip().isdigit()]
+                if lugar_ids:
+                    for lid in lugar_ids:
+                        qs = qs.filter(p_x_l_pere__lugar__lugar_id=lid)
+                    qs = qs.distinct()
             if type_key == 'personanoesclavizada':
                 if p.get('ocupaciones__actividad__icontains'):
                     qs = qs.filter(ocupaciones__actividad__icontains=p['ocupaciones__actividad__icontains']).distinct()
@@ -1213,6 +1219,8 @@ class SearchAPIView(APIView):
                     qs = qs.filter(etnonimos__etonimo__icontains=p['etnonimos__etonimo__icontains']).distinct()
                 if p.get('hispanizacion__hispanizacion__icontains'):
                     qs = qs.filter(hispanizacion__hispanizacion__icontains=p['hispanizacion__hispanizacion__icontains']).distinct()
+                if p.get('procedencia'):
+                    qs = qs.filter(procedencia__lugar_id=int(p['procedencia']))
                 if p.get('fecha_documento__gte'):
                     val = p['fecha_documento__gte']
                     if len(val) == 4 and val.isdigit():
@@ -1243,6 +1251,8 @@ class SearchAPIView(APIView):
         elif type_key == 'corporacion':
             if p.get('tipo_institucion__tipo__icontains'):
                 qs = qs.filter(tipo_institucion__tipo__icontains=p['tipo_institucion__tipo__icontains'])
+            if p.get('lugar_corporacion__nombre_lugar__icontains'):
+                qs = qs.filter(lugar_corporacion__nombre_lugar__icontains=p['lugar_corporacion__nombre_lugar__icontains'])
 
         return qs
 
@@ -1280,6 +1290,7 @@ class SearchAPIView(APIView):
         calidad_counts = {}
         hispanizacion_counts = {}
         ocupacion_counts = {}
+        procedencia_counts = {}
 
         for type_key, qs in querysets_by_type.items():
             # ── Lugares ───
@@ -1347,6 +1358,13 @@ class SearchAPIView(APIView):
                     label = row['hispanizacion__hispanizacion']
                     hispanizacion_counts[label] = hispanizacion_counts.get(label, 0) + row['c']
 
+                for row in qs.filter(procedencia__isnull=False).values(
+                        'procedencia__lugar_id', 'procedencia__nombre_lugar'
+                ).annotate(c=Count('persona_id', distinct=True)):
+                    lid = row['procedencia__lugar_id']
+                    procedencia_counts.setdefault(lid, {'id': lid, 'label': row['procedencia__nombre_lugar'], 'count': 0})
+                    procedencia_counts[lid]['count'] += row['c']
+
         # ── Build hierarchical year tree (century → decade → year) ────
         century_labels = {16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX'}
         years_tree = {}
@@ -1375,6 +1393,7 @@ class SearchAPIView(APIView):
             'ocupaciones': sorted(
                 [{'label': k, 'count': v} for k, v in ocupacion_counts.items()],
                 key=lambda x: -x['count']),
+            'procedencias': sorted(procedencia_counts.values(), key=lambda x: -x['count']),
         }
 
     # ── main handler ──────────────────────────────────────────────────
