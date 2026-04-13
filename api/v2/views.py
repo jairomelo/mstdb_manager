@@ -1240,6 +1240,10 @@ class SearchAPIView(APIView):
                     qs = qs.filter(hispanizacion__hispanizacion__icontains=p['hispanizacion__hispanizacion__icontains']).distinct()
                 if p.get('procedencia'):
                     qs = qs.filter(procedencia__lugar_id=int(p['procedencia']))
+                for fld in ('altura', 'cabello', 'ojos', 'marcas_corporales', 'conducta', 'salud'):
+                    val = p.get(f'{fld}__icontains')
+                    if val:
+                        qs = qs.filter(**{f'{fld}__icontains': val})
                 if p.get('fecha_documento__gte'):
                     val = p['fecha_documento__gte']
                     if len(val) == 4 and val.isdigit():
