@@ -3,7 +3,7 @@ import logging
 import re
 from collections import defaultdict
 
-from django.db.models import Count, F, Q, Prefetch, Min, Max
+from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
@@ -363,7 +363,10 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         'documentos__documento_id': ['exact'],
     }
     search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-    ordering_fields = ['nombre_normalizado', 'edad', 'created_at', 'updated_at', 'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date']
+    ordering_fields = ['nombre_normalizado', 'edad', 'sexo', 'altura', 'cabello', 'ojos',
+                        'marcas_corporales', 'conducta', 'salud',
+                        'created_at', 'updated_at', 'fecha_nacimiento',
+                        'earliest_doc_date', 'latest_doc_date', 'persona_idno']
     ordering = ['-created_at']
 
     def get_export_filename(self):
@@ -642,7 +645,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         'documentos__documento_id': ['exact'],
     }
     search_fields = ['nombre_normalizado', 'nombres', 'apellidos', 'persona_idno']
-    ordering_fields = ['nombre_normalizado', 'created_at', 'updated_at']
+    ordering_fields = ['nombre_normalizado', 'sexo', 'created_at', 'updated_at', 'persona_idno']
     ordering = ['-created_at']
 
     def get_export_filename(self):
@@ -1094,10 +1097,29 @@ class SearchAPIView(APIView):
     # Allowed ordering fields per entity type (whitelist)
     ORDERING_FIELDS = {
         'documento': {'titulo', 'fecha_inicial', 'fecha_final', 'created_at', 'updated_at'},
-        'personaesclavizada': {'nombre_normalizado', 'edad', 'created_at', 'updated_at', 'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date'},
-        'personanoesclavizada': {'nombre_normalizado', 'created_at', 'updated_at'},
+        'personaesclavizada': {
+            'nombre_normalizado', 'edad', 'sexo', 'altura', 'cabello', 'ojos',
+            'created_at', 'updated_at', 'fecha_nacimiento',
+            'earliest_doc_date', 'latest_doc_date', 'persona_idno',
+            'marcas_corporales', 'conducta', 'salud',
+            'procedencia', 'etnonimos', 'calidades', 'hispanizacion',
+            'estado_civil', 'has_relaciones', 'has_lugares',
+            'documento_list', 'documented_span',
+        },
+        'personanoesclavizada': {
+            'nombre_normalizado', 'sexo', 'created_at', 'updated_at', 'persona_idno',
+            'calidades', 'estado_civil', 'ocupaciones',
+            'has_relaciones', 'has_lugares', 'documento_list',
+        },
         'lugar': {'nombre_lugar', 'tipo', 'created_at', 'updated_at'},
         'corporacion': {'nombre_institucion', 'created_at', 'updated_at'},
+    }
+
+    # Column key → actual DB field for FK traversals
+    ORDERING_FIELD_MAP = {
+        'personaesclavizada': {
+            'procedencia': 'procedencia__nombre_lugar',
+        },
     }
 
     DEFAULT_ORDERING = {
@@ -1289,15 +1311,83 @@ class SearchAPIView(APIView):
             q_objects |= Q(**{f'{field}__icontains': text})
         return qs.filter(q_objects).distinct()
 
-    def _validate_ordering(self, ordering_param, type_key):
-        """Return validated ordering string or default for the entity type."""
+    # Column keys that need queryset annotations before ordering.
+    # key → (annotation_name, lambda returning annotation expression)
+    ORDERING_ANNOTATIONS = {
+        'personaesclavizada': {
+            'etnonimos': ('etnonimos_sort', lambda: Subquery(
+                Etonimos.objects.filter(personaesclavizada=OuterRef('pk'))
+                .order_by('etonimo').values('etonimo')[:1]
+            )),
+            'calidades': ('calidades_sort', lambda: Subquery(
+                Calidades.objects.filter(persona=OuterRef('pk'))
+                .order_by('calidad').values('calidad')[:1]
+            )),
+            'hispanizacion': ('hispanizacion_sort', lambda: Subquery(
+                Hispanizaciones.objects.filter(personaesclavizada=OuterRef('pk'))
+                .order_by('hispanizacion').values('hispanizacion')[:1]
+            )),
+            'estado_civil': ('estado_civil_sort', lambda: Subquery(
+                EstadoCivil.objects.filter(persona=OuterRef('pk'))
+                .order_by('estado_civil').values('estado_civil')[:1]
+            )),
+            'has_relaciones': ('has_relaciones_sort', lambda: Exists(
+                PersonaRelaciones.objects.filter(personas=OuterRef('pk'))
+            )),
+            'has_lugares': ('has_lugares_sort', lambda: Exists(
+                PersonaLugarRel.objects.filter(personas=OuterRef('pk'))
+            )),
+            'documento_list': ('documento_count', lambda: Count('documentos', distinct=True)),
+            'documented_span': ('documented_span_val', lambda: F('latest_doc_date') - F('earliest_doc_date')),
+        },
+        'personanoesclavizada': {
+            'calidades': ('calidades_sort', lambda: Subquery(
+                Calidades.objects.filter(persona=OuterRef('pk'))
+                .order_by('calidad').values('calidad')[:1]
+            )),
+            'estado_civil': ('estado_civil_sort', lambda: Subquery(
+                EstadoCivil.objects.filter(persona=OuterRef('pk'))
+                .order_by('estado_civil').values('estado_civil')[:1]
+            )),
+            'ocupaciones': ('ocupaciones_sort', lambda: Subquery(
+                ActividadesModel.objects.filter(
+                    persona_ocupaciones_per=OuterRef('pk')
+                ).order_by('actividad').values('actividad')[:1]
+            )),
+            'has_relaciones': ('has_relaciones_sort', lambda: Exists(
+                PersonaRelaciones.objects.filter(personas=OuterRef('pk'))
+            )),
+            'has_lugares': ('has_lugares_sort', lambda: Exists(
+                PersonaLugarRel.objects.filter(personas=OuterRef('pk'))
+            )),
+            'documento_list': ('documento_count', lambda: Count('documentos', distinct=True)),
+        },
+    }
+
+    def _resolve_ordering(self, ordering_param, type_key):
+        """Validate ordering and return (order_by_string, annotations_dict)."""
+        default = self.DEFAULT_ORDERING.get(type_key, '-created_at')
         if not ordering_param:
-            return self.DEFAULT_ORDERING.get(type_key, '-created_at')
+            return default, {}
+
+        desc = ordering_param.startswith('-')
         field = ordering_param.lstrip('-')
+        prefix = '-' if desc else ''
+
         allowed = self.ORDERING_FIELDS.get(type_key, set())
-        if field in allowed:
-            return ordering_param
-        return self.DEFAULT_ORDERING.get(type_key, '-created_at')
+        if field not in allowed:
+            return default, {}
+
+        # Annotation-based ordering
+        anno_map = self.ORDERING_ANNOTATIONS.get(type_key, {})
+        if field in anno_map:
+            anno_name, anno_factory = anno_map[field]
+            return f'{prefix}{anno_name}', {anno_name: anno_factory()}
+
+        # FK traversal mapping
+        field_map = self.ORDERING_FIELD_MAP.get(type_key, {})
+        actual_field = field_map.get(field, field)
+        return f'{prefix}{actual_field}', {}
 
     # ── facets ─────────────────────────────────────────────────────────
 
@@ -1545,13 +1635,17 @@ class SearchAPIView(APIView):
                 # Ordering
                 if is_search:
                     if ordering_param:
-                        validated = self._validate_ordering(ordering_param, tk)
-                        qs = qs.order_by(validated)
+                        order_by, annotations = self._resolve_ordering(ordering_param, tk)
+                        if annotations:
+                            qs = qs.annotate(**annotations)
+                        qs = qs.order_by(order_by)
                     else:
                         qs = qs.order_by('-search_rank', '-name_similarity')
                 else:
-                    validated = self._validate_ordering(ordering_param, tk)
-                    qs = qs.order_by(validated)
+                    order_by, annotations = self._resolve_ordering(ordering_param, tk)
+                    if annotations:
+                        qs = qs.annotate(**annotations)
+                    qs = qs.order_by(order_by)
 
                 total_count = qs.count()
                 start = (page_number - 1) * page_size
@@ -1578,8 +1672,10 @@ class SearchAPIView(APIView):
                     if is_search:
                         qs = qs.order_by('-search_rank', '-name_similarity')
                     else:
-                        validated = self._validate_ordering(ordering_param, tk)
-                        qs = qs.order_by(validated)
+                        order_by, annotations = self._resolve_ordering(ordering_param, tk)
+                        if annotations:
+                            qs = qs.annotate(**annotations)
+                        qs = qs.order_by(order_by)
 
                     for obj in qs[:500]:  # cap per type to prevent memory issues
                         score = 0
