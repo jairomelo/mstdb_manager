@@ -1,5 +1,6 @@
 import csv
 import itertools
+import json
 from datetime import date
 from pathlib import Path
 
@@ -16,15 +17,36 @@ from dbgestor.models import (
 )
 
 PIPE = "|"
+FIELD_MAP_PATH = Path(__file__).parent / "deposit_field_map.json"
 
 
-def _write_csv(path, fieldnames, rows):
+def _load_field_map():
+    """Load the optional field/file rename mapping."""
+    if FIELD_MAP_PATH.exists():
+        with open(FIELD_MAP_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("columns", {}), data.get("files", {})
+    return {}, {}
+
+
+def _rename_fields(fieldnames, col_map):
+    """Apply column renames, preserving order."""
+    return [col_map.get(f, f) for f in fieldnames]
+
+
+def _rename_row(row, col_map):
+    """Rename keys in a single row dict."""
+    return {col_map.get(k, k): v for k, v in row.items()}
+
+
+def _write_csv(path, fieldnames, rows, col_map=None):
+    out_fields = _rename_fields(fieldnames, col_map) if col_map else fieldnames
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=out_fields)
         writer.writeheader()
         count = 0
         for row in rows:
-            writer.writerow(row)
+            writer.writerow(_rename_row(row, col_map) if col_map else row)
             count += 1
     return count
 
@@ -44,6 +66,13 @@ class Command(BaseCommand):
         today = date.today().isoformat()
         out_dir = Path(options["output"]) / today
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        col_map, file_map = _load_field_map()
+        self.col_map = col_map
+        self.file_map = file_map
+
+        if col_map or file_map:
+            self.stdout.write(f"  Field map loaded: {len(col_map)} column renames, {len(file_map)} file renames")
 
         self.stdout.write(f"Exporting deposit to {out_dir} ...")
         manifest = {}
@@ -120,10 +149,11 @@ class Command(BaseCommand):
                     "notas": p.notas,
                 }
 
-        path = out_dir / "personas_esclavizadas.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  personas_esclavizadas.csv — {count} rows")
-        return {"personas_esclavizadas.csv": count}
+        fname = self.file_map.get("personas_esclavizadas.csv", "personas_esclavizadas.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_personas_no_esclavizadas(self, out_dir):
         fields = [
@@ -169,10 +199,11 @@ class Command(BaseCommand):
                     "notas": p.notas,
                 }
 
-        path = out_dir / "personas_no_esclavizadas.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  personas_no_esclavizadas.csv — {count} rows")
-        return {"personas_no_esclavizadas.csv": count}
+        fname = self.file_map.get("personas_no_esclavizadas.csv", "personas_no_esclavizadas.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_documentos(self, out_dir):
         fields = [
@@ -227,10 +258,11 @@ class Command(BaseCommand):
                     "notas": d.notas,
                 }
 
-        path = out_dir / "documentos.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  documentos.csv — {count} rows")
-        return {"documentos.csv": count}
+        fname = self.file_map.get("documentos.csv", "documentos.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_lugares(self, out_dir):
         fields = [
@@ -250,10 +282,11 @@ class Command(BaseCommand):
                     "lon": l.lon,
                 }
 
-        path = out_dir / "lugares.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  lugares.csv — {count} rows")
-        return {"lugares.csv": count}
+        fname = self.file_map.get("lugares.csv", "lugares.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_corporaciones(self, out_dir):
         fields = [
@@ -282,10 +315,11 @@ class Command(BaseCommand):
                     "notas": c.notas,
                 }
 
-        path = out_dir / "corporaciones.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  corporaciones.csv — {count} rows")
-        return {"corporaciones.csv": count}
+        fname = self.file_map.get("corporaciones.csv", "corporaciones.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     # -------------------------------------------------------------------------
     # Relational tables
@@ -324,10 +358,11 @@ class Command(BaseCommand):
                         "notas": rel.notas,
                     }
 
-        path = out_dir / "trayectorias.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  trayectorias.csv — {count} rows")
-        return {"trayectorias.csv": count}
+        fname = self.file_map.get("trayectorias.csv", "trayectorias.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_relaciones_personas(self, out_dir):
         """Long/pairwise: one row per C(N,2) pair per PersonaRelaciones record."""
@@ -362,10 +397,11 @@ class Command(BaseCommand):
                         "notas": rel.notas,
                     }
 
-        path = out_dir / "relaciones_personas.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  relaciones_personas.csv — {count} rows")
-        return {"relaciones_personas.csv": count}
+        fname = self.file_map.get("relaciones_personas.csv", "relaciones_personas.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_roles_evento_personas(self, out_dir):
         fields = ["persona_idno", "documento_idno", "rol_evento"]
@@ -384,10 +420,11 @@ class Command(BaseCommand):
                         "rol_evento": rol_nombre,
                     }
 
-        path = out_dir / "roles_evento_personas.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  roles_evento_personas.csv — {count} rows")
-        return {"roles_evento_personas.csv": count}
+        fname = self.file_map.get("roles_evento_personas.csv", "roles_evento_personas.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     def _export_roles_evento_instituciones(self, out_dir):
         fields = ["corporacion_idno", "documento_idno", "rol_evento"]
@@ -406,10 +443,11 @@ class Command(BaseCommand):
                         "rol_evento": rol_nombre,
                     }
 
-        path = out_dir / "roles_evento_instituciones.csv"
-        count = _write_csv(path, fields, rows())
-        self.stdout.write(f"  roles_evento_instituciones.csv — {count} rows")
-        return {"roles_evento_instituciones.csv": count}
+        fname = self.file_map.get("roles_evento_instituciones.csv", "roles_evento_instituciones.csv")
+        path = out_dir / fname
+        count = _write_csv(path, fields, rows(), self.col_map)
+        self.stdout.write(f"  {fname} — {count} rows")
+        return {fname: count}
 
     # -------------------------------------------------------------------------
     # Controlled vocabulary codelists
@@ -435,22 +473,25 @@ class Command(BaseCommand):
                 for obj in m.objects.iterator(chunk_size=2000):
                     yield {f: getattr(obj, f, None) for f in fn}
 
-            path = out_dir / filename
-            count = _write_csv(path, fieldnames, make_rows(model, fieldnames))
-            self.stdout.write(f"  {filename} — {count} rows")
-            manifest[filename] = count
+            fname = self.file_map.get(filename, filename)
+            path = out_dir / fname
+            count = _write_csv(path, fieldnames, make_rows(model, fieldnames), self.col_map)
+            self.stdout.write(f"  {fname} — {count} rows")
+            manifest[fname] = count
 
         # cv_tipos_lugar derives from model choices (not a DB table)
         lugar_fields = ["tipo", "etiqueta"]
-        lugar_path = out_dir / "cv_tipos_lugar.csv"
+        out_lugar_fields = _rename_fields(lugar_fields, self.col_map)
+        fname = self.file_map.get("cv_tipos_lugar.csv", "cv_tipos_lugar.csv")
+        lugar_path = out_dir / fname
         with open(lugar_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=lugar_fields)
+            writer = csv.DictWriter(f, fieldnames=out_lugar_fields)
             writer.writeheader()
             for code, label in PLACE_TYPE_CHOICES:
-                writer.writerow({"tipo": code, "etiqueta": label})
+                writer.writerow(_rename_row({"tipo": code, "etiqueta": label}, self.col_map))
         count = len(PLACE_TYPE_CHOICES)
-        self.stdout.write(f"  cv_tipos_lugar.csv — {count} rows")
-        manifest["cv_tipos_lugar.csv"] = count
+        self.stdout.write(f"  {fname} — {count} rows")
+        manifest[fname] = count
 
         return manifest
 

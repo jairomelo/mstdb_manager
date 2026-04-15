@@ -1,0 +1,18 @@
+{
+  "_comment": "Mapping from internal schema names to deposit labels. Add entries here to rename CSV output filenames or column headers without changing the export command code.",
+  "files": {
+    "cv_etnonimos.csv": "cv_etnonimos.csv",
+    "cv_hispanizaciones.csv": "cv_agencia_adaptacion.csv",
+    "cv_actividades.csv": "cv_ocupaciones.csv",
+    "cv_estados_civiles.csv": "cv_estado_matrimonial.csv"
+  },
+  "columns": {
+    "etonimo_id": "etnonimo_id",
+    "etonimo": "etnonimo",
+    "hispanizacion_id": "agencia_id",
+    "hispanizacion": "agencia/adaptacion",
+    "actividad_id": "ocupacion_id",
+    "actividad": "ocupacion",
+    "estado_civil": "estado_matrimonial"
+  }
+}
