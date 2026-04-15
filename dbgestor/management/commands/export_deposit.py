@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
+from dbgestor.version import get_version_with_date
 from dbgestor.models import (
     Actividades, Calidades, Corporacion, Documento, EstadoCivil,
     Etonimos, Hispanizaciones, InstitucionRolEvento, Lugar,
@@ -15,13 +16,6 @@ from dbgestor.models import (
 )
 
 PIPE = "|"
-
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent
-
-
-def _read_version():
-    version_file = BASE_DIR / "VERSION"
-    return version_file.read_text().strip() if version_file.exists() else "unknown"
 
 
 def _write_csv(path, fieldnames, rows):
@@ -465,7 +459,7 @@ class Command(BaseCommand):
     # -------------------------------------------------------------------------
 
     def _write_manifest(self, out_dir, manifest, today):
-        version = _read_version()
+        version = get_version_with_date()
         manifest_path = out_dir / "MANIFEST.txt"
         with open(manifest_path, "w", encoding="utf-8") as f:
             f.write(f"TrayectoriasAfro Data Deposit\n")
