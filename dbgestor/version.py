@@ -1,11 +1,20 @@
-VERSION = (0, 99, 0)
+VERSION = (1, 0, 0)
 VERSION_STRING = '.'.join(str(x) for x in VERSION)
-VERSION_DATE = '2026-03-01'
+VERSION_DATE = '2026-03-05'
+
+# Data schema version — stable since migration 0006 (2026-03-03).
+SCHEMA_VERSION = (1, 0, 0)
+SCHEMA_VERSION_STRING = '.'.join(str(x) for x in SCHEMA_VERSION)
+SCHEMA_VERSION_DATE = '2026-03-03'
 
 def get_version():
-    """Returns the version string"""
+    """Returns the code version string"""
     return VERSION_STRING
 
 def get_version_with_date():
-    """Returns the version string with date"""
+    """Returns the code version string with date"""
     return f"V. {VERSION_STRING} [{VERSION_DATE}]"
+
+def get_schema_version():
+    """Returns the data schema version string."""
+    return SCHEMA_VERSION_STRING
