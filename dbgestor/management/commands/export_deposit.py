@@ -159,7 +159,7 @@ class Command(BaseCommand):
         fields = [
             "persona_idno", "nombres", "apellidos", "nombre_normalizado",
             "sexo", "honorifico", "calidades", "ocupaciones", "ocupacion_categoria",
-            "estado_civil", "entidad_asociada", "entidades_asociadas",
+            "estado_civil", "entidad_asociada",
             "lugar_nacimiento_id", "fecha_nacimiento", "fecha_nacimiento_raw",
             "fecha_nacimiento_factual", "lugar_defuncion_id",
             "fecha_defuncion", "fecha_defuncion_raw", "fecha_defuncion_factual",
@@ -169,7 +169,7 @@ class Command(BaseCommand):
         def rows():
             qs = PersonaNoEsclavizada.objects.prefetch_related(
                 "calidades", "ocupaciones", "estado_civil",
-                "documentos", "entidades_asociadas",
+                "documentos",
             ).select_related("lugar_nacimiento", "lugar_defuncion")
             for p in qs.iterator(chunk_size=2000):
                 yield {
@@ -184,9 +184,6 @@ class Command(BaseCommand):
                     "ocupacion_categoria": p.ocupacion_categoria,
                     "estado_civil": PIPE.join(p.estado_civil.values_list("estado_civil", flat=True)),
                     "entidad_asociada": p.entidad_asociada,
-                    "entidades_asociadas": PIPE.join(
-                        p.entidades_asociadas.values_list("corporacion_idno", flat=True)
-                    ),
                     "lugar_nacimiento_id": p.lugar_nacimiento_id,
                     "fecha_nacimiento": p.fecha_nacimiento,
                     "fecha_nacimiento_raw": p.fecha_nacimiento_raw,
