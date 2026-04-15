@@ -5,7 +5,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from dbgestor.version import get_version_with_date
+from dbgestor.version import get_schema_version
 from dbgestor.models import (
     Actividades, Calidades, Corporacion, Documento, EstadoCivil,
     Etonimos, Hispanizaciones, InstitucionRolEvento, Lugar,
@@ -459,13 +459,15 @@ class Command(BaseCommand):
     # -------------------------------------------------------------------------
 
     def _write_manifest(self, out_dir, manifest, today):
-        version = get_version_with_date()
+        schema_version = get_schema_version()
         manifest_path = out_dir / "MANIFEST.txt"
         with open(manifest_path, "w", encoding="utf-8") as f:
             f.write(f"TrayectoriasAfro Data Deposit\n")
-            f.write(f"Export date : {today}\n")
-            f.write(f"Dataset version : {version}\n")
-            f.write(f"License : CC BY-NC 4.0\n\n")
+            f.write(f"Export date    : {today}\n")
+            f.write(f"Schema version : {schema_version}\n")
+            f.write(f"License        : CC BY-NC 4.0\n")
+            f.write(f"\nNote: 'Export date' is the data snapshot date. ")
+            f.write(f"Schema version tracks structural changes to the CSV layout.\n")
             f.write(f"{'File':<45} {'Rows':>8}\n")
             f.write(f"{'-'*45} {'-'*8}\n")
             for filename, count in sorted(manifest.items()):

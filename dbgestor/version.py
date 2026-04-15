@@ -2,7 +2,7 @@ VERSION = (1, 0, 0)
 VERSION_STRING = '.'.join(str(x) for x in VERSION)
 VERSION_DATE = '2026-03-05'
 
-# Data schema version — stable since migration 0006 (2026-03-03).
+# Data schema version 
 SCHEMA_VERSION = (1, 0, 0)
 SCHEMA_VERSION_STRING = '.'.join(str(x) for x in SCHEMA_VERSION)
 SCHEMA_VERSION_DATE = '2026-03-03'
