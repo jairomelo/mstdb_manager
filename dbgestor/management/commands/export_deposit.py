@@ -91,7 +91,7 @@ class Command(BaseCommand):
                 "calidades", "hispanizacion", "etnonimos",
                 "ocupaciones", "estado_civil", "documentos",
             ).select_related("procedencia", "lugar_nacimiento", "lugar_defuncion")
-            for p in qs.iterator():
+            for p in qs.iterator(chunk_size=2000):
                 yield {
                     "persona_idno": p.persona_idno,
                     "nombres": p.nombres,
@@ -147,7 +147,7 @@ class Command(BaseCommand):
                 "calidades", "ocupaciones", "estado_civil",
                 "documentos", "entidades_asociadas",
             ).select_related("lugar_nacimiento", "lugar_defuncion")
-            for p in qs.iterator():
+            for p in qs.iterator(chunk_size=2000):
                 yield {
                     "persona_idno": p.persona_idno,
                     "nombres": p.nombres,
@@ -200,7 +200,7 @@ class Command(BaseCommand):
                 "archivo", "archivo__ubicacion_archivo",
                 "tipo_documento", "lugar_de_produccion",
             )
-            for d in qs.iterator():
+            for d in qs.iterator(chunk_size=2000):
                 yield {
                     "documento_idno": d.documento_idno,
                     "archivo_idno": d.archivo.archivo_idno,
@@ -245,7 +245,7 @@ class Command(BaseCommand):
         ]
 
         def rows():
-            for l in Lugar.objects.iterator():
+            for l in Lugar.objects.iterator(chunk_size=2000):
                 yield {
                     "lugar_id": l.lugar_id,
                     "nombre_lugar": l.nombre_lugar,
@@ -272,7 +272,7 @@ class Command(BaseCommand):
             qs = Corporacion.objects.prefetch_related(
                 "personas_asociadas", "documentos",
             ).select_related("tipo_institucion", "lugar_corporacion")
-            for c in qs.iterator():
+            for c in qs.iterator(chunk_size=2000):
                 yield {
                     "corporacion_idno": c.corporacion_idno,
                     "nombre_institucion": c.nombre_institucion,
@@ -310,7 +310,7 @@ class Command(BaseCommand):
             qs = PersonaLugarRel.objects.prefetch_related("personas").select_related(
                 "documento", "lugar", "situacion_lugar"
             )
-            for rel in qs.iterator():
+            for rel in qs.iterator(chunk_size=2000):
                 doc_idno = rel.documento.documento_idno
                 situacion = rel.situacion_lugar.situacion if rel.situacion_lugar else None
                 for persona in rel.personas.all():
@@ -348,7 +348,7 @@ class Command(BaseCommand):
 
         def rows():
             qs = PersonaRelaciones.objects.prefetch_related("personas").select_related("documento")
-            for rel in qs.iterator():
+            for rel in qs.iterator(chunk_size=2000):
                 personas = list(rel.personas.all())
                 doc_idno = rel.documento.documento_idno
                 for p1, p2 in itertools.combinations(personas, 2):
@@ -380,7 +380,7 @@ class Command(BaseCommand):
             qs = PersonaRolEvento.objects.prefetch_related("personas").select_related(
                 "documento", "rol_evento"
             )
-            for rol in qs.iterator():
+            for rol in qs.iterator(chunk_size=2000):
                 doc_idno = rol.documento.documento_idno
                 rol_nombre = rol.rol_evento.rol_evento
                 for persona in rol.personas.all():
@@ -402,7 +402,7 @@ class Command(BaseCommand):
             qs = InstitucionRolEvento.objects.prefetch_related("corporaciones").select_related(
                 "documento", "rol_evento"
             )
-            for rol in qs.iterator():
+            for rol in qs.iterator(chunk_size=2000):
                 doc_idno = rol.documento.documento_idno
                 rol_nombre = rol.rol_evento.rol_evento
                 for corp in rol.corporaciones.all():
@@ -438,7 +438,7 @@ class Command(BaseCommand):
 
         for filename, model, fieldnames in simple:
             def make_rows(m, fn):
-                for obj in m.objects.iterator():
+                for obj in m.objects.iterator(chunk_size=2000):
                     yield {f: getattr(obj, f, None) for f in fn}
 
             path = out_dir / filename
