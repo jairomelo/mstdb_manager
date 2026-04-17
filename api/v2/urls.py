@@ -11,6 +11,7 @@ from .views import (
     EstadoCivilViewSet, ActividadesViewSet, SituacionLugarViewSet, RolEventoViewSet,
     TiposInstitucionViewSet,
 )
+from .crosstab import CrosstabView, CrosstabSchemaView
 
 # Create router for V2 API
 router_v2 = DefaultRouter()
@@ -52,4 +53,6 @@ urlpatterns = [
     path('log/', log_message, name='log_v2'),
     path('gender-status-distribution/', gender_status_distribution, name='gender_status_distribution_v2'),
     path('places-people-distribution/', PlacesPeopleDistribution.as_view(), name='places_people_distribution_v2'),
+    path('crosstab/', CrosstabView.as_view(), name='crosstab_v2'),
+    path('crosstab/schema/', CrosstabSchemaView.as_view(), name='crosstab_schema_v2'),
 ]
