@@ -64,7 +64,34 @@
                     Seleccione una persona para asignar un lugar.
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                   </div>
-                  
+                  {% if perms.dbgestor.add_personarelaciones %}
+                  <div id="deriveRelationsAlert" class="alert alert-success alert-dismissible fade show" role="alert" style="display: none;">
+                    <span id="deriveRelationsMsg"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                  {% endif %}
+
+                  {% if perms.dbgestor.add_personarelaciones %}
+                  <!-- Modal: Derivar relaciones info -->
+                  <div class="modal fade" id="deriveInfoModal" tabindex="-1" aria-labelledby="deriveInfoModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="deriveInfoModalLabel">Derivar relaciones de subordinación</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                          <p><strong>Derivar</strong> crea automáticamente una relación de subordinación entre cada persona no esclavizada y cada persona esclavizada asociadas a este documento.</p>
+                          <p>La persona no esclavizada se asigna como <em>persona sujeto</em> (quien ejerce control). La operación es idempotente: ejecutarla múltiples veces no duplica relaciones.</p>
+                          <p><strong>Revertir</strong> elimina únicamente las relaciones de subordinación derivadas automáticamente (sin descripción). Las relaciones creadas o editadas manualmente no se ven afectadas.</p>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
 
                 <!-- End Control buttons -->
                 <!-- Select buttons -->
@@ -72,6 +99,11 @@
                     <div class="selectall">
                         <button id="selectAllBtn" class="btn btn-light toggle-button"><i class="far fa-check-square"></i> Seleccionar todas</button>
                         <button id="deselectAllBtn" class="btn btn-light toggle-button hidden"><i class="far fa-square"></i> Deseleccionar todas</button>
+                        {% if perms.dbgestor.add_personarelaciones %}
+                        <button id="deriveRelationsBtn" class="btn btn-outline-secondary" title="Derivar relaciones de subordinación"><i class="fas fa-project-diagram"></i> Derivar relaciones de subordinación</button>
+                        <button id="revertRelationsBtn" class="btn btn-outline-danger btn-sm" title="Revertir relaciones derivadas"><i class="fas fa-undo"></i> Revertir</button>
+                        <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#deriveInfoModal" aria-label="Información sobre derivar relaciones"><i class="fas fa-info-circle"></i></button>
+                        {% endif %}
                     </div>
                     <!-- Personas Esclavizadas Card -->
                     <h3>Personas esclavizadas asociadas al documento</h3>
@@ -244,12 +276,57 @@
         }
     });
 
+    {% if perms.dbgestor.add_personarelaciones %}
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')
+        ? document.querySelector('[name=csrfmiddlewaretoken]').value
+        : '{{ csrf_token }}';
+    const msgEl = document.getElementById('deriveRelationsMsg');
+    const alertEl = document.getElementById('deriveRelationsAlert');
+
+    function showDeriveAlert(text, isError) {
+        alertEl.classList.remove('alert-success', 'alert-danger');
+        alertEl.classList.add(isError ? 'alert-danger' : 'alert-success');
+        msgEl.textContent = text;
+        alertEl.style.display = 'block';
+    }
+
+    const deriveBtn = document.getElementById('deriveRelationsBtn');
+    if (deriveBtn) {
+        deriveBtn.addEventListener('click', function() {
+            fetch("{% url 'derive-relations' documento.pk %}", {
+                method: 'POST',
+                headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+            })
+            .then(r => r.json())
+            .then(data => {
+                showDeriveAlert('Se derivaron ' + data.created + ' relaciones de subordinación.', false);
+                if (data.created > 0) setTimeout(() => location.reload(), 1200);
+            })
+            .catch(() => showDeriveAlert('Error al derivar relaciones.', true));
+        });
+    }
+
+    const revertBtn = document.getElementById('revertRelationsBtn');
+    if (revertBtn) {
+        revertBtn.addEventListener('click', function() {
+            if (!confirm('¿Revertir las relaciones de subordinación derivadas automáticamente en este documento?')) return;
+            fetch("{% url 'revert-relations' documento.pk %}", {
+                method: 'POST',
+                headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+            })
+            .then(r => r.json())
+            .then(data => {
+                showDeriveAlert('Se eliminaron ' + data.deleted + ' relaciones derivadas.', false);
+                if (data.deleted > 0) setTimeout(() => location.reload(), 1200);
+            })
+            .catch(() => showDeriveAlert('Error al revertir relaciones.', true));
+        });
+    }
+    {% endif %}
+
     function toggleButtons() {
         var selectAllBtn = document.getElementById('selectAllBtn');
         var deselectAllBtn = document.getElementById('deselectAllBtn');
-
-        selectAllBtn.classList.toggle('hidden');
-        deselectAllBtn.classList.toggle('hidden');
 
     }
 

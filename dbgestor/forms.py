@@ -449,12 +449,25 @@ class PersonaRelacionesForm(forms.ModelForm):
         widget=autocomplete.ModelSelect2Multiple(url='personas-autocomplete'),
         label='Personas relacionadas'
     )
-    
+
+    persona_sujeto = forms.ModelChoiceField(
+        queryset=Persona.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(url='personas-autocomplete'),
+        label='Persona sujeto (quien controla)'
+    )
+
     def __init__(self, *args, **kwargs):
         super(PersonaRelacionesForm, self).__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
-    
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('naturaleza_relacion') == 'sub' and not cleaned_data.get('persona_sujeto'):
+            self.add_error('persona_sujeto', 'Este campo es obligatorio para relaciones de Subordinación.')
+        return cleaned_data
+
 
 class PersonaRolEventoForm(forms.ModelForm):
     class Meta:

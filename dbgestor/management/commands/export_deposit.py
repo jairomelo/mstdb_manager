@@ -365,7 +365,8 @@ class Command(BaseCommand):
         """Long/pairwise: one row per C(N,2) pair per PersonaRelaciones record."""
         fields = [
             "persona_idno_1", "persona_idno_2", "persona_relacion_id",
-            "documento_idno", "naturaleza_relacion", "descripcion_relacion",
+            "documento_idno", "naturaleza_relacion", "persona_sujeto_idno",
+            "descripcion_relacion",
             "fecha_inicial_relacion", "fecha_inicial_relacion_raw",
             "fecha_inicial_relacion_factual", "fecha_final_relacion",
             "fecha_final_relacion_raw", "fecha_final_relacion_factual",
@@ -373,10 +374,13 @@ class Command(BaseCommand):
         ]
 
         def rows():
-            qs = PersonaRelaciones.objects.prefetch_related("personas").select_related("documento")
+            qs = PersonaRelaciones.objects.prefetch_related("personas").select_related(
+                "documento", "persona_sujeto"
+            )
             for rel in qs.iterator(chunk_size=2000):
                 personas = list(rel.personas.all())
                 doc_idno = rel.documento.documento_idno
+                sujeto_idno = rel.persona_sujeto.persona_idno if rel.persona_sujeto else ""
                 for p1, p2 in itertools.combinations(personas, 2):
                     yield {
                         "persona_idno_1": p1.persona_idno,
@@ -384,6 +388,7 @@ class Command(BaseCommand):
                         "persona_relacion_id": rel.persona_relacion_id,
                         "documento_idno": doc_idno,
                         "naturaleza_relacion": rel.naturaleza_relacion,
+                        "persona_sujeto_idno": sujeto_idno,
                         "descripcion_relacion": rel.descripcion_relacion,
                         "fecha_inicial_relacion": rel.fecha_inicial_relacion,
                         "fecha_inicial_relacion_raw": rel.fecha_inicial_relacion_raw,

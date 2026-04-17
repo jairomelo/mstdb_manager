@@ -16,6 +16,8 @@ from .models import (Corporacion, EstadoCivil, Lugar, PersonaEsclavizada, Person
                      PersonaLugarRel, Persona, PersonaRelaciones, PersonaRolEvento, SituacionLugar,
                      TipoDocumental, RolEvento, TipoLugar, TiposInstitucion, InstitucionRolEvento)
 
+from .utils import derive_subordination_rels, revert_subordination_rels
+
 from .forms import (CorporacionForm, EstadoCivilForm, LugarForm, DocumentoForm, ArchivoForm, PersonaEsclavizadaForm,
                     PersonaNoEsclavizadaForm, TipoDocumentalForm,
                     CalidadesForm, HispanizacionesForm, EtnonimosForm, OcupacionesForm,
@@ -1212,7 +1214,7 @@ class DocumentoDetailView(DetailView):
             models.Q(
                 documento=documento
             )
-        )
+        ).select_related('persona_sujeto')
         
         personarolrel = PersonaRolEvento.objects.filter(
             models.Q(
@@ -1236,9 +1238,12 @@ class DocumentoDetailView(DetailView):
         
         for relacion in personapersonarel:
             naturaleza_rel = relacion.get_naturaleza_relacion_display()
+            sujeto = relacion.persona_sujeto
             relacion_data = {
                 'id_rel': relacion.persona_relacion_id,
                 'personas': [],
+                'persona_sujeto_idno': sujeto.persona_idno if sujeto else None,
+                'persona_sujeto_nombre': sujeto.nombre_normalizado if sujeto else None,
             }
             for persona in relacion.personas.all():
                 relacion_data['personas'].append({
@@ -1636,6 +1641,32 @@ class DeletePersonaRelacionesView(DeleteNextUrlMixin, DeleteView):
     model = PersonaRelaciones
     template_name = 'dbgestor/Base/confirm_delete.html'
     success_url = reverse_lazy('documento-browse')
+
+
+class DeriveRelacionesView(TemplateView):
+    """POST-only: derives subordination relations from event participants for a document."""
+
+    def post(self, request, pk):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Autenticación requerida.'}, status=403)
+        if not request.user.has_perm('dbgestor.add_personarelaciones'):
+            return JsonResponse({'error': 'Sin permiso.'}, status=403)
+        documento = get_object_or_404(Documento, pk=pk)
+        created = derive_subordination_rels(documento.pk)
+        return JsonResponse({'created': created})
+
+
+class RevertRelacionesView(TemplateView):
+    """POST-only: reverts auto-derived subordination relations for a document."""
+
+    def post(self, request, pk):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Autenticación requerida.'}, status=403)
+        if not request.user.has_perm('dbgestor.delete_personarelaciones'):
+            return JsonResponse({'error': 'Sin permiso.'}, status=403)
+        documento = get_object_or_404(Documento, pk=pk)
+        deleted = revert_subordination_rels(documento.pk)
+        return JsonResponse({'deleted': deleted})
     
 class DeletePersonaLugarRelView(DeleteView):
     model = PersonaLugarRel

@@ -132,7 +132,7 @@
                     
                     {% for persona in personapersonarel %}
                         {% for personar in persona.personas.all %}
-                            {% if personaesclavizada.persona_idno != personar.persona_idno %}
+                            {% if personanoesclavizada.persona_idno != personar.persona_idno %}
                                 {% with personar.persona_type as type %}
                                     {% if type == 'esclavizada' %}
                                         <p><a href="{% url 'personaesclavizada_detail' personar.pk %}">
@@ -140,6 +140,9 @@
                                         <p><a href="{% url 'personanoesclavizada_detail' personar.pk %}">
                                     {% endif %}
                                     {{ personar.nombre_normalizado }}</a> ({{ personar.persona_idno }}) [{{ persona.get_naturaleza_relacion_display }}]
+                                    {% if persona.naturaleza_relacion == 'sub' and persona.persona_sujeto %}
+                                        &rarr; <em>subordinado/a de </em>
+                                    {% endif %}
                                     </p>
                                 {% endwith %}
                             {% endif %}

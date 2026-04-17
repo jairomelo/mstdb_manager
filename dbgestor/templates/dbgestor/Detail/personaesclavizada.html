@@ -145,6 +145,9 @@
                                         <p><a href="{% url 'personanoesclavizada_detail' personar.pk %}">
                                     {% endif %}
                                     {{ personar.nombre_normalizado }}</a> ({{ personar.persona_idno }}) [{{ persona.get_naturaleza_relacion_display }}]
+                                    {% if persona.naturaleza_relacion == 'sub' and persona.persona_sujeto and persona.persona_sujeto.persona_idno != personaesclavizada.persona_idno %}
+                                        &rarr; <em>subordinado/a de </em>
+                                    {% endif %}
                                     </p>
                                 {% endwith %}
                             {% endif %}

@@ -20,7 +20,7 @@ from .views import (
     CorporacionDetailView, CorporacionUpdateView, DeleteRolEventoView, 
     PersonaRolEventoCreateView, TipoDocumentalsCreateView,
     associate_persona_documento, associate_institucion_documento, 
-    InstitucionAutocomplete
+    InstitucionAutocomplete, DeriveRelacionesView, RevertRelacionesView
 )
 
 
@@ -104,4 +104,6 @@ urlpatterns = [
     # testing
     path('personarel/delete/<int:pk>/', DeletePersonaRelacionesView.as_view(), name='delete-personarel'),
     path('personalugar/delete/<int:pk>/', DeletePersonaLugarRelView.as_view(), name='delete-personalugarrel'),
+    path('documento/<int:pk>/derive-relations/', DeriveRelacionesView.as_view(), name='derive-relations'),
+    path('documento/<int:pk>/revert-relations/', RevertRelacionesView.as_view(), name='revert-relations'),
 ]

@@ -33,6 +33,14 @@
             {{ form.naturaleza_relacion }}
             {{ form.naturaleza_relacion.errors }}
         </div>
+
+        <div class="mb-3" id="persona_sujeto_wrapper" style="display:none;">
+            <label for="{{ form.persona_sujeto.id_for_label }}" class="form-label">{{ form.persona_sujeto.label }}</label>
+            {{ form.persona_sujeto }}
+            {{ form.persona_sujeto.errors }}
+            <div class="form-text">La persona que ejerce control o dominio sobre las demás en esta relación.</div>
+        </div>
+
         <div class="mb-3">
             {{ form.descripcion_relacion.label_tag }}
             {{ form.descripcion_relacion }}
@@ -104,6 +112,24 @@
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     })
+</script>
+
+<script>
+    (function () {
+        var wrapper = document.getElementById('persona_sujeto_wrapper');
+        var select = document.getElementById('id_naturaleza_relacion');
+        var input = wrapper ? wrapper.querySelector('input, select') : null;
+
+        function toggleSujeto() {
+            if (!wrapper || !select) return;
+            var isSubordinacion = select.value === 'sub';
+            wrapper.style.display = isSubordinacion ? 'block' : 'none';
+            if (input) input.setAttribute('aria-required', isSubordinacion ? 'true' : 'false');
+        }
+
+        toggleSujeto();
+        if (select) select.addEventListener('change', toggleSujeto);
+    })();
 </script>
 
 {% else %}
