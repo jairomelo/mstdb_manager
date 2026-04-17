@@ -72,6 +72,13 @@ DIMENSIONS = {
         'values_field': 'procedencia__nombre_lugar',
         'null_label': 'Sin procedencia',
     },
+    'lugar_trayectoria': {
+        'label': 'Lugar (trayectoria)',
+        'entities': ['personaesclavizada', 'personanoesclavizada'],
+        'is_m2m': True,
+        'values_field': 'p_x_l_pere__lugar__nombre_lugar',
+        'null_label': 'Sin lugar',
+    },
     'estado_civil': {
         'label': 'Estado matrimonial',
         'entities': ['personaesclavizada', 'personanoesclavizada'],
