@@ -1909,12 +1909,38 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Aggregate all individual trajectories into route flows.
         Returns {routes, places} for Sankey-style map visualization.
-        Supports filters: sexo, etnonimo, calidad, hispanizacion,
-        edad__gte, edad__lte, fecha_inicial__gte, fecha_inicial__lte.
+        Supports filters: q (full-text), sexo, etnonimo, calidad,
+        hispanizacion, edad__gte, edad__lte, fecha_inicial__gte,
+        fecha_inicial__lte.
         """
         qs = PersonaEsclavizada.objects.select_related(
             'procedencia', 'lugar_nacimiento', 'lugar_defuncion'
         ).prefetch_related('p_x_l_pere__lugar', 'p_x_l_pere__documento')
+
+        # Full-text / trigram search
+        raw_q = request.query_params.get('q', '').strip()
+        if raw_q:
+            match = re.fullmatch(r'["\'](.+)["\']', raw_q)
+            if match:
+                clean, is_exact = match.group(1), True
+            else:
+                clean, is_exact = raw_q, False
+            search_type = 'phrase' if is_exact else 'plain'
+            sq = SearchQuery(clean, config='spanish', search_type=search_type)
+            qs = qs.annotate(
+                search_rank=SearchRank(F('search_vector'), sq),
+                name_similarity=TrigramSimilarity('nombre_normalizado', clean),
+            )
+            if is_exact:
+                qs = qs.filter(search_vector=sq)
+            else:
+                qs = qs.filter(Q(search_vector=sq) | Q(name_similarity__gt=0.3))
+
+        # Apply form filters using the same logic as search / crosstab.
+        # Import here to avoid circular imports.
+        from .crosstab import _apply_form_filters
+        qs = _apply_form_filters(qs, 'personaesclavizada', request)
+        # Legacy param names (sexo, etnonimo, calidad, etc.) for backward compat
         qs = self._apply_persona_filters(qs, request.query_params)
 
         # Only personas with at least some place data
