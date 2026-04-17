@@ -33,7 +33,7 @@ from dbgestor.models import PersonaEsclavizada, PersonaNoEsclavizada
 
 DIMENSIONS = {
     'fecha_periodo': {
-        'label': 'Período de tiempo',
+        'label': 'Periodo de tiempo',
         'entities': ['personaesclavizada', 'personanoesclavizada'],
         'is_period': True,
         'null_label': 'Desconocido',
