@@ -5,10 +5,12 @@ person-level data:  row dim × col dim → aggregated cell value (count / avg_ed
 """
 import csv
 import io
+import re
 from collections import defaultdict
 
+from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
 from django.db.models import (
-    Avg, Case, Count, IntegerField, Min, OuterRef, Q, Subquery, Sum, Value, When,
+    Avg, Case, Count, F, IntegerField, Min, OuterRef, Q, Subquery, Sum, Value, When,
 )
 from django.db.models.functions import ExtractYear
 from django.http import StreamingHttpResponse
@@ -132,6 +134,41 @@ _MODELS = {
     'personaesclavizada': PersonaEsclavizada,
     'personanoesclavizada': PersonaNoEsclavizada,
 }
+
+
+# ── Full-text search helper ───────────────────────────────────────────────────
+
+_SIM_FIELDS = {
+    'personaesclavizada': 'nombre_normalizado',
+    'personanoesclavizada': 'nombre_normalizado',
+}
+
+
+def _apply_text_search(qs, entity_type, request):
+    """Apply the ?q= full-text / trigram filter, mirroring SearchAPIView._text_match."""
+    raw = request.query_params.get('q', '').strip()
+    if not raw:
+        return qs
+
+    match = re.fullmatch(r'["\'](.+)["\']', raw)
+    if match:
+        clean, is_exact = match.group(1), True
+    else:
+        clean, is_exact = raw, False
+
+    search_type = 'phrase' if is_exact else 'plain'
+    sq = SearchQuery(clean, config='spanish', search_type=search_type)
+    sim_field = _SIM_FIELDS.get(entity_type, 'nombre_normalizado')
+
+    qs = qs.annotate(
+        search_rank=SearchRank(F('search_vector'), sq),
+        name_similarity=TrigramSimilarity(sim_field, clean),
+    )
+    if is_exact:
+        qs = qs.filter(search_vector=sq)
+    else:
+        qs = qs.filter(Q(search_vector=sq) | Q(name_similarity__gt=0.3))
+    return qs
 
 
 # ── Filter helpers ────────────────────────────────────────────────────────────
@@ -458,6 +495,7 @@ class CrosstabView(APIView):
         # ── Build queryset ────────────────────────────────────────────────────
         model = _MODELS[entity_type]
         qs = model.objects.all()
+        qs = _apply_text_search(qs, entity_type, request)
         qs = _apply_sidebar_filters(qs, entity_type, request)
         qs = _apply_form_filters(qs, entity_type, request)
 
