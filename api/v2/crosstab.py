@@ -7,7 +7,9 @@ import csv
 import io
 from collections import defaultdict
 
-from django.db.models import Avg, Count, IntegerField, Min, OuterRef, Q, Subquery, Sum
+from django.db.models import (
+    Avg, Case, Count, IntegerField, Min, OuterRef, Q, Subquery, Sum, Value, When,
+)
 from django.db.models.functions import ExtractYear
 from django.http import StreamingHttpResponse
 from rest_framework.response import Response
@@ -480,8 +482,16 @@ class CrosstabView(APIView):
         # ── Aggregation ───────────────────────────────────────────────────────
         anno = {'_count': Count('persona_id', distinct=True)}
         if cell_op == 'avg_edad':
-            anno['_sum_edad'] = Sum('edad')
-            anno['_n_edad'] = Count('edad')  # non-null edad entries
+            # Only count edad (in years) when unidad_temporal_edad is 'a' or NULL.
+            # Other units (months, days, etc.) are too small to convert reliably,
+            # so they are excluded from the average.
+            _edad_years = Case(
+                When(Q(unidad_temporal_edad='a') | Q(unidad_temporal_edad__isnull=True), then='edad'),
+                default=Value(None),
+                output_field=IntegerField(),
+            )
+            anno['_sum_edad'] = Sum(_edad_years)
+            anno['_n_edad'] = Count(_edad_years)  # non-null entries only
 
         raw_qs = qs.values(row_vf, col_vf).annotate(**anno)
 
