@@ -57,7 +57,7 @@ DIMENSIONS = {
         'null_label': 'Sin calidad',
     },
     'hispanizacion': {
-        'label': 'Hispanización',
+        'label': 'Agencia / Adaptación',
         'entities': ['personaesclavizada'],
         'is_m2m': True,
         'values_field': 'hispanizacion__hispanizacion',
@@ -70,25 +70,11 @@ DIMENSIONS = {
         'values_field': 'procedencia__nombre_lugar',
         'null_label': 'Sin procedencia',
     },
-    'procedencia_region': {
-        'label': 'Procedencia (región)',
-        'entities': ['personaesclavizada'],
-        'is_m2m': False,
-        'values_field': 'procedencia__es_parte_de__nombre_lugar',
-        'null_label': 'Sin región',
-    },
     'estado_civil': {
-        'label': 'Estado civil',
+        'label': 'Estado matrimonial',
         'entities': ['personaesclavizada', 'personanoesclavizada'],
         'is_m2m': True,
         'values_field': 'estado_civil__estado_civil',
-        'null_label': 'Sin información',
-    },
-    'lugar_nacimiento': {
-        'label': 'Lugar de nacimiento',
-        'entities': ['personaesclavizada', 'personanoesclavizada'],
-        'is_m2m': False,
-        'values_field': 'lugar_nacimiento__nombre_lugar',
         'null_label': 'Sin información',
     },
     'honorifico': {
