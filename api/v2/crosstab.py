@@ -399,7 +399,7 @@ class CrosstabView(APIView):
         row_dim = p.get('row_dim', '')
         col_dim = p.get('col_dim', '')
         cell_op = p.get('cell_op', 'count')
-        fmt = p.get('format', 'json')
+        fmt = p.get('export_format', 'json')
 
         try:
             period_size = int(p.get('period_size', 50))
