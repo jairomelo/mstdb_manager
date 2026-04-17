@@ -7,7 +7,7 @@ import csv
 import io
 from collections import defaultdict
 
-from django.db.models import Avg, Count, Sum, Min, Q
+from django.db.models import Avg, Count, IntegerField, Min, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import ExtractYear
 from django.http import StreamingHttpResponse
 from rest_framework.response import Response
@@ -467,14 +467,26 @@ class CrosstabView(APIView):
         qs = _apply_form_filters(qs, entity_type, request)
 
         # ── Annotate period dims with min document year ───────────────────────
+        # Use a correlated Subquery so the min-year is a per-row scalar.
+        # A plain Min(ExtractYear(...)) is an aggregate that gets collapsed
+        # by the subsequent .values().annotate() GROUP BY, producing wrong
+        # results (one row per sexo instead of one per sexo × year).
+        if row_conf.get('is_period') or col_conf.get('is_period'):
+            _year_sq = Subquery(
+                model.objects.filter(pk=OuterRef('pk')).annotate(
+                    _yr=Min(ExtractYear('documentos__fecha_inicial'))
+                ).values('_yr'),
+                output_field=IntegerField(),
+            )
+
         if row_conf.get('is_period'):
-            qs = qs.annotate(_row_year=Min(ExtractYear('documentos__fecha_inicial')))
+            qs = qs.annotate(_row_year=_year_sq)
             row_vf = '_row_year'
         else:
             row_vf = row_conf['values_field']
 
         if col_conf.get('is_period'):
-            qs = qs.annotate(_col_year=Min(ExtractYear('documentos__fecha_inicial')))
+            qs = qs.annotate(_col_year=_year_sq)
             col_vf = '_col_year'
         else:
             col_vf = col_conf['values_field']
