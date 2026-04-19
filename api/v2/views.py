@@ -181,12 +181,13 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="{self.get_export_filename()}"'
         
         if serializer.data:
-            writer = csv.DictWriter(response, fieldnames=serializer.data[0].keys())
+            flattened_data = [self.flatten_for_csv(row) for row in serializer.data]
+            # Collect all unique fieldnames across every row to handle per-row key variation
+            all_fields = list(dict.fromkeys(k for row in flattened_data for k in row.keys()))
+            writer = csv.DictWriter(response, fieldnames=all_fields, extrasaction='ignore', restval='')
             writer.writeheader()
-            for row in serializer.data:
-                # Flatten any nested objects for CSV
-                flattened_row = self.flatten_for_csv(row)
-                writer.writerow(flattened_row)
+            for row in flattened_data:
+                writer.writerow(row)
         
         return response
 
@@ -209,9 +210,9 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
                 elif 'nombre_lugar' in value:
                     flattened[f"{key}_nombre"] = value.get('nombre_lugar')
             elif isinstance(value, list):
-                # For lists, join IDs or convert to string
-                if value and isinstance(value[0], dict):
-                    ids = [str(item.get('id', '')) for item in value if 'id' in item]
+                # Always use _ids suffix for list-of-dicts; plain join for scalar lists
+                if not value or isinstance(value[0], dict):
+                    ids = [str(item.get('id', '')) for item in value if isinstance(item, dict) and 'id' in item]
                     flattened[f"{key}_ids"] = '; '.join(ids)
                 else:
                     flattened[key] = '; '.join([str(v) for v in value])
@@ -1527,11 +1528,42 @@ class SearchAPIView(APIView):
                 key=lambda x: -x['count']),
         }
 
+    # ── CSV export helper ─────────────────────────────────────────────
+
+    CSV_MAX_ROWS = 5000
+
+    def _export_csv(self, qs, serializer_cls, type_key):
+        """Stream the filtered queryset as a CSV download."""
+        qs = qs[:self.CSV_MAX_ROWS]
+        serializer = serializer_cls(qs, many=True)
+
+        filename = f"{type_key}_export.csv"
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        if serializer.data:
+            flattened_data = [
+                BaseV2ViewSet.flatten_for_csv(None, row) for row in serializer.data
+            ]
+            all_fields = list(dict.fromkeys(
+                k for row in flattened_data for k in row.keys()
+            ))
+            writer = csv.DictWriter(
+                response, fieldnames=all_fields,
+                extrasaction='ignore', restval='',
+            )
+            writer.writeheader()
+            for row in flattened_data:
+                writer.writerow(row)
+
+        return response
+
     # ── main handler ──────────────────────────────────────────────────
 
     def get(self, request):
         query_text = request.query_params.get('q', '').strip()
         entity_type = request.query_params.get('type', 'all')
+        export_format = request.query_params.get('export_format', '').strip().lower()
         page_number = max(int(request.query_params.get('page', 1)), 1)
         page_size = min(
             max(int(request.query_params.get('page_size', self.DEFAULT_PAGE_SIZE)), 1),
@@ -1646,6 +1678,10 @@ class SearchAPIView(APIView):
                     if annotations:
                         qs = qs.annotate(**annotations)
                     qs = qs.order_by(order_by)
+
+                # ── CSV export shortcut ────────────────────────────
+                if export_format == 'csv':
+                    return self._export_csv(qs, serializer_cls, tk)
 
                 total_count = qs.count()
                 start = (page_number - 1) * page_size
