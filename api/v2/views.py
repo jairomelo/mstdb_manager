@@ -3,6 +3,7 @@ import logging
 import re
 from collections import defaultdict
 
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery
 from django.db.models.functions import ExtractYear
 from django.contrib.auth import authenticate, login, logout
@@ -1842,6 +1843,212 @@ class SearchAPIView(APIView):
         except Exception as e:
             logger.error(f"Error in search/browse: {str(e)}")
             return Response({'error': 'An error occurred during the search'}, status=500)
+
+
+class SearchNetworkAPIView(SearchAPIView):
+    """Build a Cytoscape-ready people network from the current Search filters."""
+
+    PERSON_TYPES = {'personaesclavizada', 'personanoesclavizada'}
+    MAX_NODES = 700
+    MAX_EDGES = 3500
+
+    def _build_filtered_person_queryset(self, request, type_key):
+        query_text = request.query_params.get('q', '').strip()
+        search_text = request.query_params.get('search', '').strip()
+
+        filters = {
+            'lugar_id': self._csv_ints(request, 'lugar_id'),
+            'archivo_id': self._csv_ints(request, 'archivo_id'),
+            'year': self._csv_ints(request, 'year'),
+            'etnonimo': self._csv_strs(request, 'etnonimo'),
+            'calidad': self._csv_strs(request, 'calidad'),
+            'hispanizacion': self._csv_strs(request, 'hispanizacion'),
+            'ocupacion': self._csv_strs(request, 'ocupacion'),
+        }
+        has_filters = any(v for v in filters.values())
+
+        model, similarity_field, _ = self.TYPE_CONFIGS[type_key]
+        if query_text:
+            clean_query, is_exact = parse_search_query(query_text)
+            search_type = 'phrase' if is_exact else 'plain'
+            search_query = SearchQuery(clean_query, config='spanish', search_type=search_type)
+            qs = self._text_match(model, search_query, similarity_field, clean_query, is_exact)
+        else:
+            qs = model.objects.all()
+
+        if has_filters:
+            qs = self._apply_filters(qs, type_key, filters)
+
+        qs = self._apply_form_filters(qs, type_key, request)
+
+        if search_text:
+            qs = self._apply_simple_search(qs, type_key, search_text)
+
+        return qs.distinct()
+
+    @staticmethod
+    def _map_relation_type(naturaleza_relacion):
+        nat = naturaleza_relacion or ''
+        if nat == 'fam':
+            return 'fam'
+        if nat == 'aso':
+            return 'aso'
+        if nat == 'sub':
+            return 'sub'
+        return 'tmp'
+
+    def get(self, request):
+        type_key = request.query_params.get('type', 'personaesclavizada').strip()
+        scope_mode = request.query_params.get('scope_mode', 'strict').strip().lower()
+
+        if type_key not in self.PERSON_TYPES:
+            return Response(
+                {'error': 'type must be personaesclavizada or personanoesclavizada'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if scope_mode not in {'strict', 'expanded'}:
+            scope_mode = 'strict'
+
+        try:
+            base_qs = self._build_filtered_person_queryset(request, type_key)
+            strict_node_ids = set(base_qs.values_list('persona_id', flat=True))
+
+            if not strict_node_ids:
+                return Response({
+                    'nodes': [],
+                    'edges': [],
+                    'meta': {
+                        'scope_mode': scope_mode,
+                        'node_count': 0,
+                        'edge_count': 0,
+                        'result_count': 0,
+                        'truncated': False,
+                    },
+                })
+
+            relaciones = PersonaRelaciones.objects.filter(
+                personas__persona_id__in=strict_node_ids,
+            ).prefetch_related('personas').select_related('persona_sujeto').distinct()
+
+            node_ids = set(strict_node_ids)
+            if scope_mode == 'expanded':
+                for rel in relaciones:
+                    for persona in rel.personas.all():
+                        node_ids.add(persona.persona_id)
+
+            truncated = False
+
+            if len(node_ids) > self.MAX_NODES:
+                strict_sorted = sorted(strict_node_ids)
+                if scope_mode == 'strict' or len(strict_sorted) >= self.MAX_NODES:
+                    node_ids = set(strict_sorted[:self.MAX_NODES])
+                else:
+                    neighbor_ids = sorted(node_ids - strict_node_ids)
+                    keep_neighbors = self.MAX_NODES - len(strict_sorted)
+                    node_ids = set(strict_sorted + neighbor_ids[:keep_neighbors])
+                truncated = True
+
+            edge_records = []
+            edge_keys = set()
+
+            for rel in relaciones:
+                rel_type = self._map_relation_type(rel.naturaleza_relacion)
+                rel_personas = [p for p in rel.personas.all() if p.persona_id in node_ids]
+                rel_persona_ids = [p.persona_id for p in rel_personas]
+
+                if len(rel_persona_ids) < 2:
+                    continue
+
+                if rel_type == 'sub' and rel.persona_sujeto_id and rel.persona_sujeto_id in node_ids:
+                    sujeto_id = rel.persona_sujeto_id
+                    for pid in rel_persona_ids:
+                        if pid == sujeto_id:
+                            continue
+                        source_id = f'p{sujeto_id}'
+                        target_id = f'p{pid}'
+                        edge_key = (source_id, target_id, rel_type, rel.persona_relacion_id)
+                        if edge_key in edge_keys:
+                            continue
+                        edge_keys.add(edge_key)
+                        edge_records.append({
+                            'data': {
+                                'id': f'e{rel.persona_relacion_id}-{source_id}-{target_id}',
+                                'source': source_id,
+                                'target': target_id,
+                                'relation': rel_type,
+                                'label': rel.descripcion_relacion or (rel.naturaleza_relacion or ''),
+                            }
+                        })
+                else:
+                    ordered_ids = sorted(rel_persona_ids)
+                    for idx, pid_a in enumerate(ordered_ids):
+                        for pid_b in ordered_ids[idx + 1:]:
+                            source_id = f'p{pid_a}'
+                            target_id = f'p{pid_b}'
+                            edge_key = (source_id, target_id, rel_type, rel.persona_relacion_id)
+                            if edge_key in edge_keys:
+                                continue
+                            edge_keys.add(edge_key)
+                            edge_records.append({
+                                'data': {
+                                    'id': f'e{rel.persona_relacion_id}-{source_id}-{target_id}',
+                                    'source': source_id,
+                                    'target': target_id,
+                                    'relation': rel_type,
+                                    'label': rel.descripcion_relacion or (rel.naturaleza_relacion or ''),
+                                }
+                            })
+
+            edge_records.sort(key=lambda e: (e['data']['source'], e['data']['target'], e['data']['relation']))
+            if len(edge_records) > self.MAX_EDGES:
+                edge_records = edge_records[:self.MAX_EDGES]
+                truncated = True
+
+            degree_count = defaultdict(int)
+            for edge in edge_records:
+                src = edge['data']['source']
+                tgt = edge['data']['target']
+                degree_count[src] += 1
+                degree_count[tgt] += 1
+
+            persons = Persona.objects.filter(persona_id__in=node_ids).only(
+                'persona_id', 'nombre_normalizado', 'sexo', 'polymorphic_ctype_id'
+            )
+
+            pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
+            max_degree = max(degree_count.values()) if degree_count else 1
+
+            nodes = []
+            for person in sorted(persons, key=lambda p: p.persona_id):
+                node_id = f'p{person.persona_id}'
+                degree = degree_count.get(node_id, 0)
+                nodes.append({
+                    'data': {
+                        'id': node_id,
+                        'persona_id': person.persona_id,
+                        'label': person.nombre_normalizado or str(person.persona_id),
+                        'type': 'esclavizada' if person.polymorphic_ctype_id == pe_ctype_id else 'no_esclavizada',
+                        'sexo': getattr(person, 'sexo', 'i') or 'i',
+                        'in_results': person.persona_id in strict_node_ids,
+                        'centrality': (degree / max_degree) if max_degree else 0,
+                    }
+                })
+
+            return Response({
+                'nodes': nodes,
+                'edges': edge_records,
+                'meta': {
+                    'scope_mode': scope_mode,
+                    'node_count': len(nodes),
+                    'edge_count': len(edge_records),
+                    'result_count': len(strict_node_ids),
+                    'truncated': truncated,
+                },
+            })
+        except Exception as e:
+            logger.error(f"Error in search network: {str(e)}")
+            return Response({'error': 'An error occurred while building the network'}, status=500)
 
 
 # Travel Trajectory ViewSet
