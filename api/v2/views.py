@@ -502,6 +502,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                             'id': f'p{p.persona_id}',
                             'label': p.nombre_normalizado or str(p.persona_id),
                             'type': 'esclavizada' if p.polymorphic_ctype_id == pe_ctype_id else 'no_esclavizada',
+                            'sexo': getattr(p, 'sexo', 'i') or 'i',
                         }
                     }
 
@@ -776,6 +777,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                             'id': f'p{p.persona_id}',
                             'label': p.nombre_normalizado or str(p.persona_id),
                             'type': 'esclavizada' if p.polymorphic_ctype_id == pe_ctype_id else 'no_esclavizada',
+                            'sexo': getattr(p, 'sexo', 'i') or 'i',
                         }
                     }
 
