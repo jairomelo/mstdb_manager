@@ -484,6 +484,9 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         persona = self.get_object()
         relaciones = persona.relaciones.prefetch_related('personas').all()
 
+        from django.contrib.contenttypes.models import ContentType
+        pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
+
         # Collect every persona that shares a relacion with the current one
         node_map = {}
         edges = []
@@ -498,14 +501,15 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                         'data': {
                             'id': f'p{p.persona_id}',
                             'label': p.nombre_normalizado or str(p.persona_id),
-                            'type': p.polymorphic_ctype_id,
+                            'type': 'esclavizada' if p.polymorphic_ctype_id == pe_ctype_id else 'no_esclavizada',
                         }
                     }
 
             # Create edges between all pairs in this relacion
             nat = rel.naturaleza_relacion or ''
-            rel_type = 'fam' if 'fam' in nat.lower() else (
-                        'aso' if 'aso' in nat.lower() else 'tmp')
+            rel_type = 'fam' if nat == 'fam' else (
+                        'aso' if nat == 'aso' else (
+                        'sub' if nat == 'sub' else 'tmp'))
             for i, pid_a in enumerate(persona_ids_in_rel):
                 for pid_b in persona_ids_in_rel[i + 1:]:
                     edges.append({
@@ -741,6 +745,9 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         persona = self.get_object()
         relaciones = persona.relaciones.prefetch_related('personas').all()
 
+        from django.contrib.contenttypes.models import ContentType
+        pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
+
         node_map = {}
         edges = []
 
@@ -754,7 +761,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                         'data': {
                             'id': f'p{p.persona_id}',
                             'label': p.nombre_normalizado or str(p.persona_id),
-                            'type': p.polymorphic_ctype_id,
+                            'type': 'esclavizada' if p.polymorphic_ctype_id == pe_ctype_id else 'no_esclavizada',
                         }
                     }
 
