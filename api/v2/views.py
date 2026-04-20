@@ -482,7 +482,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         Returns {nodes, edges} filtered to people connected via shared relaciones.
         """
         persona = self.get_object()
-        relaciones = persona.relaciones.prefetch_related('personas').all()
+        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_sujeto').all()
 
         from django.contrib.contenttypes.models import ContentType
         pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
@@ -510,16 +510,30 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
             rel_type = 'fam' if nat == 'fam' else (
                         'aso' if nat == 'aso' else (
                         'sub' if nat == 'sub' else 'tmp'))
-            for i, pid_a in enumerate(persona_ids_in_rel):
-                for pid_b in persona_ids_in_rel[i + 1:]:
-                    edges.append({
-                        'data': {
-                            'source': f'p{pid_a}',
-                            'target': f'p{pid_b}',
-                            'relation': rel_type,
-                            'label': rel.descripcion_relacion or nat,
-                        }
-                    })
+
+            if rel_type == 'sub' and rel.persona_sujeto_id:
+                sujeto_id = rel.persona_sujeto_id
+                for pid in persona_ids_in_rel:
+                    if pid != sujeto_id:
+                        edges.append({
+                            'data': {
+                                'source': f'p{sujeto_id}',
+                                'target': f'p{pid}',
+                                'relation': rel_type,
+                                'label': rel.descripcion_relacion or nat,
+                            }
+                        })
+            else:
+                for i, pid_a in enumerate(persona_ids_in_rel):
+                    for pid_b in persona_ids_in_rel[i + 1:]:
+                        edges.append({
+                            'data': {
+                                'source': f'p{pid_a}',
+                                'target': f'p{pid_b}',
+                                'relation': rel_type,
+                                'label': rel.descripcion_relacion or nat,
+                            }
+                        })
 
         return Response({
             'nodes': list(node_map.values()),
@@ -743,7 +757,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         Returns {nodes, edges} filtered to people connected via shared relaciones.
         """
         persona = self.get_object()
-        relaciones = persona.relaciones.prefetch_related('personas').all()
+        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_sujeto').all()
 
         from django.contrib.contenttypes.models import ContentType
         pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
@@ -769,16 +783,30 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
             rel_type = 'fam' if nat == 'fam' else (
                         'aso' if nat == 'aso' else (
                         'sub' if nat == 'sub' else 'tmp'))
-            for i, pid_a in enumerate(persona_ids_in_rel):
-                for pid_b in persona_ids_in_rel[i + 1:]:
-                    edges.append({
-                        'data': {
-                            'source': f'p{pid_a}',
-                            'target': f'p{pid_b}',
-                            'relation': rel_type,
-                            'label': rel.descripcion_relacion or nat,
-                        }
-                    })
+
+            if rel_type == 'sub' and rel.persona_sujeto_id:
+                sujeto_id = rel.persona_sujeto_id
+                for pid in persona_ids_in_rel:
+                    if pid != sujeto_id:
+                        edges.append({
+                            'data': {
+                                'source': f'p{sujeto_id}',
+                                'target': f'p{pid}',
+                                'relation': rel_type,
+                                'label': rel.descripcion_relacion or nat,
+                            }
+                        })
+            else:
+                for i, pid_a in enumerate(persona_ids_in_rel):
+                    for pid_b in persona_ids_in_rel[i + 1:]:
+                        edges.append({
+                            'data': {
+                                'source': f'p{pid_a}',
+                                'target': f'p{pid_b}',
+                                'relation': rel_type,
+                                'label': rel.descripcion_relacion or nat,
+                            }
+                        })
 
         return Response({
             'nodes': list(node_map.values()),
