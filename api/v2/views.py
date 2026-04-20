@@ -732,6 +732,52 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         serializer = PersonaHistorySerializer(history_records, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def network(self, request, persona_id=None):
+        """
+        Build a Cytoscape-ready ego-network graph for this persona.
+        Returns {nodes, edges} filtered to people connected via shared relaciones.
+        """
+        persona = self.get_object()
+        relaciones = persona.relaciones.prefetch_related('personas').all()
+
+        node_map = {}
+        edges = []
+
+        for rel in relaciones:
+            rel_personas = list(rel.personas.all())
+            persona_ids_in_rel = [p.persona_id for p in rel_personas]
+
+            for p in rel_personas:
+                if p.persona_id not in node_map:
+                    node_map[p.persona_id] = {
+                        'data': {
+                            'id': f'p{p.persona_id}',
+                            'label': p.nombre_normalizado or str(p.persona_id),
+                            'type': p.polymorphic_ctype_id,
+                        }
+                    }
+
+            nat = rel.naturaleza_relacion or ''
+            rel_type = 'fam' if nat == 'fam' else (
+                        'aso' if nat == 'aso' else (
+                        'sub' if nat == 'sub' else 'tmp'))
+            for i, pid_a in enumerate(persona_ids_in_rel):
+                for pid_b in persona_ids_in_rel[i + 1:]:
+                    edges.append({
+                        'data': {
+                            'source': f'p{pid_a}',
+                            'target': f'p{pid_b}',
+                            'relation': rel_type,
+                            'label': rel.descripcion_relacion or nat,
+                        }
+                    })
+
+        return Response({
+            'nodes': list(node_map.values()),
+            'edges': edges,
+        })
+
 
 # Lugar ViewSet
 class LugarViewSet(BaseV2ViewSet):
