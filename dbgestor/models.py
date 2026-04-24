@@ -47,7 +47,8 @@ PLACE_TYPE_CHOICES = (
     ('puerto', 'Puerto'),
     ('isla', 'Isla'),
     ('region', 'Región'),
-    ('diocesis', 'Diócesis')
+    ('diocesis', 'Diócesis'),
+    ('hacienda', 'Hacienda')
 )
 
 
@@ -153,6 +154,8 @@ class Lugar(models.Model):
             return 'Región'
         elif self.tipo == 'diocesis':
             return 'Diócesis'
+        elif self.tipo == 'hacienda':
+            return 'Hacienda'
         else:
             return 'Desconocido'
 
