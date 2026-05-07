@@ -862,8 +862,7 @@ class LugarViewSet(BaseV2ViewSet):
 
             queryset = queryset.order_by(
                 '-search_rank',
-                '-nombre_similarity',
-                '-updated_at'
+                '-nombre_similarity'
             ).distinct()
             
             page = self.paginate_queryset(queryset)
@@ -1018,7 +1017,10 @@ class PersonaLugarRelViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
     lookup_field = 'persona_x_lugares'
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = {'documento__documento_id': ['exact']}
+    filterset_fields = {
+        'documento__documento_id': ['exact'],
+        'personas__persona_id': ['exact'],
+    }
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy',
