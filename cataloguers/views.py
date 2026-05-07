@@ -51,15 +51,23 @@ def register_user(request):
             verification_url = request.build_absolute_uri(
                 reverse('activate_account', kwargs={'uidb64': uid, 'token': token})
             )
-            send_mail(
-                'Verifica tu cuenta',
-                f'Por favor, haz clic en el siguiente enlace para activar tu cuenta: {verification_url}',
-                'soporte@abcng.org',
-                [user.email],
-                fail_silently=False,
-            )
+            try:
+                send_mail(
+                    'Verifica tu cuenta',
+                    f'Por favor, haz clic en el siguiente enlace para activar tu cuenta: {verification_url}',
+                    None,  # uses DEFAULT_FROM_EMAIL
+                    [user.email],
+                    fail_silently=False,
+                )
+                messages.success(request, "Por favor, revisa tu email para confirmar el registro.")
+            except Exception:
+                logger.exception("Error sending verification email to %s", user.email)
+                messages.warning(
+                    request,
+                    "Tu cuenta fue creada pero no pudimos enviarte el correo de verificación. "
+                    "Contacta al soporte para activarla."
+                )
 
-            messages.success(request, "Por favor, revisa tu email para confirmar el registro.")
             return redirect('login')
         else:
             messages.error(request, "Corrige los siguientes errores.")
