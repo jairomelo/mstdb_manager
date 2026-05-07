@@ -1,7 +1,7 @@
 import csv
 import itertools
 import json
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -61,11 +61,20 @@ class Command(BaseCommand):
             default="deposit",
             help="Root output directory (default: deposit/). A YYYY-MM-DD subfolder is created.",
         )
+        parser.add_argument(
+            "--until",
+            type=str,
+            default=None,
+            metavar="DATE",
+            help="Export only records updated on or before this date (YYYY-MM-DD or DD-MM-YYYY). Default: all records.",
+        )
 
     def handle(self, *args, **options):
         today = date.today().isoformat()
         out_dir = Path(options["output"]) / today
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        cutoff = self._parse_until(options["until"])
 
         col_map, file_map = _load_field_map()
         self.col_map = col_map
@@ -74,28 +83,41 @@ class Command(BaseCommand):
         if col_map or file_map:
             self.stdout.write(f"  Field map loaded: {len(col_map)} column renames, {len(file_map)} file renames")
 
+        if cutoff:
+            self.stdout.write(f"  Cutoff date      : {cutoff.isoformat()} (records updated on or before this date)")
+
         self.stdout.write(f"Exporting deposit to {out_dir} ...")
         manifest = {}
 
-        manifest.update(self._export_personas_esclavizadas(out_dir))
-        manifest.update(self._export_personas_no_esclavizadas(out_dir))
-        manifest.update(self._export_documentos(out_dir))
+        manifest.update(self._export_personas_esclavizadas(out_dir, cutoff))
+        manifest.update(self._export_personas_no_esclavizadas(out_dir, cutoff))
+        manifest.update(self._export_documentos(out_dir, cutoff))
         manifest.update(self._export_lugares(out_dir))
-        manifest.update(self._export_corporaciones(out_dir))
-        manifest.update(self._export_trayectorias(out_dir))
-        manifest.update(self._export_relaciones_personas(out_dir))
-        manifest.update(self._export_roles_evento_personas(out_dir))
-        manifest.update(self._export_roles_evento_instituciones(out_dir))
+        manifest.update(self._export_corporaciones(out_dir, cutoff))
+        manifest.update(self._export_trayectorias(out_dir, cutoff))
+        manifest.update(self._export_relaciones_personas(out_dir, cutoff))
+        manifest.update(self._export_roles_evento_personas(out_dir, cutoff))
+        manifest.update(self._export_roles_evento_instituciones(out_dir, cutoff))
         manifest.update(self._export_codelists(out_dir))
 
-        self._write_manifest(out_dir, manifest, today)
+        self._write_manifest(out_dir, manifest, today, cutoff)
         self.stdout.write(self.style.SUCCESS(f"Done. {len(manifest)} files written to {out_dir}"))
+
+    def _parse_until(self, raw):
+        if not raw:
+            return None
+        for fmt in ("%Y-%m-%d", "%d-%m-%Y"):
+            try:
+                return datetime.strptime(raw, fmt).date()
+            except ValueError:
+                continue
+        raise CommandError(f"Invalid --until date: {raw!r}. Use YYYY-MM-DD or DD-MM-YYYY.")
 
     # -------------------------------------------------------------------------
     # Entity tables
     # -------------------------------------------------------------------------
 
-    def _export_personas_esclavizadas(self, out_dir):
+    def _export_personas_esclavizadas(self, out_dir, cutoff=None):
         fields = [
             "persona_idno", "nombres", "apellidos", "nombre_normalizado",
             "sexo", "edad", "unidad_temporal_edad", "altura", "cabello", "ojos",
@@ -114,6 +136,8 @@ class Command(BaseCommand):
                 "calidades", "hispanizacion", "etnonimos",
                 "ocupaciones", "estado_civil", "documentos",
             ).select_related("procedencia", "lugar_nacimiento", "lugar_defuncion")
+            if cutoff:
+                qs = qs.filter(updated_at__date__lte=cutoff)
             for p in qs.iterator(chunk_size=2000):
                 yield {
                     "persona_idno": p.persona_idno,
@@ -155,7 +179,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
-    def _export_personas_no_esclavizadas(self, out_dir):
+    def _export_personas_no_esclavizadas(self, out_dir, cutoff=None):
         fields = [
             "persona_idno", "nombres", "apellidos", "nombre_normalizado",
             "sexo", "honorifico", "calidades", "ocupaciones", "ocupacion_categoria",
@@ -171,6 +195,8 @@ class Command(BaseCommand):
                 "calidades", "ocupaciones", "estado_civil",
                 "documentos",
             ).select_related("lugar_nacimiento", "lugar_defuncion")
+            if cutoff:
+                qs = qs.filter(updated_at__date__lte=cutoff)
             for p in qs.iterator(chunk_size=2000):
                 yield {
                     "persona_idno": p.persona_idno,
@@ -202,7 +228,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
-    def _export_documentos(self, out_dir):
+    def _export_documentos(self, out_dir, cutoff=None):
         fields = [
             "documento_idno", "archivo_idno", "archivo_nombre",
             "archivo_nombre_abreviado", "archivo_ubicacion_lugar_id",
@@ -222,6 +248,8 @@ class Command(BaseCommand):
                 "archivo", "archivo__ubicacion_archivo",
                 "tipo_documento", "lugar_de_produccion",
             )
+            if cutoff:
+                qs = qs.filter(updated_at__date__lte=cutoff)
             for d in qs.iterator(chunk_size=2000):
                 yield {
                     "documento_idno": d.documento_idno,
@@ -285,7 +313,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
-    def _export_corporaciones(self, out_dir):
+    def _export_corporaciones(self, out_dir, cutoff=None):
         fields = [
             "corporacion_idno", "nombre_institucion", "nombres_alternativos",
             "tipo_institucion", "lugar_corporacion_id",
@@ -296,6 +324,8 @@ class Command(BaseCommand):
             qs = Corporacion.objects.prefetch_related(
                 "personas_asociadas", "documentos",
             ).select_related("tipo_institucion", "lugar_corporacion")
+            if cutoff:
+                qs = qs.filter(updated_at__date__lte=cutoff)
             for c in qs.iterator(chunk_size=2000):
                 yield {
                     "corporacion_idno": c.corporacion_idno,
@@ -322,7 +352,7 @@ class Command(BaseCommand):
     # Relational tables
     # -------------------------------------------------------------------------
 
-    def _export_trayectorias(self, out_dir):
+    def _export_trayectorias(self, out_dir, cutoff=None):
         fields = [
             "persona_idno", "persona_x_lugares_id", "documento_idno",
             "lugar_id", "situacion_lugar", "ordinal",
@@ -335,6 +365,8 @@ class Command(BaseCommand):
             qs = PersonaLugarRel.objects.prefetch_related("personas").select_related(
                 "documento", "lugar", "situacion_lugar"
             )
+            if cutoff:
+                qs = qs.filter(updated_at__date__lte=cutoff)
             for rel in qs.iterator(chunk_size=2000):
                 doc_idno = rel.documento.documento_idno
                 situacion = rel.situacion_lugar.situacion if rel.situacion_lugar else None
@@ -361,7 +393,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
-    def _export_relaciones_personas(self, out_dir):
+    def _export_relaciones_personas(self, out_dir, cutoff=None):
         """Long/pairwise: one row per C(N,2) pair per PersonaRelaciones record."""
         fields = [
             "persona_idno_1", "persona_idno_2", "persona_relacion_id",
@@ -377,6 +409,8 @@ class Command(BaseCommand):
             qs = PersonaRelaciones.objects.prefetch_related("personas").select_related(
                 "documento", "persona_sujeto"
             )
+            if cutoff:
+                qs = qs.filter(documento__updated_at__date__lte=cutoff)
             for rel in qs.iterator(chunk_size=2000):
                 personas = list(rel.personas.all())
                 doc_idno = rel.documento.documento_idno
@@ -405,13 +439,15 @@ class Command(BaseCommand):
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
-    def _export_roles_evento_personas(self, out_dir):
+    def _export_roles_evento_personas(self, out_dir, cutoff=None):
         fields = ["persona_idno", "documento_idno", "rol_evento"]
 
         def rows():
             qs = PersonaRolEvento.objects.prefetch_related("personas").select_related(
                 "documento", "rol_evento"
             )
+            if cutoff:
+                qs = qs.filter(documento__updated_at__date__lte=cutoff)
             for rol in qs.iterator(chunk_size=2000):
                 doc_idno = rol.documento.documento_idno
                 rol_nombre = rol.rol_evento.rol_evento
@@ -428,13 +464,15 @@ class Command(BaseCommand):
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
-    def _export_roles_evento_instituciones(self, out_dir):
+    def _export_roles_evento_instituciones(self, out_dir, cutoff=None):
         fields = ["corporacion_idno", "documento_idno", "rol_evento"]
 
         def rows():
             qs = InstitucionRolEvento.objects.prefetch_related("corporaciones").select_related(
                 "documento", "rol_evento"
             )
+            if cutoff:
+                qs = qs.filter(documento__updated_at__date__lte=cutoff)
             for rol in qs.iterator(chunk_size=2000):
                 doc_idno = rol.documento.documento_idno
                 rol_nombre = rol.rol_evento.rol_evento
@@ -501,12 +539,14 @@ class Command(BaseCommand):
     # Manifest
     # -------------------------------------------------------------------------
 
-    def _write_manifest(self, out_dir, manifest, today):
+    def _write_manifest(self, out_dir, manifest, today, cutoff=None):
         schema_version = get_schema_version()
         manifest_path = out_dir / "MANIFEST.txt"
         with open(manifest_path, "w", encoding="utf-8") as f:
             f.write(f"TrayectoriasAfro Data Deposit\n")
             f.write(f"Export date    : {today}\n")
+            if cutoff:
+                f.write(f"Cutoff date    : {cutoff.isoformat()} (records updated on or before this date)\n")
             f.write(f"Schema version : {schema_version}\n")
             f.write(f"License        : CC BY-NC 4.0\n")
             f.write(f"\nNote: 'Export date' is the data snapshot date. ")
