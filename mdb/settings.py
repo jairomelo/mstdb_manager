@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.postgres',  # PostgreSQL-specific features
     'rest_framework',
     'drf_spectacular', # API documentation
+    'dbbackup',
     'django_filters',
     'corsheaders',
     'import_export',
@@ -180,6 +181,21 @@ else:
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+# Backups Storage Backend
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+    'dbbackup': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'OPTIONS': {
+            'location': '/backups',
+        },
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

@@ -67,3 +67,6 @@ dj-database-url==2.1.0
 
 # enhance API documentation
 drf-spectacular
+
+# Backups manager
+django-dbbackup
