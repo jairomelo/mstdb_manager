@@ -41,7 +41,7 @@ class LugarReferenceSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'nombre_lugar', 'tipo']
+        fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon']
 
 
 class CorporacionReferenceSerializer(serializers.ModelSerializer):
