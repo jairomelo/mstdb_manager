@@ -523,6 +523,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'target': f'p{pid}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
+                                'descripcion': rel.descripcion_relacion or '',
                             }
                         })
             else:
@@ -534,6 +535,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'target': f'p{pid_b}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
+                                'descripcion': rel.descripcion_relacion or '',
                             }
                         })
 
@@ -797,6 +799,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'target': f'p{pid}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
+                                'descripcion': rel.descripcion_relacion or '',
                             }
                         })
             else:
@@ -808,6 +811,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'target': f'p{pid_b}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
+                                'descripcion': rel.descripcion_relacion or '',
                             }
                         })
 
