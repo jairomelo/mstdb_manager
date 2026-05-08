@@ -18,6 +18,7 @@ from dbgestor.models import (
 
 PIPE = "|"
 FIELD_MAP_PATH = Path(__file__).parent / "deposit_field_map.json"
+METADATA_ELEMENTS_PATH = Path(__file__).parents[3] / "metadata_elements.csv"
 
 
 def _load_field_map():
@@ -40,15 +41,19 @@ def _rename_row(row, col_map):
 
 
 def _write_csv(path, fieldnames, rows, col_map=None):
-    out_fields = _rename_fields(fieldnames, col_map) if col_map else fieldnames
+    all_rows = list(rows)
+    if all_rows:
+        non_empty = {f for row in all_rows for f, v in row.items() if v is not None and v != ""}
+        active = [f for f in fieldnames if f in non_empty]
+    else:
+        active = fieldnames
+    out_fields = _rename_fields(active, col_map) if col_map else active
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
+        writer = csv.DictWriter(f, fieldnames=out_fields, extrasaction="ignore")
         writer.writeheader()
-        count = 0
-        for row in rows:
+        for row in all_rows:
             writer.writerow(_rename_row(row, col_map) if col_map else row)
-            count += 1
-    return count
+    return len(all_rows), out_fields
 
 
 class Command(BaseCommand):
@@ -79,6 +84,7 @@ class Command(BaseCommand):
         col_map, file_map = _load_field_map()
         self.col_map = col_map
         self.file_map = file_map
+        self.written_columns = {}
 
         if col_map or file_map:
             self.stdout.write(f"  Field map loaded: {len(col_map)} column renames, {len(file_map)} file renames")
@@ -100,6 +106,7 @@ class Command(BaseCommand):
         manifest.update(self._export_roles_evento_instituciones(out_dir, cutoff))
         manifest.update(self._export_codelists(out_dir))
 
+        self._write_metadata_elements(out_dir)
         self._write_manifest(out_dir, manifest, today, cutoff)
         self.stdout.write(self.style.SUCCESS(f"Done. {len(manifest)} files written to {out_dir}"))
 
@@ -175,7 +182,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("personas_esclavizadas.csv", "personas_esclavizadas.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["personas_esclavizadas.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -224,7 +232,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("personas_no_esclavizadas.csv", "personas_no_esclavizadas.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["personas_no_esclavizadas.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -285,7 +294,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("documentos.csv", "documentos.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["documentos.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -309,7 +319,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("lugares.csv", "lugares.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["lugares.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -344,7 +355,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("corporaciones.csv", "corporaciones.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["corporaciones.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -389,7 +401,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("trayectorias.csv", "trayectorias.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["trayectorias.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -435,7 +448,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("relaciones_personas.csv", "relaciones_personas.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["relaciones_personas.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -460,7 +474,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("roles_evento_personas.csv", "roles_evento_personas.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["roles_evento_personas.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -485,7 +500,8 @@ class Command(BaseCommand):
 
         fname = self.file_map.get("roles_evento_instituciones.csv", "roles_evento_instituciones.csv")
         path = out_dir / fname
-        count = _write_csv(path, fields, rows(), self.col_map)
+        count, written_fields = _write_csv(path, fields, rows(), self.col_map)
+        self.written_columns["roles_evento_instituciones.csv"] = written_fields
         self.stdout.write(f"  {fname} — {count} rows")
         return {fname: count}
 
@@ -515,7 +531,8 @@ class Command(BaseCommand):
 
             fname = self.file_map.get(filename, filename)
             path = out_dir / fname
-            count = _write_csv(path, fieldnames, make_rows(model, fieldnames), self.col_map)
+            count, written_fields = _write_csv(path, fieldnames, make_rows(model, fieldnames), self.col_map)
+            self.written_columns[filename] = written_fields
             self.stdout.write(f"  {fname} — {count} rows")
             manifest[fname] = count
 
@@ -530,10 +547,44 @@ class Command(BaseCommand):
             for code, label in PLACE_TYPE_CHOICES:
                 writer.writerow(_rename_row({"tipo": code, "etiqueta": label}, self.col_map))
         count = len(PLACE_TYPE_CHOICES)
+        self.written_columns["cv_tipos_lugar.csv"] = out_lugar_fields
         self.stdout.write(f"  {fname} — {count} rows")
         manifest[fname] = count
 
         return manifest
+
+    # -------------------------------------------------------------------------
+    # Metadata elements
+    # -------------------------------------------------------------------------
+
+    def _write_metadata_elements(self, out_dir):
+        if not METADATA_ELEMENTS_PATH.exists():
+            self.stdout.write(
+                self.style.WARNING(f"  metadata_elements.csv not found at {METADATA_ELEMENTS_PATH}, skipping.")
+            )
+            return
+
+        master = {}
+        with open(METADATA_ELEMENTS_PATH, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                master[(row["archivo_csv"], row["propiedad"])] = row
+
+        out_rows = []
+        for original_fname, written_fields in self.written_columns.items():
+            for field in written_fields:
+                key = (original_fname, field)
+                if key in master:
+                    out_rows.append(master[key])
+
+        if not out_rows:
+            return
+
+        meta_path = out_dir / "metadata_elements.csv"
+        with open(meta_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["archivo_csv", "propiedad", "tipo"])
+            writer.writeheader()
+            writer.writerows(out_rows)
+        self.stdout.write(f"  metadata_elements.csv — {len(out_rows)} elements")
 
     # -------------------------------------------------------------------------
     # Manifest
