@@ -192,7 +192,7 @@ STORAGES = {
     'dbbackup': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
         'OPTIONS': {
-            'location': '/backups',
+            'location': '/app/backups',
         },
     },
 }
