@@ -13,6 +13,7 @@
     "hispanizacion": "agencia/adaptacion",
     "actividad_id": "ocupacion_id",
     "actividad": "ocupacion",
-    "estado_civil": "estado_matrimonial"
+    "estado_civil": "estado_matrimonial",
+    "titulo": "resumen"
   }
 }
