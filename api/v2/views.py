@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
 import csv
@@ -818,6 +819,14 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
 
 
 # Lugar ViewSet
+class LugarFilter(django_filters.FilterSet):
+    tipo = django_filters.CharFilter(field_name='tipo__tipo_lugar', lookup_expr='exact')
+
+    class Meta:
+        model = Lugar
+        fields = ['tipo']
+
+
 class LugarViewSet(BaseV2ViewSet):
     queryset = Lugar.objects.all()
     serializer_class = LugarListSerializer
@@ -825,11 +834,9 @@ class LugarViewSet(BaseV2ViewSet):
     detail_serializer_class = LugarDetailSerializer
     write_serializer_class = LugarWriteSerializer
     lookup_field = 'lugar_id'
-    filterset_fields = {
-        'tipo': ['exact'],
-    }
-    search_fields = ['nombre_lugar', 'otros_nombres']
-    ordering_fields = ['nombre_lugar', 'tipo', 'created_at', 'updated_at']
+    filterset_class = LugarFilter
+    search_fields = ['nombre_lugar', 'tipo__tipo_lugar', 'otros_nombres']
+    ordering_fields = ['nombre_lugar', 'tipo__tipo_lugar', 'created_at', 'updated_at']
     ordering = ['nombre_lugar']
 
     def get_export_filename(self):
@@ -1198,7 +1205,7 @@ class SearchAPIView(APIView):
             'calidades', 'estado_civil', 'ocupaciones',
             'has_relaciones', 'has_lugares', 'documento_list',
         },
-        'lugar': {'nombre_lugar', 'tipo', 'created_at', 'updated_at'},
+        'lugar': {'nombre_lugar', 'tipo__tipo_lugar', 'created_at', 'updated_at'},
         'corporacion': {'nombre_institucion', 'created_at', 'updated_at'},
     }
 
@@ -2111,44 +2118,44 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
 
         # 1) PersonaLugarRel places (existing)
         pxl_places = PersonaLugarRel.objects.select_related('lugar').values(
-            'lugar__lugar_id', 'lugar__nombre_lugar', 'lugar__tipo', 'lugar__lat', 'lugar__lon'
+            'lugar__lugar_id', 'lugar__nombre_lugar', 'lugar__tipo__tipo_lugar', 'lugar__lat', 'lugar__lon'
         ).annotate(
             trajectory_count=Count('persona_x_lugares'),
             persona_count=Count('personas', distinct=True)
         ).filter(lugar__lat__isnull=False, lugar__lon__isnull=False)
 
         for row in pxl_places:
-            _add_place(row['lugar__lugar_id'], row['lugar__nombre_lugar'], row['lugar__tipo'],
+            _add_place(row['lugar__lugar_id'], row['lugar__nombre_lugar'], row['lugar__tipo__tipo_lugar'],
                        row['lugar__lat'], row['lugar__lon'], row['trajectory_count'], row['persona_count'])
 
         # 2) Procedencia places (PersonaEsclavizada only)
         proc_places = (PersonaEsclavizada.objects
                        .filter(procedencia__isnull=False, procedencia__lat__isnull=False, procedencia__lon__isnull=False)
-                       .values('procedencia__lugar_id', 'procedencia__nombre_lugar', 'procedencia__tipo',
+                       .values('procedencia__lugar_id', 'procedencia__nombre_lugar', 'procedencia__tipo__tipo_lugar',
                                'procedencia__lat', 'procedencia__lon')
                        .annotate(persona_count=Count('persona_id', distinct=True)))
         for row in proc_places:
-            _add_place(row['procedencia__lugar_id'], row['procedencia__nombre_lugar'], row['procedencia__tipo'],
+            _add_place(row['procedencia__lugar_id'], row['procedencia__nombre_lugar'], row['procedencia__tipo__tipo_lugar'],
                        row['procedencia__lat'], row['procedencia__lon'], 0, row['persona_count'])
 
         # 3) lugar_nacimiento places
         nac_places = (Persona.objects
                       .filter(lugar_nacimiento__isnull=False, lugar_nacimiento__lat__isnull=False, lugar_nacimiento__lon__isnull=False)
-                      .values('lugar_nacimiento__lugar_id', 'lugar_nacimiento__nombre_lugar', 'lugar_nacimiento__tipo',
+                      .values('lugar_nacimiento__lugar_id', 'lugar_nacimiento__nombre_lugar', 'lugar_nacimiento__tipo__tipo_lugar',
                               'lugar_nacimiento__lat', 'lugar_nacimiento__lon')
                       .annotate(persona_count=Count('persona_id', distinct=True)))
         for row in nac_places:
-            _add_place(row['lugar_nacimiento__lugar_id'], row['lugar_nacimiento__nombre_lugar'], row['lugar_nacimiento__tipo'],
+            _add_place(row['lugar_nacimiento__lugar_id'], row['lugar_nacimiento__nombre_lugar'], row['lugar_nacimiento__tipo__tipo_lugar'],
                        row['lugar_nacimiento__lat'], row['lugar_nacimiento__lon'], 0, row['persona_count'])
 
         # 4) lugar_defuncion places
         def_places = (Persona.objects
                       .filter(lugar_defuncion__isnull=False, lugar_defuncion__lat__isnull=False, lugar_defuncion__lon__isnull=False)
-                      .values('lugar_defuncion__lugar_id', 'lugar_defuncion__nombre_lugar', 'lugar_defuncion__tipo',
+                      .values('lugar_defuncion__lugar_id', 'lugar_defuncion__nombre_lugar', 'lugar_defuncion__tipo__tipo_lugar',
                               'lugar_defuncion__lat', 'lugar_defuncion__lon')
                       .annotate(persona_count=Count('persona_id', distinct=True)))
         for row in def_places:
-            _add_place(row['lugar_defuncion__lugar_id'], row['lugar_defuncion__nombre_lugar'], row['lugar_defuncion__tipo'],
+            _add_place(row['lugar_defuncion__lugar_id'], row['lugar_defuncion__nombre_lugar'], row['lugar_defuncion__tipo__tipo_lugar'],
                        row['lugar_defuncion__lat'], row['lugar_defuncion__lon'], 0, row['persona_count'])
 
         return Response({
@@ -2515,7 +2522,7 @@ class PlacesPeopleDistribution(APIView):
             .annotate(
                 year=ExtractYear('p_x_l_pere__documento__fecha_inicial'),
                 lugar=F('p_x_l_pere__lugar__nombre_lugar'),
-                tipo=F('p_x_l_pere__lugar__tipo'),
+                tipo=F('p_x_l_pere__lugar__tipo__tipo_lugar'),
             )
             .values('lugar', 'tipo', 'year')
             .annotate(count=Count('persona_id', distinct=True))

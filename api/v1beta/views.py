@@ -93,7 +93,7 @@ class CorporacionViewSet(viewsets.ModelViewSet):
 
 class LugarAmpliadoViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
-    search_fields = ['nombre_lugar', 'tipo', 'otros_nombres', 'es_parte_de']
+    search_fields = ['nombre_lugar', 'tipo__tipo_lugar', 'otros_nombres']
     filter_backends = (filters.SearchFilter,)
     serializer_class = LugarAmpliadoSerializer
     pagination_class = CustomPagination

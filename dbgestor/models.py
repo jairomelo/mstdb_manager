@@ -110,7 +110,8 @@ class Lugar(models.Model):
     lon = models.DecimalField(
         max_digits=9, decimal_places=6, null=True, blank=True)
 
-    tipo = models.CharField(max_length=50, choices=PLACE_TYPE_CHOICES)
+    tipo = models.ForeignKey(
+        TipoLugar, on_delete=models.SET_NULL, null=True, blank=True, related_name='lugares')
     
     # PostgreSQL full-text search
     search_vector = SearchVectorField(null=True, blank=True)
@@ -125,42 +126,13 @@ class Lugar(models.Model):
             GinIndex(fields=['nombre_lugar'], opclasses=['gin_trgm_ops'], name='lugar_nombre_trgm_idx'),
         ]
 
-    def type_to_string(self):
-        if self.tipo == 'ciudad':
-            return 'Ciudad'
-        elif self.tipo == 'pueblo':
-            return 'Pueblo'
-        elif self.tipo == 'estado':
-            return 'Estado'
-        elif self.tipo == 'gobernacion':
-            return 'Gobernación'
-        elif self.tipo == 'pais':
-            return 'País'
-        elif self.tipo == 'provincia':
-            return 'Provincia'
-        elif self.tipo == 'villa':
-            return 'Villa'
-        elif self.tipo == 'real':
-            return 'Real de Minas'
-        elif self.tipo == 'parroquia':
-            return 'Parroquia'
-        elif self.tipo == 'fuerte':
-            return 'Fuerte'
-        elif self.tipo == 'puerto':
-            return 'Puerto'
-        elif self.tipo == 'isla':
-            return 'Isla'
-        elif self.tipo == 'region':
-            return 'Región'
-        elif self.tipo == 'diocesis':
-            return 'Diócesis'
-        elif self.tipo == 'hacienda':
-            return 'Hacienda'
-        else:
-            return 'Desconocido'
+    @property
+    def short_id(self):
+        return f'L{self.lugar_id}'
 
     def __str__(self) -> str:
-        return f"{self.nombre_lugar} ({self.type_to_string()})"
+        tipo_str = str(self.tipo) if self.tipo else 'Sin tipo'
+        return f"{self.nombre_lugar} ({tipo_str})"
 
 
 ####################
@@ -274,6 +246,10 @@ class Documento(models.Model):
             GinIndex(fields=['descripcion'], opclasses=['gin_trgm_ops'], name='documento_desc_trgm_idx'),
         ]
 
+    @property
+    def short_id(self):
+        return f'D{self.documento_id}'
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         
@@ -317,6 +293,11 @@ class Calidades(models.Model):
     calidad = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+        if self.calidad:
+            self.calidad = self.calidad.lower()
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return f'{self.calidad}'
 
@@ -340,6 +321,11 @@ class Hispanizaciones(models.Model):
     hispanizacion = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+        if self.hispanizacion:
+            self.hispanizacion = self.hispanizacion.lower()
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return f'{self.hispanizacion}'
 
@@ -352,6 +338,11 @@ class Etonimos(models.Model):
     etonimo_id = models.AutoField(primary_key=True)
     etonimo = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.etonimo:
+            self.etonimo = self.etonimo.lower()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f'{self.etonimo}'
@@ -459,6 +450,10 @@ class Persona(PolymorphicModel):
 
         return nombre_capitalizado
 
+    @property
+    def short_id(self):
+        return f'P{self.persona_id}'
+
     def persona_type(self):
         if isinstance(self, PersonaEsclavizada):
             return 'esclavizada'
@@ -549,6 +544,10 @@ class PersonaNoEsclavizada(Persona):
     entidad_asociada = models.CharField(max_length=100, blank=True)
     honorifico = models.CharField(
         max_length=100, choices=HONORIFICOS, default='nan')
+
+    @property
+    def short_id(self):
+        return f'PN{self.persona_id}'
 
     def type_to_string(self):
         if self.honorifico == 'nan':
@@ -737,6 +736,10 @@ class Corporacion(PolymorphicModel):
             GinIndex(fields=['nombre_institucion'], opclasses=['gin_trgm_ops'], name='corporacion_nombre_trgm_idx'),
             GinIndex(fields=['nombres_alternativos'], opclasses=['gin_trgm_ops'], name='corporacion_alt_trgm_idx'),
         ]
+
+    @property
+    def short_id(self):
+        return f'C{self.corporacion_id}'
 
     def save(self, *args, **kwargs):
 

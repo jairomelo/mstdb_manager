@@ -38,6 +38,7 @@ class PersonaReferenceSerializer(serializers.ModelSerializer):
 
 class LugarReferenceSerializer(serializers.ModelSerializer):
     """Minimal Lugar data for references"""
+    tipo = serializers.StringRelatedField()
     
     class Meta:
         model = Lugar
@@ -70,22 +71,24 @@ class DocumentoListSerializer(serializers.ModelSerializer):
     """Documento data for list views"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
+    short_id = serializers.ReadOnlyField()
     lugar_de_produccion_id = serializers.IntegerField(source='lugar_de_produccion.lugar_id', read_only=True)
 
     class Meta:
         model = Documento
-        fields = ['documento_id', 'documento_idno', 'archivo', 'titulo', 'tipo_documento', 
+        fields = ['documento_id', 'short_id', 'documento_idno', 'archivo', 'titulo', 'tipo_documento', 
                   'fecha_inicial', 'fecha_final', 'lugar_de_produccion_id', 'created_at', 'updated_at']
 
 
 class PersonaListSerializer(serializers.ModelSerializer):
     """Base Persona list serializer"""
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
+    short_id = serializers.ReadOnlyField()
     documento_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Persona
-        fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
+        fields = ['persona_id', 'short_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
                   'sexo', 'polymorphic_ctype', 'documento_count', 'created_at', 'updated_at']
 
     def get_documento_count(self, obj):
@@ -196,12 +199,14 @@ class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
 
 class LugarListSerializer(serializers.ModelSerializer):
     """Lugar data for list views"""
+    tipo = serializers.StringRelatedField()
+    short_id = serializers.ReadOnlyField()
     persona_count = serializers.SerializerMethodField()
     persona_lugar_rel = serializers.SerializerMethodField()
 
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
+        fields = ['lugar_id', 'short_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
                   'persona_count', 'persona_lugar_rel']
 
     def get_persona_count(self, obj):
@@ -223,11 +228,12 @@ class LugarListSerializer(serializers.ModelSerializer):
 class CorporacionListSerializer(serializers.ModelSerializer):
     """Corporacion data for list views"""
     tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
+    short_id = serializers.ReadOnlyField()
     lugar_corporacion = LugarReferenceSerializer(read_only=True)
 
     class Meta:
         model = Corporacion
-        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion', 'lugar_corporacion']
+        fields = ['corporacion_id', 'short_id', 'nombre_institucion', 'tipo_institucion', 'lugar_corporacion']
 
 
 # Detail Serializers - Full entity data with references instead of nested objects
@@ -379,11 +385,13 @@ class PersonaNoEsclavizadaDetailSerializer(PersonaDetailSerializer):
 
 class LugarDetailSerializer(serializers.ModelSerializer):
     """Full Lugar details"""
+    tipo = serializers.StringRelatedField()
+    short_id = serializers.ReadOnlyField()
     procedencia_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
+        fields = ['lugar_id', 'short_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
                   'procedencia_count']
 
     def get_procedencia_count(self, obj):
@@ -570,7 +578,7 @@ class PersonaTravelTrajectorySerializer(serializers.Serializer):
             points.append({
                 'lugar_id': lugar.lugar_id,
                 'nombre_lugar': lugar.nombre_lugar,
-                'tipo_lugar': lugar.tipo,
+                'tipo_lugar': str(lugar.tipo) if lugar.tipo else None,
                 'lat': float(lugar.lat) if lugar.lat else None,
                 'lon': float(lugar.lon) if lugar.lon else None,
                 'fecha': None,
@@ -585,7 +593,7 @@ class PersonaTravelTrajectorySerializer(serializers.Serializer):
             points.append({
                 'lugar_id': rel.lugar.lugar_id,
                 'nombre_lugar': rel.lugar.nombre_lugar,
-                'tipo_lugar': rel.lugar.tipo,
+                'tipo_lugar': str(rel.lugar.tipo) if rel.lugar.tipo else None,
                 'lat': float(rel.lugar.lat) if rel.lugar.lat else None,
                 'lon': float(rel.lugar.lon) if rel.lugar.lon else None,
                 'fecha': rel.fecha_inicial_lugar or (rel.documento.fecha_inicial if rel.documento else None),
