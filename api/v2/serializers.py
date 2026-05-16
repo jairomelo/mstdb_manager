@@ -6,7 +6,7 @@ from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion, InstitucionRolEvento,
                              PersonaLugarRel, Lugar, PersonaRelaciones, Actividades, Persona,
                              PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
-                             SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion)
+                             SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion, TipoLugar)
 
 from django.db.models import Manager, Q
 
@@ -935,4 +935,11 @@ class TiposInstitucionWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = TiposInstitucion
         fields = ['tipo', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False}}
+
+
+class TipoLugarWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoLugar
+        fields = ['id', 'tipo_lugar', 'descripcion']
         extra_kwargs = {'descripcion': {'required': False}}

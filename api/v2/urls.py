@@ -9,7 +9,7 @@ from .views import (
     gender_status_distribution, PlacesPeopleDistribution,
     TipoDocumentalViewSet, CalidadesViewSet, HispanizacionesViewSet, EtnonimosViewSet,
     EstadoCivilViewSet, ActividadesViewSet, SituacionLugarViewSet, RolEventoViewSet,
-    TiposInstitucionViewSet,
+    TiposInstitucionViewSet, TipoLugarViewSet,
 )
 from .crosstab import CrosstabView, CrosstabSchemaView
 
@@ -37,6 +37,7 @@ router_v2.register('vocabularios/actividades', ActividadesViewSet, basename='voc
 router_v2.register('vocabularios/situaciones-lugar', SituacionLugarViewSet, basename='vocab_situacion_lugar')
 router_v2.register('vocabularios/roles-evento', RolEventoViewSet, basename='vocab_rol_evento')
 router_v2.register('vocabularios/tipos-institucion', TiposInstitucionViewSet, basename='vocab_tipos_institucion')
+router_v2.register('vocabularios/tipos-lugar', TipoLugarViewSet, basename='vocab_tipos_lugar')
 
 # URL patterns for V2
 urlpatterns = [

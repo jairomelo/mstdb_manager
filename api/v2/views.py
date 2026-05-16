@@ -29,7 +29,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaRolEvento, InstitucionRolEvento,
                              Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
-                             RolEvento, TiposInstitucion)
+                             RolEvento, TiposInstitucion, TipoLugar)
 
 from .serializers import (
     # Reference serializers
@@ -66,6 +66,7 @@ from .serializers import (
     TipoDocumentalWriteSerializer, CalidadesWriteSerializer, HispanizacionesWriteSerializer,
     EtnonimosWriteSerializer, EstadoCivilWriteSerializer, ActividadesWriteSerializer,
     SituacionLugarWriteSerializer, RolEventoWriteSerializer, TiposInstitucionWriteSerializer,
+    TipoLugarWriteSerializer,
 )
 
 
@@ -1152,6 +1153,13 @@ class TiposInstitucionViewSet(VocabBaseViewSet):
     serializer_class = TiposInstitucionWriteSerializer
     search_fields = ['tipo']
     lookup_field = 'tipo_id'
+
+
+class TipoLugarViewSet(VocabBaseViewSet):
+    queryset = TipoLugar.objects.all().order_by('tipo_lugar')
+    serializer_class = TipoLugarWriteSerializer
+    search_fields = ['tipo_lugar']
+    lookup_field = 'pk'
 
 
 # Global Search API
