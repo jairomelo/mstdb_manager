@@ -2451,17 +2451,99 @@ def get_csrf_token(request):
     })
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def whoami(request):
     user = request.user
+    try:
+        profile = user.profile
+    except Exception:
+        from cataloguers.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+
+    if request.method == 'PATCH':
+        allowed = {'bio', 'institution', 'institution_url', 'role'}
+        for field in allowed & set(request.data.keys()):
+            setattr(profile, field, request.data[field])
+        profile.save()
+
+    from dbgestor.models import (
+        HistoricalPersonaEsclavizada, HistoricalPersonaNoEsclavizada,
+        HistoricalDocumento,
+    )
+    pe = HistoricalPersonaEsclavizada.objects.filter(history_user=user, history_type='+').count()
+    pn = HistoricalPersonaNoEsclavizada.objects.filter(history_user=user, history_type='+').count()
+    doc = HistoricalDocumento.objects.filter(history_user=user, history_type='+').count()
+
     return Response({
         'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
         'email': user.email,
         'is_staff': user.is_staff,
         'groups': [g.name for g in user.groups.all()],
         'permissions': list(user.get_all_permissions()),
+        'profile': {
+            'bio': profile.bio,
+            'institution': profile.institution,
+            'institution_url': profile.institution_url,
+            'role': profile.role,
+        },
+        'contributions': {
+            'personas_esclavizadas': pe,
+            'personas_no_esclavizadas': pn,
+            'documentos': doc,
+            'total': pe + pn + doc,
+        },
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def users_progress(request):
+    """Staff-only: per-user contribution counts from historical records."""
+    if not request.user.is_staff:
+        return Response({'detail': 'Forbidden'}, status=403)
+
+    from django.contrib.auth import get_user_model
+    from cataloguers.models import UserProfile
+    from dbgestor.models import (
+        HistoricalPersonaEsclavizada, HistoricalPersonaNoEsclavizada,
+        HistoricalDocumento,
+    )
+
+    User = get_user_model()
+    users = User.objects.prefetch_related('groups').order_by('username')
+
+    results = []
+    for u in users:
+        try:
+            profile = u.profile
+        except Exception:
+            profile, _ = UserProfile.objects.get_or_create(user=u)
+
+        pe = HistoricalPersonaEsclavizada.objects.filter(history_user=u, history_type='+').count()
+        pn = HistoricalPersonaNoEsclavizada.objects.filter(history_user=u, history_type='+').count()
+        doc = HistoricalDocumento.objects.filter(history_user=u, history_type='+').count()
+
+        results.append({
+            'username': u.username,
+            'email': u.email,
+            'is_staff': u.is_staff,
+            'groups': [g.name for g in u.groups.all()],
+            'profile': {
+                'institution': profile.institution,
+                'role': profile.role,
+            },
+            'contributions': {
+                'personas_esclavizadas': pe,
+                'personas_no_esclavizadas': pn,
+                'documentos': doc,
+                'total': pe + pn + doc,
+            },
+        })
+
+    return Response(results)
 
 
 def api_login(request):
