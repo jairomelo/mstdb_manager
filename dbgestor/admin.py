@@ -12,7 +12,7 @@ from .models import Archivo, Documento
 from .models import Calidades, Actividades, Hispanizaciones, Etonimos
 from .models import SituacionLugar, TipoDocumental, TipoLugar, TiposInstitucion
 from .models import PersonaEsclavizada, PersonaNoEsclavizada, Corporacion
-from .models import PersonaRelaciones, PersonaLugarRel, RolEvento
+from .models import PersonaRelaciones, PersonaLugarRel, RolEvento, SugerenciaMerge
     
 
 class SituacionLugarAdmin(ImportExportModelAdmin):
@@ -39,4 +39,5 @@ admin.site.register(RolEvento, ImportExportModelAdmin)
 admin.site.register(TiposInstitucion, TipoInstitucionAdmin)
 admin.site.register(Corporacion, ImportExportModelAdmin)
 admin.site.register(PersonaRolEvento, ImportExportModelAdmin)
+admin.site.register(SugerenciaMerge)
 

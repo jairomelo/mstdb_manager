@@ -70,3 +70,6 @@ drf-spectacular
 
 # Backups manager
 django-dbbackup
+
+# Fuzzy string matching (merge candidates)
+rapidfuzz

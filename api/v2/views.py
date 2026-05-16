@@ -3,6 +3,7 @@ import logging
 import re
 from collections import defaultdict
 
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery
 from django.db.models.functions import ExtractYear
@@ -29,7 +30,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaRolEvento, InstitucionRolEvento,
                              Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
-                             RolEvento, TiposInstitucion, TipoLugar)
+                             RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge)
 
 from .serializers import (
     # Reference serializers
@@ -1004,7 +1005,10 @@ class PersonaRelacionesViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
     lookup_field = 'persona_relacion_id'
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = {'documento__documento_id': ['exact']}
+    filterset_fields = {
+        'documento__documento_id': ['exact'],
+        'personas__persona_id': ['exact'],
+    }
 
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy'):
@@ -2624,3 +2628,180 @@ class PlacesPeopleDistribution(APIView):
              "year": item['year'], "count": item['count']}
             for item in data
         ])
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Merge endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+MERGE_ENTITY_MAP = {
+    'pe':  (PersonaEsclavizada,    'persona_id',    'nombre_normalizado'),
+    'pn':  (PersonaNoEsclavizada,  'persona_id',    'nombre_normalizado'),
+    'lug': (Lugar,                 'lugar_id',      'nombre_lugar'),
+}
+
+
+class MergeCandidatesView(APIView):
+    """GET /api/v2/merge/candidates/?entity=pe&q=Melchora
+    Returns all records of the entity type plus rapidfuzz similarity scores
+    so the client can show likely duplicates.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entity = request.query_params.get('entity', '')
+        query   = request.query_params.get('q', '').strip()
+        if entity not in MERGE_ENTITY_MAP:
+            return Response({'error': 'entity must be one of: pe, pn, lug'}, status=400)
+        if len(query) < 2:
+            return Response({'error': 'q must be at least 2 characters'}, status=400)
+
+        from rapidfuzz import fuzz
+
+        Model, pk_field, name_field = MERGE_ENTITY_MAP[entity]
+        qs = Model.objects.all().values(pk_field, name_field)
+
+        results = []
+        for obj in qs:
+            score = fuzz.token_set_ratio(query, obj[name_field] or '')
+            if score >= 50:
+                results.append({
+                    'id':    obj[pk_field],
+                    'label': obj[name_field],
+                    'score': score,
+                })
+        results.sort(key=lambda x: -x['score'])
+        return Response(results[:30])
+
+
+class MergeExecuteView(APIView):
+    """POST /api/v2/merge/execute/
+    Body: { entity, canonical_id, duplicate_id }
+    Staff only.  Re-points FK/M2M refs from duplicate → canonical, then deletes
+    the duplicate record.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_staff:
+            return Response({'error': 'Staff only'}, status=403)
+
+        entity       = request.data.get('entity', '')
+        canonical_id = request.data.get('canonical_id')
+        duplicate_id = request.data.get('duplicate_id')
+
+        if entity not in MERGE_ENTITY_MAP:
+            return Response({'error': 'Invalid entity type'}, status=400)
+        if not canonical_id or not duplicate_id:
+            return Response({'error': 'canonical_id and duplicate_id required'}, status=400)
+        if canonical_id == duplicate_id:
+            return Response({'error': 'canonical and duplicate must differ'}, status=400)
+
+        Model, pk_field, name_field = MERGE_ENTITY_MAP[entity]
+
+        try:
+            canonical  = Model.objects.get(**{pk_field: canonical_id})
+            duplicate  = Model.objects.get(**{pk_field: duplicate_id})
+        except Model.DoesNotExist:
+            return Response({'error': 'Record not found'}, status=404)
+
+        with transaction.atomic():
+            if entity in ('pe', 'pn'):
+                _merge_persona(canonical, duplicate)
+            elif entity == 'lug':
+                _merge_lugar(canonical, duplicate)
+
+            # record accepted suggestion if one exists
+            SugerenciaMerge.objects.filter(
+                entity_type=entity,
+                canonical_id=canonical_id,
+                duplicate_id=duplicate_id,
+            ).update(status='accepted')
+
+        return Response({'detail': f'Merged {pk_field}={duplicate_id} into {pk_field}={canonical_id}'})
+
+
+class MergeSuggestView(APIView):
+    """POST /api/v2/merge/suggest/
+    Body: { entity, canonical_id, duplicate_id, notas }
+    Creates a SugerenciaMerge (pending) for staff review.  Any authenticated
+    user may submit a suggestion.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        entity       = request.data.get('entity', '')
+        canonical_id = request.data.get('canonical_id')
+        duplicate_id = request.data.get('duplicate_id')
+        notas        = request.data.get('notas', '')
+
+        if entity not in MERGE_ENTITY_MAP:
+            return Response({'error': 'Invalid entity type'}, status=400)
+        if not canonical_id or not duplicate_id:
+            return Response({'error': 'canonical_id and duplicate_id required'}, status=400)
+        if int(canonical_id) == int(duplicate_id):
+            return Response({'error': 'canonical and duplicate must differ'}, status=400)
+
+        sug = SugerenciaMerge.objects.create(
+            entity_type=entity,
+            canonical_id=canonical_id,
+            duplicate_id=duplicate_id,
+            suggested_by=request.user,
+            notas=notas,
+        )
+        return Response({'id': sug.pk, 'status': sug.status}, status=201)
+
+
+def _merge_persona(canonical, duplicate):
+    """Re-point all M2M and FK references from duplicate → canonical."""
+    # documentos (Persona.documentos M2M)
+    for doc in duplicate.documentos.all():
+        canonical.documentos.add(doc)
+
+    # PersonaLugarRel.personas M2M
+    for plr in duplicate.p_x_l_pere.all():
+        plr.personas.add(canonical)
+        plr.personas.remove(duplicate)
+
+    # PersonaRelaciones.personas M2M
+    for pr in duplicate.relaciones.all():
+        pr.personas.add(canonical)
+        pr.personas.remove(duplicate)
+
+    # PersonaRelaciones.persona_fuente FK (nullable)
+    PersonaRelaciones.objects.filter(persona_fuente=duplicate).update(persona_fuente=canonical)
+
+    # PersonaRolEvento.personas M2M
+    for pre in duplicate.p_roles_evento.all():
+        pre.personas.add(canonical)
+        pre.personas.remove(duplicate)
+
+    # Corporacion.personas_asociadas M2M
+    for corp in duplicate.corporacion_set.all():
+        corp.personas_asociadas.add(canonical)
+        corp.personas_asociadas.remove(duplicate)
+
+    duplicate.delete()
+
+
+def _merge_lugar(canonical, duplicate):
+    """Re-point all FK references from duplicate Lugar → canonical Lugar."""
+    # PersonaLugarRel.lugar FK
+    PersonaLugarRel.objects.filter(lugar=duplicate).update(lugar=canonical)
+
+    # Lugar.es_parte_de self-FK
+    Lugar.objects.filter(es_parte_de=duplicate).update(es_parte_de=canonical)
+
+    # Archivo.lugar_archivo FK (if it exists)
+    from dbgestor.models import Archivo
+    Archivo.objects.filter(lugar_archivo=duplicate).update(lugar_archivo=canonical)
+
+    # PersonaEsclavizada FK places
+    PersonaEsclavizada.objects.filter(procedencia=duplicate).update(procedencia=canonical)
+    PersonaEsclavizada.objects.filter(lugar_nacimiento=duplicate).update(lugar_nacimiento=canonical)
+    PersonaEsclavizada.objects.filter(lugar_defuncion=duplicate).update(lugar_defuncion=canonical)
+
+    # PersonaNoEsclavizada FK places
+    PersonaNoEsclavizada.objects.filter(lugar_nacimiento=duplicate).update(lugar_nacimiento=canonical)
+    PersonaNoEsclavizada.objects.filter(lugar_defuncion=duplicate).update(lugar_defuncion=canonical)
+
+    duplicate.delete()

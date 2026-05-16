@@ -1,5 +1,6 @@
 import re
 from django.db import models, transaction
+from django.conf import settings
 from simple_history.models import HistoricalRecords
 from polymorphic.models import PolymorphicModel
 from datetime import timezone
@@ -769,3 +770,41 @@ class InstitucionRolEvento(models.Model):
 
     def __str__(self) -> str:
         return ', '.join([corporaciones.nombre_institucion for corporaciones in self.corporaciones.all()])
+
+
+class SugerenciaMerge(models.Model):
+    """A proposal to merge a duplicate entity into a canonical one."""
+
+    ENTITY_TYPES = (
+        ('pe',  'Persona Esclavizada'),
+        ('pn',  'Persona No Esclavizada'),
+        ('doc', 'Documento'),
+        ('lug', 'Lugar'),
+        ('cor', 'Corporación'),
+    )
+    STATUS_CHOICES = (
+        ('pending',  'Pendiente'),
+        ('accepted', 'Aceptado'),
+        ('rejected', 'Rechazado'),
+    )
+
+    entity_type  = models.CharField(max_length=3, choices=ENTITY_TYPES)
+    canonical_id = models.PositiveIntegerField(help_text='PK of the record to keep')
+    duplicate_id = models.PositiveIntegerField(help_text='PK of the record to discard')
+    suggested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='sugerencias_merge',
+    )
+    status     = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    notas      = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Sugerencia de merge'
+        verbose_name_plural = 'Sugerencias de merge'
+
+    def __str__(self) -> str:
+        return f"{self.get_entity_type_display()} canonical={self.canonical_id} dup={self.duplicate_id} [{self.status}]"
