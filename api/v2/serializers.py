@@ -286,11 +286,11 @@ class PersonaLugarRelNestedSerializer(serializers.ModelSerializer):
 class PersonaRelacionesNestedSerializer(serializers.ModelSerializer):
     """PersonaRelaciones with nested persona refs for network graph"""
     personas = PersonaReferenceSerializer(many=True, read_only=True)
-    persona_sujeto = PersonaReferenceSerializer(read_only=True)
+    persona_fuente = PersonaReferenceSerializer(read_only=True)
 
     class Meta:
         model = PersonaRelaciones
-        fields = ['persona_relacion_id', 'personas', 'persona_sujeto', 'naturaleza_relacion',
+        fields = ['persona_relacion_id', 'personas', 'persona_fuente', 'naturaleza_relacion',
                   'descripcion_relacion']
 
 
@@ -432,11 +432,11 @@ class PersonaRelacionesDetailSerializer(serializers.ModelSerializer):
     """PersonaRelaciones with references"""
     documento = DocumentoReferenceSerializer(read_only=True)
     persona_ids = serializers.SerializerMethodField()
-    persona_sujeto = PersonaReferenceSerializer(read_only=True)
+    persona_fuente = PersonaReferenceSerializer(read_only=True)
 
     class Meta:
         model = PersonaRelaciones
-        fields = ['persona_relacion_id', 'documento', 'persona_ids', 'persona_sujeto',
+        fields = ['persona_relacion_id', 'documento', 'persona_ids', 'persona_fuente',
                   'naturaleza_relacion', 'descripcion_relacion']
 
     def get_persona_ids(self, obj):

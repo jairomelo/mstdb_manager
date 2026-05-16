@@ -483,7 +483,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         Returns {nodes, edges} filtered to people connected via shared relaciones.
         """
         persona = self.get_object()
-        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_sujeto').all()
+        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_fuente').all()
 
         from django.contrib.contenttypes.models import ContentType
         pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
@@ -509,12 +509,10 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
 
             # Create edges between all pairs in this relacion
             nat = rel.naturaleza_relacion or ''
-            rel_type = 'fam' if nat == 'fam' else (
-                        'aso' if nat == 'aso' else (
-                        'sub' if nat == 'sub' else 'tmp'))
+            rel_type = 'fam' if nat == 'fam' else ('sub' if nat == 'sub' else 'tmp')
 
-            if rel_type == 'sub' and rel.persona_sujeto_id:
-                sujeto_id = rel.persona_sujeto_id
+            if rel.persona_fuente_id:
+                sujeto_id = rel.persona_fuente_id
                 for pid in persona_ids_in_rel:
                     if pid != sujeto_id:
                         edges.append({
@@ -761,7 +759,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         Returns {nodes, edges} filtered to people connected via shared relaciones.
         """
         persona = self.get_object()
-        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_sujeto').all()
+        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_fuente').all()
 
         from django.contrib.contenttypes.models import ContentType
         pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
@@ -785,12 +783,10 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     }
 
             nat = rel.naturaleza_relacion or ''
-            rel_type = 'fam' if nat == 'fam' else (
-                        'aso' if nat == 'aso' else (
-                        'sub' if nat == 'sub' else 'tmp'))
+            rel_type = 'fam' if nat == 'fam' else ('sub' if nat == 'sub' else 'tmp')
 
-            if rel_type == 'sub' and rel.persona_sujeto_id:
-                sujeto_id = rel.persona_sujeto_id
+            if rel.persona_fuente_id:
+                sujeto_id = rel.persona_fuente_id
                 for pid in persona_ids_in_rel:
                     if pid != sujeto_id:
                         edges.append({
@@ -1897,8 +1893,6 @@ class SearchNetworkAPIView(SearchAPIView):
         nat = naturaleza_relacion or ''
         if nat == 'fam':
             return 'fam'
-        if nat == 'aso':
-            return 'aso'
         if nat == 'sub':
             return 'sub'
         return 'tmp'
@@ -1935,7 +1929,7 @@ class SearchNetworkAPIView(SearchAPIView):
 
             relaciones = PersonaRelaciones.objects.filter(
                 personas__persona_id__in=strict_node_ids,
-            ).prefetch_related('personas').select_related('persona_sujeto').distinct()
+            ).prefetch_related('personas').select_related('persona_fuente').distinct()
 
             node_ids = set(strict_node_ids)
             if scope_mode == 'expanded':
@@ -1966,8 +1960,8 @@ class SearchNetworkAPIView(SearchAPIView):
                 if len(rel_persona_ids) < 2:
                     continue
 
-                if rel_type == 'sub' and rel.persona_sujeto_id and rel.persona_sujeto_id in node_ids:
-                    sujeto_id = rel.persona_sujeto_id
+                if rel.persona_fuente_id and rel.persona_fuente_id in node_ids:
+                    sujeto_id = rel.persona_fuente_id
                     for pid in rel_persona_ids:
                         if pid == sujeto_id:
                             continue

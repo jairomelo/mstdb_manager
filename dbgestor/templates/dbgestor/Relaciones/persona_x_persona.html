@@ -34,10 +34,10 @@
             {{ form.naturaleza_relacion.errors }}
         </div>
 
-        <div class="mb-3" id="persona_sujeto_wrapper" style="display:none;">
-            <label for="{{ form.persona_sujeto.id_for_label }}" class="form-label">{{ form.persona_sujeto.label }}</label>
-            {{ form.persona_sujeto }}
-            {{ form.persona_sujeto.errors }}
+        <div class="mb-3" id="persona_fuente_wrapper" style="display:none;">
+            <label for="{{ form.persona_fuente.id_for_label }}" class="form-label">{{ form.persona_fuente.label }}</label>
+            {{ form.persona_fuente }}
+            {{ form.persona_fuente.errors }}
             <div class="form-text">La persona que ejerce control o dominio sobre las demás en esta relación.</div>
         </div>
 
@@ -116,7 +116,7 @@
 
 <script>
     (function () {
-        var wrapper = document.getElementById('persona_sujeto_wrapper');
+        var wrapper = document.getElementById('persona_fuente_wrapper');
         var select = document.getElementById('id_naturaleza_relacion');
         var input = wrapper ? wrapper.querySelector('input, select') : null;
 

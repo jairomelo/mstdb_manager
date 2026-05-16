@@ -450,11 +450,11 @@ class PersonaRelacionesForm(forms.ModelForm):
         label='Personas relacionadas'
     )
 
-    persona_sujeto = forms.ModelChoiceField(
+    persona_fuente = forms.ModelChoiceField(
         queryset=Persona.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2(url='personas-autocomplete'),
-        label='Persona sujeto (quien controla)'
+        label='Persona fuente (quien controla)'
     )
 
     def __init__(self, *args, **kwargs):
@@ -464,8 +464,8 @@ class PersonaRelacionesForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data.get('naturaleza_relacion') == 'sub' and not cleaned_data.get('persona_sujeto'):
-            self.add_error('persona_sujeto', 'Este campo es obligatorio para relaciones de Subordinación.')
+        if cleaned_data.get('naturaleza_relacion') == 'sub' and not cleaned_data.get('persona_fuente'):
+            self.add_error('persona_fuente', 'Este campo es obligatorio para relaciones de Subordinación.')
         return cleaned_data
 
 

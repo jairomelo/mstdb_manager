@@ -1214,7 +1214,7 @@ class DocumentoDetailView(DetailView):
             models.Q(
                 documento=documento
             )
-        ).select_related('persona_sujeto')
+        ).select_related('persona_fuente')
         
         personarolrel = PersonaRolEvento.objects.filter(
             models.Q(
@@ -1238,12 +1238,12 @@ class DocumentoDetailView(DetailView):
         
         for relacion in personapersonarel:
             naturaleza_rel = relacion.get_naturaleza_relacion_display()
-            sujeto = relacion.persona_sujeto
+            sujeto = relacion.persona_fuente
             relacion_data = {
                 'id_rel': relacion.persona_relacion_id,
                 'personas': [],
-                'persona_sujeto_idno': sujeto.persona_idno if sujeto else None,
-                'persona_sujeto_nombre': sujeto.nombre_normalizado if sujeto else None,
+                'persona_fuente_idno': sujeto.persona_idno if sujeto else None,
+                'persona_fuente_nombre': sujeto.nombre_normalizado if sujeto else None,
             }
             for persona in relacion.personas.all():
                 relacion_data['personas'].append({

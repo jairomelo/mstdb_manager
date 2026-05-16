@@ -22,7 +22,7 @@ def derive_subordination_rels(documento_id: int) -> int:
     existing = set(
         PersonaRelaciones.objects
         .filter(documento_id=documento_id, naturaleza_relacion='sub')
-        .values_list('persona_sujeto_id', 'personas__persona_id')
+        .values_list('persona_fuente_id', 'personas__persona_id')
     )
 
     created = 0
@@ -33,7 +33,7 @@ def derive_subordination_rels(documento_id: int) -> int:
             rel = PersonaRelaciones.objects.create(
                 documento_id=documento_id,
                 naturaleza_relacion='sub',
-                persona_sujeto=sujeto,
+                persona_fuente=sujeto,
             )
             rel.personas.set([sujeto, objeto])
             created += 1

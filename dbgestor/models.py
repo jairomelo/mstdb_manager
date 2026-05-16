@@ -618,7 +618,6 @@ class PersonaRelaciones(models.Model):
 
     RELACIONES = (
         ('fam', 'Familiar'),
-        ('aso', 'Asociativa'),
         ('tmp', 'Temporal'),
         ('sub', 'Subordinación'),
     )
@@ -633,9 +632,9 @@ class PersonaRelaciones(models.Model):
         related_name='relaciones'
     )
     naturaleza_relacion = models.CharField(max_length=50, choices=RELACIONES)
-    persona_sujeto = models.ForeignKey(
+    persona_fuente = models.ForeignKey(
         'Persona', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='relaciones_como_sujeto'
+        related_name='relaciones_como_fuente'
     )
     descripcion_relacion = models.CharField(
         max_length=250, null=True, blank=True)
@@ -656,8 +655,6 @@ class PersonaRelaciones(models.Model):
     def type_to_string(self):
         if self.naturaleza_relacion == 'fam':
             return 'Familiar'
-        elif self.naturaleza_relacion == 'aso':
-            return 'Asociativa'
         elif self.naturaleza_relacion == 'tmp':
             return 'Temporal'
         elif self.naturaleza_relacion == 'sub':
