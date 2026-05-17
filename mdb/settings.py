@@ -289,6 +289,10 @@ LOGIN_REDIRECT_URL = 'success'
 DEFAULT_HTTP_PROTOCOL = 'https'
 DEFAULT_DOMAIN = 'db.trayectoriasafro.org'
 
+# Cloudflare Turnstile
+TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
+TURNSTILE_SITE_KEY = os.getenv('TURNSTILE_SITE_KEY', '')
+
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
 
@@ -303,8 +307,18 @@ SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': int(os.getenv('REST_FRAMEWORK_PAGE_SIZE', '20')), 
+    'PAGE_SIZE': int(os.getenv('REST_FRAMEWORK_PAGE_SIZE', '20')),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',
+        'user': '300/minute',
+        'login': '10/minute',     # applied explicitly to login/register
+        'register': '5/minute',
+    },
 }
 
 SPECTACULAR_SETTINGS = {

@@ -14,10 +14,19 @@ from django.utils.decorators import method_decorator
 from django.http import JsonResponse, HttpResponse
 from django.middleware.csrf import get_token
 from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
+
+
+class LoginRateThrottle(AnonRateThrottle):
+    scope = 'login'
+
+
+class RegisterRateThrottle(AnonRateThrottle):
+    scope = 'register'
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, action, permission_classes
+from rest_framework.decorators import api_view, action, permission_classes, throttle_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
@@ -2463,6 +2472,45 @@ def get_csrf_token(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_config(request):
+    """Return public runtime configuration (safe to expose to the browser)."""
+    from django.conf import settings as django_settings
+    return Response({
+        'turnstile_site_key': django_settings.TURNSTILE_SITE_KEY,
+    })
+
+
+def _verify_turnstile(token, remote_ip=None):
+    """Verify a Cloudflare Turnstile token server-side.
+    Returns True if valid, or if no secret key is configured (dev mode)."""
+    import urllib.request
+    import urllib.parse
+    from django.conf import settings as django_settings
+
+    secret = django_settings.TURNSTILE_SECRET_KEY
+    if not secret:
+        return True  # skip in dev when key not set
+
+    payload = {'secret': secret, 'response': token}
+    if remote_ip:
+        payload['remoteip'] = remote_ip
+
+    encoded = urllib.parse.urlencode(payload).encode('utf-8')
+    try:
+        req = urllib.request.Request(
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            data=encoded,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            result = json.loads(resp.read())
+        return result.get('success', False)
+    except Exception:
+        return False
+
+
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def whoami(request):
@@ -2591,10 +2639,13 @@ def users_progress(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([RegisterRateThrottle])
 def api_register(request):
     """Create a new user account. New accounts have no group membership;
     staff must add users to 'colectores' or other groups separately."""
     from django.contrib.auth import get_user_model
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
     from cataloguers.models import UserProfile
     import re
 
@@ -2618,14 +2669,24 @@ def api_register(request):
 
     if not password:
         errors['password'] = 'La contraseña es obligatoria.'
-    elif len(password) < 8:
-        errors['password'] = 'La contraseña debe tener al menos 8 caracteres.'
+    else:
+        dummy_user = User(username=username)
+        try:
+            validate_password(password, user=dummy_user)
+        except DjangoValidationError as e:
+            errors['password'] = ' '.join(e.messages)
 
     if email and User.objects.filter(email=email).exists():
         errors['email'] = 'Ese correo electrónico ya está registrado.'
 
     if errors:
         return Response({'errors': errors}, status=400)
+
+    # Turnstile human verification
+    turnstile_token = data.get('turnstile_token', '')
+    remote_ip = request.META.get('HTTP_CF_CONNECTING_IP') or request.META.get('REMOTE_ADDR')
+    if not _verify_turnstile(turnstile_token, remote_ip):
+        return Response({'errors': {'turnstile': 'Verificación fallida. Por favor, intenta nuevamente.'}}, status=400)
 
     user = User.objects.create_user(
         username=username,
@@ -2639,19 +2700,20 @@ def api_register(request):
     return Response({'detail': 'Cuenta creada exitosamente. Puedes iniciar sesión ahora.'}, status=201)
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def api_login(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-    data = json.loads(request.body)
-    user = authenticate(request, username=data.get('username'), password=data.get('password'))
+    try:
+        data = request.data
+    except Exception:
+        return Response({'error': 'Invalid request body.'}, status=400)
+
+    user = authenticate(request, username=data.get('username', ''), password=data.get('password', ''))
     if user is not None:
         login(request, user)
-        return JsonResponse({
-            'username': user.username,
-            'email': user.email,
-            'is_staff': user.is_staff
-        })
-    return JsonResponse({'error': 'Invalid credentials'}, status=401)
+        return Response({'username': user.username, 'is_staff': user.is_staff})
+    return Response({'error': 'Usuario o contraseña incorrectos.'}, status=401)
 
 
 @api_view(['POST'])
