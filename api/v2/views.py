@@ -2474,8 +2474,15 @@ def whoami(request):
         profile, _ = UserProfile.objects.get_or_create(user=user)
 
     if request.method == 'PATCH':
-        allowed = {'bio', 'institution', 'institution_url', 'role'}
-        for field in allowed & set(request.data.keys()):
+        # Update User model fields
+        user_fields = {'username', 'first_name', 'last_name', 'email'}
+        for field in user_fields & set(request.data.keys()):
+            setattr(user, field, request.data[field])
+        user.save(update_fields=list(user_fields & set(request.data.keys())) or None)
+
+        # Update UserProfile fields
+        profile_fields = {'bio', 'institution', 'institution_url', 'role'}
+        for field in profile_fields & set(request.data.keys()):
             setattr(profile, field, request.data[field])
         profile.save()
 
@@ -2493,6 +2500,7 @@ def whoami(request):
         'last_name': user.last_name,
         'email': user.email,
         'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
         'groups': [g.name for g in user.groups.all()],
         'permissions': list(user.get_all_permissions()),
         'profile': {
@@ -2508,6 +2516,29 @@ def whoami(request):
             'total': pe + pn + doc,
         },
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """Allow the authenticated user to change their own password."""
+    from django.contrib.auth import authenticate, update_session_auth_hash
+    current = request.data.get('current_password', '')
+    new = request.data.get('new_password', '')
+
+    if not current or not new:
+        return Response({'detail': 'current_password and new_password are required.'}, status=400)
+    if len(new) < 8:
+        return Response({'detail': 'La contraseña debe tener al menos 8 caracteres.'}, status=400)
+
+    user = authenticate(request, username=request.user.username, password=current)
+    if user is None:
+        return Response({'detail': 'Contraseña actual incorrecta.'}, status=400)
+
+    user.set_password(new)
+    user.save()
+    update_session_auth_hash(request, user)  # keep the session alive
+    return Response({'detail': 'Contraseña actualizada correctamente.'})
 
 
 @api_view(['GET'])
