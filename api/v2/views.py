@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse, HttpResponse
 from django.middleware.csrf import get_token
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -2587,6 +2587,56 @@ def users_progress(request):
         })
 
     return Response(results)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def api_register(request):
+    """Create a new user account. New accounts have no group membership;
+    staff must add users to 'colectores' or other groups separately."""
+    from django.contrib.auth import get_user_model
+    from cataloguers.models import UserProfile
+    import re
+
+    User = get_user_model()
+    data = request.data
+
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    email = data.get('email', '').strip()
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+
+    # --- Validation ---
+    errors = {}
+    if not username:
+        errors['username'] = 'El nombre de usuario es obligatorio.'
+    elif not re.match(r'^[\w.@+-]+$', username):
+        errors['username'] = 'Solo letras, números y los caracteres . @ + - _'
+    elif User.objects.filter(username=username).exists():
+        errors['username'] = 'Ese nombre de usuario ya está en uso.'
+
+    if not password:
+        errors['password'] = 'La contraseña es obligatoria.'
+    elif len(password) < 8:
+        errors['password'] = 'La contraseña debe tener al menos 8 caracteres.'
+
+    if email and User.objects.filter(email=email).exists():
+        errors['email'] = 'Ese correo electrónico ya está registrado.'
+
+    if errors:
+        return Response({'errors': errors}, status=400)
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+    )
+    UserProfile.objects.get_or_create(user=user)
+
+    return Response({'detail': 'Cuenta creada exitosamente. Puedes iniciar sesión ahora.'}, status=201)
 
 
 def api_login(request):
