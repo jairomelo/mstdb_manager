@@ -17,7 +17,7 @@ class ArchivoReferenceSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Archivo
-        fields = ['archivo_id', 'nombre', 'archivo_idno']
+        fields = ['archivo_id', 'nombre', 'nombre_abreviado', 'archivo_idno']
 
 
 class DocumentoReferenceSerializer(serializers.ModelSerializer):
@@ -255,16 +255,17 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
     """Full Documento details"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
+    tipo_documento_id = serializers.IntegerField(source='tipo_documento.pk', read_only=True, allow_null=True)
     lugar_de_produccion = LugarReferenceSerializer(read_only=True)
     persona_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Documento
         fields = ['documento_id', 'documento_idno', 'archivo', 'fondo', 'subfondo', 'serie', 'subserie',
-                  'tipo_udc', 'unidad_documental_compuesta', 'tipo_documento', 'sigla_documento',
-                  'titulo', 'descripcion', 'deteriorado', 'fecha_inicial', 'fecha_inicial_raw', 'fecha_final',
-                  'fecha_final_raw', 'lugar_de_produccion', 'folio_inicial', 'folio_final', 'notas', 
-                  'persona_count', 'created_at', 'updated_at']
+                  'tipo_udc', 'unidad_documental_compuesta', 'tipo_documento', 'tipo_documento_id',
+                  'sigla_documento', 'titulo', 'descripcion', 'deteriorado', 'fecha_inicial',
+                  'fecha_inicial_raw', 'fecha_final', 'fecha_final_raw', 'lugar_de_produccion',
+                  'folio_inicial', 'folio_final', 'notas', 'persona_count', 'created_at', 'updated_at']
 
     def get_persona_count(self, obj):
         return obj.persona_set.count()
@@ -878,7 +879,7 @@ class TipoDocumentalWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializ
 
     class Meta:
         model = TipoDocumental
-        fields = ['tipo_documental']
+        fields = ['id', 'tipo_documental']
 
 
 class CalidadesWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
