@@ -529,11 +529,13 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     if pid != sujeto_id:
                         edges.append({
                             'data': {
+                                'id': f'r{rel.persona_relacion_id}_{sujeto_id}_{pid}',
                                 'source': f'p{sujeto_id}',
                                 'target': f'p{pid}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
+                                'persona_relacion_id': rel.persona_relacion_id,
                             }
                         })
             else:
@@ -541,11 +543,13 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     for pid_b in persona_ids_in_rel[i + 1:]:
                         edges.append({
                             'data': {
+                                'id': f'r{rel.persona_relacion_id}_{pid_a}_{pid_b}',
                                 'source': f'p{pid_a}',
                                 'target': f'p{pid_b}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
+                                'persona_relacion_id': rel.persona_relacion_id,
                             }
                         })
 
@@ -803,11 +807,13 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     if pid != sujeto_id:
                         edges.append({
                             'data': {
+                                'id': f'r{rel.persona_relacion_id}_{sujeto_id}_{pid}',
                                 'source': f'p{sujeto_id}',
                                 'target': f'p{pid}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
+                                'persona_relacion_id': rel.persona_relacion_id,
                             }
                         })
             else:
@@ -815,11 +821,13 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     for pid_b in persona_ids_in_rel[i + 1:]:
                         edges.append({
                             'data': {
+                                'id': f'r{rel.persona_relacion_id}_{pid_a}_{pid_b}',
                                 'source': f'p{pid_a}',
                                 'target': f'p{pid_b}',
                                 'relation': rel_type,
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
+                                'persona_relacion_id': rel.persona_relacion_id,
                             }
                         })
 
