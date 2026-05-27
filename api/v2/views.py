@@ -495,7 +495,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         Returns {nodes, edges} filtered to people connected via shared relaciones.
         """
         persona = self.get_object()
-        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_fuente').all()
+        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_fuente', 'documento').all()
 
         from django.contrib.contenttypes.models import ContentType
         pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
@@ -522,6 +522,8 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
             # Create edges between all pairs in this relacion
             nat = rel.naturaleza_relacion or ''
             rel_type = 'fam' if nat == 'fam' else ('sub' if nat == 'sub' else 'tmp')
+            doc_id = rel.documento_id
+            doc_titulo = rel.documento.titulo if rel.documento else ''
 
             if rel.persona_fuente_id:
                 sujeto_id = rel.persona_fuente_id
@@ -536,6 +538,8 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
                                 'persona_relacion_id': rel.persona_relacion_id,
+                                'documento_id': doc_id,
+                                'documento_titulo': doc_titulo,
                             }
                         })
             else:
@@ -550,6 +554,8 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
                                 'persona_relacion_id': rel.persona_relacion_id,
+                                'documento_id': doc_id,
+                                'documento_titulo': doc_titulo,
                             }
                         })
 
@@ -775,7 +781,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         Returns {nodes, edges} filtered to people connected via shared relaciones.
         """
         persona = self.get_object()
-        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_fuente').all()
+        relaciones = persona.relaciones.prefetch_related('personas').select_related('persona_fuente', 'documento').all()
 
         from django.contrib.contenttypes.models import ContentType
         pe_ctype_id = ContentType.objects.get_for_model(PersonaEsclavizada).id
@@ -800,6 +806,8 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
 
             nat = rel.naturaleza_relacion or ''
             rel_type = 'fam' if nat == 'fam' else ('sub' if nat == 'sub' else 'tmp')
+            doc_id = rel.documento_id
+            doc_titulo = rel.documento.titulo if rel.documento else ''
 
             if rel.persona_fuente_id:
                 sujeto_id = rel.persona_fuente_id
@@ -814,6 +822,8 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
                                 'persona_relacion_id': rel.persona_relacion_id,
+                                'documento_id': doc_id,
+                                'documento_titulo': doc_titulo,
                             }
                         })
             else:
@@ -828,6 +838,8 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                                 'label': rel.descripcion_relacion or nat,
                                 'descripcion': rel.descripcion_relacion or '',
                                 'persona_relacion_id': rel.persona_relacion_id,
+                                'documento_id': doc_id,
+                                'documento_titulo': doc_titulo,
                             }
                         })
 
