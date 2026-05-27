@@ -387,13 +387,15 @@ class PersonaNoEsclavizadaDetailSerializer(PersonaDetailSerializer):
 class LugarDetailSerializer(serializers.ModelSerializer):
     """Full Lugar details"""
     tipo = serializers.StringRelatedField()
+    tipo_id = serializers.IntegerField(source='tipo.pk', read_only=True, allow_null=True)
+    es_parte_de = LugarReferenceSerializer(read_only=True)
     short_id = serializers.ReadOnlyField()
     procedencia_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Lugar
-        fields = ['lugar_id', 'short_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
-                  'procedencia_count']
+        fields = ['lugar_id', 'short_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'tipo_id',
+                  'es_parte_de', 'lat', 'lon', 'procedencia_count']
 
     def get_procedencia_count(self, obj):
         return obj.procedencia_persona_esclavizada.count()
