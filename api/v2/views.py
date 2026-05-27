@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse, HttpResponse
 from django.middleware.csrf import get_token
-from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
+from rest_framework.permissions import BasePermission, IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.throttling import AnonRateThrottle
 
 
@@ -2548,9 +2548,11 @@ def whoami(request):
             setattr(user, field, request.data[field])
         user.save(update_fields=list(user_fields & set(request.data.keys())) or None)
 
-        # Update UserProfile fields
-        profile_fields = {'bio', 'institution', 'institution_url', 'role'}
-        for field in profile_fields & set(request.data.keys()):
+        # Update UserProfile fields — role is staff-only; exclude it from user self-editing
+        user_editable_profile_fields = {'bio', 'institution', 'institution_url'}
+        if request.user.is_staff:
+            user_editable_profile_fields.add('role')
+        for field in user_editable_profile_fields & set(request.data.keys()):
             setattr(profile, field, request.data[field])
         profile.save()
 
@@ -2591,17 +2593,22 @@ def whoami(request):
 def change_password(request):
     """Allow the authenticated user to change their own password."""
     from django.contrib.auth import authenticate, update_session_auth_hash
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
     current = request.data.get('current_password', '')
     new = request.data.get('new_password', '')
 
     if not current or not new:
         return Response({'detail': 'current_password and new_password are required.'}, status=400)
-    if len(new) < 8:
-        return Response({'detail': 'La contraseña debe tener al menos 8 caracteres.'}, status=400)
 
     user = authenticate(request, username=request.user.username, password=current)
     if user is None:
         return Response({'detail': 'Contraseña actual incorrecta.'}, status=400)
+
+    try:
+        validate_password(new, user=user)
+    except DjangoValidationError as e:
+        return Response({'detail': ' '.join(e.messages)}, status=400)
 
     user.set_password(new)
     user.save()
@@ -2610,11 +2617,9 @@ def change_password(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 def users_progress(request):
     """Staff-only: per-user contribution counts from historical records."""
-    if not request.user.is_staff:
-        return Response({'detail': 'Forbidden'}, status=403)
 
     from django.contrib.auth import get_user_model
     from cataloguers.models import UserProfile
@@ -2821,7 +2826,8 @@ class MergeCandidatesView(APIView):
         from rapidfuzz import fuzz
 
         Model, pk_field, name_field = MERGE_ENTITY_MAP[entity]
-        qs = Model.objects.all().values(pk_field, name_field)
+        # Limit candidates fetched into Python to avoid full-table memory scans
+        qs = Model.objects.all().values(pk_field, name_field)[:5000]
 
         results = []
         for obj in qs:
@@ -2842,11 +2848,9 @@ class MergeExecuteView(APIView):
     Staff only.  Re-points FK/M2M refs from duplicate → canonical, then deletes
     the duplicate record.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def post(self, request):
-        if not request.user.is_staff:
-            return Response({'error': 'Staff only'}, status=403)
 
         entity       = request.data.get('entity', '')
         canonical_id = request.data.get('canonical_id')
@@ -2901,7 +2905,12 @@ class MergeSuggestView(APIView):
             return Response({'error': 'Invalid entity type'}, status=400)
         if not canonical_id or not duplicate_id:
             return Response({'error': 'canonical_id and duplicate_id required'}, status=400)
-        if int(canonical_id) == int(duplicate_id):
+        try:
+            canonical_id = int(canonical_id)
+            duplicate_id = int(duplicate_id)
+        except (TypeError, ValueError):
+            return Response({'error': 'canonical_id and duplicate_id must be integers'}, status=400)
+        if canonical_id == duplicate_id:
             return Response({'error': 'canonical and duplicate must differ'}, status=400)
 
         sug = SugerenciaMerge.objects.create(

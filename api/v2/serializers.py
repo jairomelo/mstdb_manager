@@ -619,8 +619,9 @@ class ActividadesSerializer(serializers.ModelSerializer):
 
 
 class LogMessageSerializer(serializers.ModelSerializer):
-    level = serializers.CharField(max_length=10)
-    message = serializers.CharField()
+    ALLOWED_LEVELS = {'debug', 'info', 'warning', 'error'}
+    level = serializers.ChoiceField(choices=list(ALLOWED_LEVELS))
+    message = serializers.CharField(max_length=2000)
     
     class Meta:
         model = LogMessage
