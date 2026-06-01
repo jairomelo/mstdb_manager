@@ -299,10 +299,10 @@ class PersonaEsclavizadaForm(forms.ModelForm):
         label='Lugar de procedencia'
     )
     
-    ocupacion = forms.ModelChoiceField(
+    ocupaciones = forms.ModelMultipleChoiceField(
         queryset=Actividades.objects.all(),
         required=False,
-        widget=autocomplete.ModelSelect2(url='ocupaciones-autocomplete'),
+        widget=autocomplete.ModelSelect2Multiple(url='ocupaciones-autocomplete'),
         label='Ocupación'
     )
 

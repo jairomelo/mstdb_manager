@@ -53,7 +53,14 @@
                         </p>
                     {% endif %}
 
-                    {% display_field personaesclavizada "ocupacion" "Actividad" %}
+                    {% if personaesclavizada.ocupaciones %}
+                    <p><strong>Ocupaciones:</strong>
+                    {% for ocupacion in personaesclavizada.ocupaciones.all %}
+                    {{ ocupacion }}
+                    {% endfor %}
+                    </p>
+                    {% endif %}
+
                     {% if personaesclavizada.calidades %}
                     <p><strong>Calidades:</strong>
                     {% for calidad in personaesclavizada.calidades.all %}
