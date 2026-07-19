@@ -1,6 +1,7 @@
 .*
 !.gitignore
 !.env_development
+!.python-version
 __pycache__
 staticfiles
 appslogs
