@@ -37,7 +37,7 @@ odfpy==1.4.1
 openpyxl==3.1.2
 packaging==24.1
 pillow==10.4.0
-pillow-heif==0.14.0
+pillow-heif>=0.20.0
 Pygments==2.18.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.0
@@ -46,6 +46,7 @@ PyYAML==6.0.1
 redis==5.0.1
 requests==2.31.0
 six==1.16.0
+setuptools<70.0.0
 soupsieve==2.5
 sqlparse==0.5.1
 tablib==3.5.0
@@ -62,7 +63,7 @@ django-ses==4.3.0
 boto3==1.37.5
 
 # PostgreSQL adapter (replacing mysqlclient)
-psycopg[binary]==3.1.18
+psycopg[binary]>=3.1.18
 dj-database-url==2.1.0
 
 # enhance API documentation

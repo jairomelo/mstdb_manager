@@ -1,7 +1,7 @@
 # ================================
 # Stage 1: Development
 # ================================
-FROM python:3.11-slim AS development
+FROM python:3.13-slim AS development
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -13,7 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq-dev \
-    gcc \
+    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,7 +42,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 # ================================
 # Stage 2: Production
 # ================================
-FROM python:3.11-slim AS production
+FROM python:3.13-slim AS production
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -55,6 +55,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq-dev \
+    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
