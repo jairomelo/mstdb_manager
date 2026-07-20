@@ -361,6 +361,34 @@ class EstadoCivil(models.Model):
         return f'{self.estado_civil}'
 
 
+class LeccionNivel(models.Model):
+    """
+    This table has the only purpose to serve as basic vocabulary for education levels
+    applicable to a Leccion (Lecciones Educativas).
+    """
+
+    nivel_id = models.AutoField(primary_key=True)
+    nivel = models.CharField(max_length=150, unique=True)
+    descripcion = models.TextField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f'{self.nivel}'
+
+
+class LeccionPalabraClave(models.Model):
+    """
+    This table has the only purpose to serve as basic vocabulary for keywords
+    applicable to a Leccion (Lecciones Educativas).
+    """
+
+    palabra_clave_id = models.AutoField(primary_key=True)
+    palabra_clave = models.CharField(max_length=150, unique=True)
+    descripcion = models.TextField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f'{self.palabra_clave}'
+
+
 ##########
 # Handling Person Information:
 # ----------------------------
