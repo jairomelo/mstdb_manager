@@ -13,6 +13,7 @@ from .models import Calidades, Actividades, Hispanizaciones, Etonimos
 from .models import SituacionLugar, TipoDocumental, TipoLugar, TiposInstitucion
 from .models import PersonaEsclavizada, PersonaNoEsclavizada, Corporacion
 from .models import PersonaRelaciones, PersonaLugarRel, RolEvento, SugerenciaMerge
+from .models import Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave
     
 
 class SituacionLugarAdmin(ImportExportModelAdmin):
@@ -20,6 +21,19 @@ class SituacionLugarAdmin(ImportExportModelAdmin):
     
 class TipoInstitucionAdmin(ImportExportModelAdmin):
     resource_class = TipoInstitucionResource
+
+
+class LeccionImagenInline(admin.TabularInline):
+    model = LeccionImagen
+    extra = 0
+    readonly_fields = ('created_at',)
+
+
+class LeccionAdmin(ImportExportModelAdmin):
+    inlines = [LeccionImagenInline]
+    list_display = ('title', 'created_at', 'updated_at')
+    search_fields = ('title', 'body')
+    filter_horizontal = ('levels', 'keywords', 'personas', 'documentos', 'corporaciones')
 
 admin.site.register(Archivo, ImportExportModelAdmin)
 admin.site.register(Calidades, ImportExportModelAdmin)
@@ -40,4 +54,7 @@ admin.site.register(TiposInstitucion, TipoInstitucionAdmin)
 admin.site.register(Corporacion, ImportExportModelAdmin)
 admin.site.register(PersonaRolEvento, ImportExportModelAdmin)
 admin.site.register(SugerenciaMerge)
+admin.site.register(Leccion, LeccionAdmin)
+admin.site.register(LeccionNivel, ImportExportModelAdmin)
+admin.site.register(LeccionPalabraClave, ImportExportModelAdmin)
 
