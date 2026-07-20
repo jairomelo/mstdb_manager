@@ -426,6 +426,18 @@ wheels = [
 ]
 
 [[package]]
+name = "gunicorn"
+version = "26.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/b7/a4a3f632f823e432ce6bc65f62961b7980c898c77f075a2f7118cb3846fe/gunicorn-26.0.0.tar.gz", hash = "sha256:ca9346f85e3a4aeeb64d491045c16b9a35647abd37ea15efe53080eb8b090baf", size = 727286, upload-time = "2026-05-05T06:38:25.529Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/40/9c2384fc2be4ad25dd4a49decd5ad9ea5a3639814c11bd40ab77cb9f0a14/gunicorn-26.0.0-py3-none-any.whl", hash = "sha256:40233d26a5f0d1872916188c276e21641155111c2853f0c2cd55260aec0d24fc", size = 212009, upload-time = "2026-05-05T06:38:23.007Z" },
+]
+
+[[package]]
 name = "hiredis"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -569,6 +581,7 @@ dependencies = [
     { name = "drf-spectacular" },
     { name = "et-xmlfile" },
     { name = "filetype" },
+    { name = "gunicorn" },
     { name = "hiredis" },
     { name = "html5lib" },
     { name = "idna" },
@@ -589,6 +602,7 @@ dependencies = [
     { name = "rapidfuzz" },
     { name = "redis" },
     { name = "requests" },
+    { name = "setuptools" },
     { name = "six" },
     { name = "soupsieve" },
     { name = "sqlparse" },
@@ -640,6 +654,7 @@ requires-dist = [
     { name = "drf-spectacular", specifier = ">=0.30.0" },
     { name = "et-xmlfile", specifier = "==1.1.0" },
     { name = "filetype", specifier = "==1.2.0" },
+    { name = "gunicorn", specifier = ">=26.0.0" },
     { name = "hiredis", specifier = "==3.0.0" },
     { name = "html5lib", specifier = "==1.1" },
     { name = "idna", specifier = "==3.6" },
@@ -660,6 +675,7 @@ requires-dist = [
     { name = "rapidfuzz", specifier = ">=3.14.5" },
     { name = "redis", specifier = "==5.0.1" },
     { name = "requests", specifier = "==2.31.0" },
+    { name = "setuptools", specifier = "<81" },
     { name = "six", specifier = "==1.16.0" },
     { name = "soupsieve", specifier = "==2.5" },
     { name = "sqlparse", specifier = "==0.5.1" },
@@ -1012,6 +1028,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c4/2b/5c9562795c2eb2b5f63536961754760c25bf0f34af93d36aa28dea2fb303/s3transfer-0.11.5.tar.gz", hash = "sha256:8c8aad92784779ab8688a61aefff3e28e9ebdce43142808eaa3f0b0f402f68b7", size = 149107, upload-time = "2025-04-17T19:23:19.051Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/45/39/13402e323666d17850eca87e4cd6ecfcf9fd7809cac9efdcce10272fc29d/s3transfer-0.11.5-py3-none-any.whl", hash = "sha256:757af0f2ac150d3c75bc4177a32355c3862a98d20447b69a0161812992fe0bd4", size = 84782, upload-time = "2025-04-17T19:23:17.516Z" },
+]
+
+[[package]]
+name = "setuptools"
+version = "80.10.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/76/95/faf61eb8363f26aa7e1d762267a8d602a1b26d4f3a1e758e92cb3cb8b054/setuptools-80.10.2.tar.gz", hash = "sha256:8b0e9d10c784bf7d262c4e5ec5d4ec94127ce206e8738f29a437945fbc219b70", size = 1200343, upload-time = "2026-01-25T22:38:17.252Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/b8/f1f62a5e3c0ad2ff1d189590bfa4c46b4f3b6e49cef6f26c6ee4e575394d/setuptools-80.10.2-py3-none-any.whl", hash = "sha256:95b30ddfb717250edb492926c92b5221f7ef3fbcc2b07579bcd4a27da21d0173", size = 1064234, upload-time = "2026-01-25T22:38:15.216Z" },
 ]
 
 [[package]]

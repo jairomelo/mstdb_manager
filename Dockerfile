@@ -1,3 +1,5 @@
+FROM ghcr.io/astral-sh/uv:0.8.13 AS uv
+
 # ================================
 # Stage 1: Development
 # ================================
@@ -6,8 +8,11 @@ FROM python:3.13-slim AS development
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH="/opt/venv/bin:${PATH}"
+
+COPY --from=uv /uv /uvx /bin/
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -20,12 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create app directory
 WORKDIR /app
 
-# Copy requirements
-COPY mstdb_manager/requirements.txt .
+# Copy dependency metadata
+COPY mstdb_manager/pyproject.toml mstdb_manager/uv.lock ./
 
-# Install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+# Install Python dependencies from lockfile
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code
 COPY mstdb_manager/ .
@@ -47,9 +51,12 @@ FROM python:3.13-slim AS production
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH="/opt/venv/bin:${PATH}" \
     DJANGO_SETTINGS_MODULE=mdb.settings
+
+COPY --from=uv /uv /uvx /bin/
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -66,10 +73,9 @@ RUN useradd -m -u 1000 appuser && \
 
 WORKDIR /app
 
-# Copy requirements and install as root
-COPY mstdb_manager/requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt gunicorn
+# Copy dependency metadata and install as root
+COPY mstdb_manager/pyproject.toml mstdb_manager/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code
 COPY --chown=appuser:appuser mstdb_manager/ .
