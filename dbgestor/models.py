@@ -1,4 +1,5 @@
 import re
+import bleach
 from django.db import models, transaction
 from django.conf import settings
 from simple_history.models import HistoricalRecords
@@ -11,6 +12,17 @@ import logging
 
 logger = logging.getLogger("dbgestor")
 # Create your models here.
+
+# Allowed HTML for sanitized rich-text fields (e.g. Leccion.body)
+LECCION_BODY_ALLOWED_TAGS = [
+    'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4',
+    'ul', 'ol', 'li', 'a', 'blockquote', 'img', 'span',
+]
+LECCION_BODY_ALLOWED_ATTRS = {
+    'a': ['href', 'title', 'rel', 'target'],
+    'img': ['src', 'alt', 'title'],
+    'span': ['class'],
+}
 
 UDC = (
     ('exp', 'Expediente'),
@@ -836,3 +848,64 @@ class SugerenciaMerge(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_entity_type_display()} canonical={self.canonical_id} dup={self.duplicate_id} [{self.status}]"
+
+
+class Leccion(models.Model):
+    """
+    "Lecciones Educativas": self-contained educational content pieces that can
+    reference existing entities (personas, documentos, corporaciones) without
+    altering their models.
+    """
+
+    leccion_id = models.AutoField(primary_key=True)
+
+    title = models.CharField(max_length=200)
+    body = models.TextField(
+        blank=True, help_text='Sanitized HTML content, rendered as-is on the public detail page.')
+
+    levels = models.ManyToManyField(LeccionNivel, blank=True, related_name='lecciones')
+    keywords = models.ManyToManyField(LeccionPalabraClave, blank=True, related_name='lecciones')
+
+    personas = models.ManyToManyField(Persona, blank=True, related_name='lecciones')
+    documentos = models.ManyToManyField(Documento, blank=True, related_name='lecciones')
+    corporaciones = models.ManyToManyField(Corporacion, blank=True, related_name='lecciones')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['title']
+        indexes = [
+            models.Index(fields=['title'], name='leccion_title_idx'),
+            models.Index(fields=['-created_at'], name='leccion_created_idx'),
+        ]
+        verbose_name = 'Lección'
+        verbose_name_plural = 'Lecciones'
+
+    def save(self, *args, **kwargs):
+        if self.body:
+            self.body = bleach.clean(
+                self.body,
+                tags=LECCION_BODY_ALLOWED_TAGS,
+                attributes=LECCION_BODY_ALLOWED_ATTRS,
+                strip=True,
+            )
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class LeccionImagen(models.Model):
+    """Images embedded within a Leccion's body content."""
+
+    leccion_imagen_id = models.AutoField(primary_key=True)
+
+    leccion = models.ForeignKey(Leccion, on_delete=models.CASCADE, related_name='imagenes')
+    imagen = models.ImageField(upload_to='lecciones/%Y/%m/')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f'Imagen de "{self.leccion.title}"'
+
