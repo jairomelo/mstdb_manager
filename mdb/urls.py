@@ -16,11 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("dbgestor.urls")),
     path('api/', include('api.urls')),
     path('cataloguers/', include('django.contrib.auth.urls')),
-    path("cataloguers/", include("cataloguers.urls"))
+    path("cataloguers/", include("cataloguers.urls")),
+    # User-uploaded media (e.g. LeccionImagen). Served by Django directly since
+    # the reverse proxy in front of it does not have filesystem access to MEDIA_ROOT.
+    path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
+
