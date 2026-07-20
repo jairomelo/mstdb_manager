@@ -32,6 +32,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
 from urllib.parse import urlencode
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser
 import csv
 
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion,
@@ -39,7 +40,8 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaRolEvento, InstitucionRolEvento,
                              Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
-                             RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge)
+                             RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge,
+                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave)
 
 from .serializers import (
     # Reference serializers
@@ -77,6 +79,10 @@ from .serializers import (
     EtnonimosWriteSerializer, EstadoCivilWriteSerializer, ActividadesWriteSerializer,
     SituacionLugarWriteSerializer, RolEventoWriteSerializer, TiposInstitucionWriteSerializer,
     TipoLugarWriteSerializer,
+
+    # Leccion serializers
+    LeccionListSerializer, LeccionDetailSerializer, LeccionWriteSerializer,
+    LeccionImagenSerializer, LeccionNivelWriteSerializer, LeccionPalabraClaveWriteSerializer,
 )
 
 
@@ -1025,6 +1031,38 @@ class CorporacionViewSet(DocumentoLinkMixin, BaseV2ViewSet):
         return Response(serializer.data)
 
 
+# Leccion ViewSet ("Lecciones Educativas")
+class LeccionViewSet(BaseV2ViewSet):
+    queryset = Leccion.objects.prefetch_related(
+        'levels', 'keywords', 'personas', 'documentos', 'corporaciones', 'imagenes').all()
+    serializer_class = LeccionListSerializer
+    list_serializer_class = LeccionListSerializer
+    detail_serializer_class = LeccionDetailSerializer
+    write_serializer_class = LeccionWriteSerializer
+    lookup_field = 'leccion_id'
+    filterset_fields = {
+        'levels': ['exact'],
+        'keywords': ['exact'],
+    }
+    search_fields = ['title', 'body']
+    ordering_fields = ['title', 'created_at']
+    ordering = ['title']
+
+    def get_export_filename(self):
+        return "lecciones_export.csv"
+
+    @action(detail=True, methods=['post'], url_path='imagenes', parser_classes=[MultiPartParser, FormParser])
+    def upload_imagen(self, request, leccion_id=None):
+        """Upload an image to embed in this Leccion's body; returns its URL."""
+        leccion = self.get_object()
+        imagen = request.FILES.get('imagen')
+        if not imagen:
+            return Response({'error': 'imagen requerida.'}, status=status.HTTP_400_BAD_REQUEST)
+        instance = LeccionImagen.objects.create(leccion=leccion, imagen=imagen)
+        serializer = LeccionImagenSerializer(instance, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
 # Relationship ViewSets
 class PersonaRelacionesViewSet(viewsets.ModelViewSet):
     """ViewSet for persona relationships"""
@@ -1193,6 +1231,20 @@ class TipoLugarViewSet(VocabBaseViewSet):
     serializer_class = TipoLugarWriteSerializer
     search_fields = ['tipo_lugar']
     lookup_field = 'pk'
+
+
+class LeccionNivelViewSet(VocabBaseViewSet):
+    queryset = LeccionNivel.objects.all().order_by('nivel')
+    serializer_class = LeccionNivelWriteSerializer
+    search_fields = ['nivel']
+    lookup_field = 'nivel_id'
+
+
+class LeccionPalabraClaveViewSet(VocabBaseViewSet):
+    queryset = LeccionPalabraClave.objects.all().order_by('palabra_clave')
+    serializer_class = LeccionPalabraClaveWriteSerializer
+    search_fields = ['palabra_clave']
+    lookup_field = 'palabra_clave_id'
 
 
 # Global Search API

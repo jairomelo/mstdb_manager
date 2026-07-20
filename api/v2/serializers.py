@@ -6,7 +6,8 @@ from rest_framework import serializers
 from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEsclavizada, Corporacion, InstitucionRolEvento,
                              PersonaLugarRel, Lugar, PersonaRelaciones, Actividades, Persona,
                              PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
-                             SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion, TipoLugar)
+                             SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion, TipoLugar,
+                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave)
 
 from django.db.models import Manager, Q
 
@@ -946,4 +947,75 @@ class TipoLugarWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = TipoLugar
         fields = ['id', 'tipo_lugar', 'descripcion']
+
+
+# ── Leccion (Lecciones Educativas) Serializers ─────────────────────────────────
+
+class LeccionNivelWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+    vocab_field = 'nivel'
+
+    class Meta:
+        model = LeccionNivel
+        fields = ['nivel_id', 'nivel', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False}}
+
+
+class LeccionPalabraClaveWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+    vocab_field = 'palabra_clave'
+
+    class Meta:
+        model = LeccionPalabraClave
+        fields = ['palabra_clave_id', 'palabra_clave', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False}}
+
+
+class LeccionNivelReferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeccionNivel
+        fields = ['nivel_id', 'nivel']
+
+
+class LeccionPalabraClaveReferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeccionPalabraClave
+        fields = ['palabra_clave_id', 'palabra_clave']
+
+
+class LeccionImagenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeccionImagen
+        fields = ['leccion_imagen_id', 'imagen', 'created_at']
+
+
+class LeccionListSerializer(serializers.ModelSerializer):
+    """Leccion data for list views"""
+    levels = LeccionNivelReferenceSerializer(many=True, read_only=True)
+    keywords = LeccionPalabraClaveReferenceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Leccion
+        fields = ['leccion_id', 'title', 'levels', 'keywords', 'created_at', 'updated_at']
+
+
+class LeccionDetailSerializer(serializers.ModelSerializer):
+    """Leccion data for the public detail view, including related entities"""
+    levels = LeccionNivelReferenceSerializer(many=True, read_only=True)
+    keywords = LeccionPalabraClaveReferenceSerializer(many=True, read_only=True)
+    personas = PersonaReferenceSerializer(many=True, read_only=True)
+    documentos = DocumentoReferenceSerializer(many=True, read_only=True)
+    corporaciones = CorporacionReferenceSerializer(many=True, read_only=True)
+    imagenes = LeccionImagenSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Leccion
+        fields = ['leccion_id', 'title', 'body', 'levels', 'keywords', 'personas',
+                  'documentos', 'corporaciones', 'imagenes', 'created_at', 'updated_at']
+
+
+class LeccionWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Leccion
+        fields = ['leccion_id', 'title', 'body', 'levels', 'keywords',
+                  'personas', 'documentos', 'corporaciones']
+        read_only_fields = ['leccion_id']
         extra_kwargs = {'descripcion': {'required': False}}

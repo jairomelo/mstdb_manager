@@ -11,6 +11,7 @@ from .views import (
     EstadoCivilViewSet, ActividadesViewSet, SituacionLugarViewSet, RolEventoViewSet,
     TiposInstitucionViewSet, TipoLugarViewSet,
     MergeCandidatesView, MergeExecuteView, MergeSuggestView,
+    LeccionViewSet, LeccionNivelViewSet, LeccionPalabraClaveViewSet,
 )
 from .crosstab import CrosstabView, CrosstabSchemaView
 
@@ -27,6 +28,7 @@ router_v2.register('corporaciones', CorporacionViewSet, basename='corporaciones_
 router_v2.register('relaciones-personas', PersonaRelacionesViewSet, basename='relaciones_personas_api_v2')
 router_v2.register('relaciones-lugares', PersonaLugarRelViewSet, basename='relaciones_lugares_api_v2')
 router_v2.register('travel-trajectories', PersonaTravelTrajectoryViewSet, basename='travel_trajectories_api_v2')
+router_v2.register('lecciones', LeccionViewSet, basename='lecciones_api_v2')
 
 # Vocabulary ViewSets
 router_v2.register('vocabularios/tipos-documentales', TipoDocumentalViewSet, basename='vocab_tipo_documental')
@@ -39,6 +41,8 @@ router_v2.register('vocabularios/situaciones-lugar', SituacionLugarViewSet, base
 router_v2.register('vocabularios/roles-evento', RolEventoViewSet, basename='vocab_rol_evento')
 router_v2.register('vocabularios/tipos-institucion', TiposInstitucionViewSet, basename='vocab_tipos_institucion')
 router_v2.register('vocabularios/tipos-lugar', TipoLugarViewSet, basename='vocab_tipos_lugar')
+router_v2.register('vocabularios/niveles-leccion', LeccionNivelViewSet, basename='vocab_niveles_leccion')
+router_v2.register('vocabularios/palabras-clave-leccion', LeccionPalabraClaveViewSet, basename='vocab_palabras_clave_leccion')
 
 # URL patterns for V2
 urlpatterns = [
