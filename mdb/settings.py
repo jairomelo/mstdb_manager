@@ -306,6 +306,9 @@ DEFAULT_DOMAIN = 'db.trayectoriasafro.org'
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
 TURNSTILE_SITE_KEY = os.getenv('TURNSTILE_SITE_KEY', '')
 
+# Carto basemap tiles (server-side only; never exposed to the browser)
+CARTO_API = os.getenv('CARTO_API', '')
+
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
 

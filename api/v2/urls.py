@@ -14,6 +14,7 @@ from .views import (
     LeccionViewSet, LeccionNivelViewSet, LeccionPalabraClaveViewSet,
 )
 from .crosstab import CrosstabView, CrosstabSchemaView
+from .tiles import carto_tile_proxy
 
 # Create router for V2 API
 router_v2 = DefaultRouter()
@@ -66,6 +67,7 @@ urlpatterns = [
     path('places-people-distribution/', PlacesPeopleDistribution.as_view(), name='places_people_distribution_v2'),
     path('crosstab/', CrosstabView.as_view(), name='crosstab_v2'),
     path('crosstab/schema/', CrosstabSchemaView.as_view(), name='crosstab_schema_v2'),
+    path('tiles/<str:layer>/<int:z>/<int:x>/<int:y>.png', carto_tile_proxy, name='carto_tile_proxy'),
     path('merge/candidates/', MergeCandidatesView.as_view(), name='merge_candidates_v2'),
     path('merge/execute/', MergeExecuteView.as_view(), name='merge_execute_v2'),
     path('merge/suggest/', MergeSuggestView.as_view(), name='merge_suggest_v2'),
