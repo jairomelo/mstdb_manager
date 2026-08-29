@@ -2314,6 +2314,7 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
                     'lat': float(lug.lat),
                     'lon': float(lug.lon),
                     'ordinal': rel.ordinal,
+                    'fecha': rel.fecha_inicial_lugar or (rel.documento.fecha_inicial if rel.documento else None),
                 })
 
         min_ord = min((p['ordinal'] for p in rel_points), default=1)
@@ -2324,16 +2325,19 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         nac = getattr(persona, 'lugar_nacimiento', None)
         if nac and nac.lat and nac.lon:
             fk_points.append({'lugar_id': nac.lugar_id, 'nombre': nac.nombre_lugar,
-                              'lat': float(nac.lat), 'lon': float(nac.lon), 'ordinal': min_ord - 2})
+                              'lat': float(nac.lat), 'lon': float(nac.lon), 'ordinal': min_ord - 2,
+                              'fecha': None})
             seen.add(nac.lugar_id)
         proc = getattr(persona, 'procedencia', None) if hasattr(persona, 'procedencia') else None
         if proc and proc.lat and proc.lon and proc.lugar_id not in seen:
             fk_points.append({'lugar_id': proc.lugar_id, 'nombre': proc.nombre_lugar,
-                              'lat': float(proc.lat), 'lon': float(proc.lon), 'ordinal': min_ord - 1})
+                              'lat': float(proc.lat), 'lon': float(proc.lon), 'ordinal': min_ord - 1,
+                              'fecha': None})
         defn = getattr(persona, 'lugar_defuncion', None)
         if defn and defn.lat and defn.lon:
             fk_points.append({'lugar_id': defn.lugar_id, 'nombre': defn.nombre_lugar,
-                              'lat': float(defn.lat), 'lon': float(defn.lon), 'ordinal': max_ord + 1})
+                              'lat': float(defn.lat), 'lon': float(defn.lon), 'ordinal': max_ord + 1,
+                              'fecha': None})
 
         return sorted(fk_points + rel_points, key=lambda p: p['ordinal'])
 
@@ -2350,7 +2354,14 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         Supports filters: q (full-text), sexo, etnonimo, calidad,
         hispanizacion, edad__gte, edad__lte, fecha_inicial__gte,
         fecha_inicial__lte.
+
+        With include_timeline=1, each route additionally carries per-year
+        movement counts (years), min_year/max_year and an undated count,
+        plus top-level min_year/max_year/undated_count. Per-year values
+        count movement legs, not unique personas.
         """
+        include_timeline = request.query_params.get('include_timeline') == '1'
+
         qs = PersonaEsclavizada.objects.select_related(
             'procedencia', 'lugar_nacimiento', 'lugar_defuncion'
         ).prefetch_related('p_x_l_pere__lugar', 'p_x_l_pere__documento')
@@ -2389,8 +2400,11 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
             Q(procedencia__isnull=False)
         ).distinct()
 
-        route_map = defaultdict(lambda: {'persona_ids': set()})
+        route_map = defaultdict(lambda: {'persona_ids': set(), 'years': defaultdict(int), 'undated': 0})
         place_map = {}
+        min_year = None
+        max_year = None
+        undated_count = 0
 
         def _touch_place(pt):
             pid = pt['lugar_id']
@@ -2427,12 +2441,25 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
                 place_map[tid]['persona_ids'].add(persona.persona_id)
                 key = (fid, tid)
                 route_map[key]['persona_ids'].add(persona.persona_id)
+                if include_timeline:
+                    # Leg year: arrival date, falling back to departure date
+                    fecha = to.get('fecha') or fr.get('fecha')
+                    if fecha:
+                        year = fecha.year
+                        route_map[key]['years'][year] += 1
+                        if min_year is None or year < min_year:
+                            min_year = year
+                        if max_year is None or year > max_year:
+                            max_year = year
+                    else:
+                        route_map[key]['undated'] += 1
+                        undated_count += 1
 
         routes = []
         for (fid, tid), info in route_map.items():
             fp = place_map[fid]
             tp = place_map[tid]
-            routes.append({
+            route = {
                 'from_lugar_id': fid,
                 'from_nombre': fp['nombre'],
                 'from_lat': fp['lat'],
@@ -2442,7 +2469,14 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'to_lat': tp['lat'],
                 'to_lon': tp['lon'],
                 'count': len(info['persona_ids']),
-            })
+            }
+            if include_timeline:
+                years = info['years']
+                route['years'] = {str(y): n for y, n in sorted(years.items())}
+                route['min_year'] = min(years) if years else None
+                route['max_year'] = max(years) if years else None
+                route['undated'] = info['undated']
+            routes.append(route)
 
         places = []
         for pid, info in place_map.items():
@@ -2456,12 +2490,17 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'persona_count': len(info['persona_ids']),
             })
 
-        return Response({
+        payload = {
             'total_routes': len(routes),
             'total_places': len(places),
             'routes': sorted(routes, key=lambda r: r['count'], reverse=True),
             'places': sorted(places, key=lambda p: p['persona_count'], reverse=True),
-        })
+        }
+        if include_timeline:
+            payload['min_year'] = min_year
+            payload['max_year'] = max_year
+            payload['undated_count'] = undated_count
+        return Response(payload)
 
     # ------------------------------------------------------------------
     # Route detail
