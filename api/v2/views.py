@@ -16,6 +16,8 @@ from django.middleware.csrf import get_token
 from rest_framework.permissions import BasePermission, IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.throttling import AnonRateThrottle
 
+from .cache_utils import cache_visualization
+
 
 class LoginRateThrottle(AnonRateThrottle):
     scope = 'login'
@@ -1997,6 +1999,7 @@ class SearchNetworkAPIView(SearchAPIView):
             return 'sub'
         return 'tmp'
 
+    @cache_visualization('search_network', ttl=300)
     def get(self, request):
         type_key = request.query_params.get('type', 'personaesclavizada').strip()
         scope_mode = request.query_params.get('scope_mode', 'strict').strip().lower()
@@ -2331,6 +2334,7 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
     # ------------------------------------------------------------------
 
     @action(detail=False, methods=['get'])
+    @cache_visualization('travel_trajectories_aggregated', ttl=600)
     def aggregated(self, request):
         """
         Aggregate all individual trajectories into route flows.
@@ -2830,6 +2834,7 @@ def gender_status_distribution(request):
 
 
 class PlacesPeopleDistribution(APIView):
+    @cache_visualization('places_people_distribution', ttl=600)
     def get(self, request):
         data = (
             PersonaEsclavizada.objects
