@@ -1383,7 +1383,15 @@ class SearchAPIView(APIView):
             if archivo_ids:
                 qs = qs.filter(documentos__archivo__archivo_id__in=archivo_ids).distinct()
             if years:
-                qs = qs.filter(documentos__fecha_inicial__year__in=years).distinct()
+                # Handle year as a list of specific years (sidebar filter) or range (network viz)
+                # If exactly 2 values: treat as [start, end] range; otherwise use __in
+                if len(years) == 2 and years[0] <= years[1]:
+                    qs = qs.filter(
+                        documentos__fecha_inicial__year__gte=years[0],
+                        documentos__fecha_inicial__year__lte=years[1]
+                    ).distinct()
+                else:
+                    qs = qs.filter(documentos__fecha_inicial__year__in=years).distinct()
             if calidades:
                 qs = qs.filter(calidades__calidad__in=calidades).distinct()
             if ocupaciones:
