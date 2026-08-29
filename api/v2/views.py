@@ -2836,15 +2836,16 @@ class PlacesPeopleDistribution(APIView):
             .annotate(
                 year=ExtractYear('p_x_l_pere__documento__fecha_inicial'),
                 lugar=F('p_x_l_pere__lugar__nombre_lugar'),
+                lugar_id=F('p_x_l_pere__lugar__lugar_id'),
                 tipo=F('p_x_l_pere__lugar__tipo__tipo_lugar'),
             )
-            .values('lugar', 'tipo', 'year')
+            .values('lugar', 'lugar_id', 'tipo', 'year')
             .annotate(count=Count('persona_id', distinct=True))
             .filter(lugar__isnull=False, year__isnull=False)
             .order_by('year', 'lugar')
         )
         return Response([
-            {"lugar": item['lugar'], "tipo": item['tipo'],
+            {"lugar": item['lugar'], "lugar_id": item['lugar_id'], "tipo": item['tipo'],
              "year": item['year'], "count": item['count']}
             for item in data
         ])
