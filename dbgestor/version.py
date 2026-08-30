@@ -1,6 +1,6 @@
-VERSION = (1, 1, 1)
+VERSION = (1, 2, 0)
 VERSION_STRING = '.'.join(str(x) for x in VERSION)
-VERSION_DATE = '2026-04-19'
+VERSION_DATE = '2026-08-29'
 
 # Data schema version 
 SCHEMA_VERSION = (1, 1, 0)
