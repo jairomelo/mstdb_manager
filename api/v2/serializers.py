@@ -31,10 +31,11 @@ class DocumentoReferenceSerializer(serializers.ModelSerializer):
 
 class PersonaReferenceSerializer(serializers.ModelSerializer):
     """Minimal Persona data for references"""
-    
+    persona_type = serializers.CharField(read_only=True)
+
     class Meta:
         model = Persona
-        fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'polymorphic_ctype']
+        fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'polymorphic_ctype', 'persona_type']
 
 
 class LugarReferenceSerializer(serializers.ModelSerializer):
@@ -418,18 +419,45 @@ class LugarPersonasRelSerializer(serializers.ModelSerializer):
                   'ordinal', 'fecha_inicial_lugar_raw', 'fecha_final_lugar_raw']
 
 
+class CorporacionEventoDocumentoSerializer(serializers.ModelSerializer):
+    """Documento + archivo info consumed by the corporacion detail page."""
+    archivo = ArchivoReferenceSerializer(read_only=True)
+
+    class Meta:
+        model = Documento
+        fields = ['documento_id', 'documento_idno', 'titulo', 'fecha_inicial',
+                  'fecha_inicial_raw', 'archivo']
+
+
+class InstitucionRolEventoNestedSerializer(serializers.ModelSerializer):
+    """Institution event-role entries with nested documento for the corporacion detail page."""
+    documento = CorporacionEventoDocumentoSerializer(read_only=True)
+    rol_evento = serializers.CharField(source='rol_evento.rol_evento', read_only=True)
+
+    class Meta:
+        model = InstitucionRolEvento
+        fields = ['id', 'rol_evento', 'documento']
+
+
 class CorporacionDetailSerializer(serializers.ModelSerializer):
     """Full Corporacion details"""
-    tipo_institucion_nombre = serializers.CharField(source='tipo_institucion.nombre', read_only=True)
+    tipo_institucion_nombre = serializers.CharField(source='tipo_institucion.tipo', read_only=True)
+    tipo_institucion_id = serializers.IntegerField(source='tipo_institucion.pk', read_only=True, allow_null=True)
     lugar_corporacion = LugarReferenceSerializer(read_only=True)
+    documentos = DocumentoReferenceSerializer(many=True, read_only=True)
+    personas_asociadas = PersonaReferenceSerializer(many=True, read_only=True)
+    eventos = InstitucionRolEventoNestedSerializer(source='p_roles_evento', many=True, read_only=True)
     documento_ids = serializers.SerializerMethodField()
     persona_ids = serializers.SerializerMethodField()
     evento_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Corporacion
-        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion_nombre', 'nombres_alternativos',
-                  'lugar_corporacion', 'documento_ids', 'persona_ids', 'evento_ids']
+        fields = ['corporacion_id', 'nombre_institucion', 'tipo_institucion_nombre',
+                  'tipo_institucion_id', 'nombres_alternativos', 'lugar_corporacion',
+                  'notas', 'documentos', 'personas_asociadas', 'eventos',
+                  'documento_ids', 'persona_ids', 'evento_ids',
+                  'created_at', 'updated_at']
 
     def get_documento_ids(self, obj):
         return list(obj.documentos.values_list('documento_id', flat=True))
@@ -438,9 +466,7 @@ class CorporacionDetailSerializer(serializers.ModelSerializer):
         return list(obj.personas_asociadas.values_list('persona_id', flat=True))
 
     def get_evento_ids(self, obj):
-        if hasattr(obj, 'roles_evento'):
-            return list(obj.roles_evento.values_list('id', flat=True))
-        return []
+        return list(obj.p_roles_evento.values_list('id', flat=True))
 
 
 # Relationship Serializers - For handling M2M relationships

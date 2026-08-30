@@ -319,9 +319,7 @@ class DocumentoViewSet(BaseV2ViewSet):
                     Q(descripcion_similarity__gt=0.3)
                 )
 
-            queryset = queryset.filter(
-                is_published=True
-            ).order_by(
+            queryset = queryset.order_by(
                 '-search_rank',
                 '-titulo_similarity',
                 '-updated_at'
@@ -452,9 +450,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     Q(nombres_similarity__gt=0.3)
                 )
 
-            queryset = queryset.filter(
-                is_published=True
-            ).order_by(
+            queryset = queryset.order_by(
                 '-search_rank',
                 '-nombre_similarity',
                 '-updated_at'
@@ -752,9 +748,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     Q(nombres_similarity__gt=0.3)
                 )
 
-            queryset = queryset.filter(
-                is_published=True
-            ).order_by(
+            queryset = queryset.order_by(
                 '-search_rank',
                 '-nombre_similarity',
                 '-updated_at'
@@ -1002,9 +996,7 @@ class CorporacionViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     Q(nombre_similarity__gt=0.3)
                 )
 
-            queryset = queryset.filter(
-                is_published=True
-            ).order_by(
+            queryset = queryset.order_by(
                 '-search_rank',
                 '-nombre_similarity',
                 '-updated_at'
@@ -1406,7 +1398,7 @@ class SearchAPIView(APIView):
     Unified search + browse endpoint.
 
     When ``q`` is provided, performs PostgreSQL full-text search with relevance
-    ranking.  When ``q`` is absent, returns *all* published records (browse mode)
+    ranking.  When ``q`` is absent, returns *all* records (browse mode)
     with server-side ordering, filtering, and pagination.
 
     Returns:
