@@ -1256,7 +1256,12 @@ class DocumentoDetailView(DetailView):
         place_data = defaultdict(lambda: defaultdict(dict))
 
         for rel in personalugarrel:
-            category = "Anteriores" if rel.ordinal < 1 else "Posteriores"
+            if rel.ordinal == 0:
+                category = "Lugar del evento/transacción"
+            elif rel.ordinal < 0:
+                category = "Anteriores"
+            else:
+                category = "Posteriores"
             place_name = rel.lugar.nombre_lugar
             place_id = rel.lugar.lugar_id
             id_relacion = rel.persona_x_lugares
