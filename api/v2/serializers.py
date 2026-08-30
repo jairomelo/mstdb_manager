@@ -111,6 +111,9 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     documented_span = serializers.SerializerMethodField()
     procedencia = serializers.SerializerMethodField()
     estado_civil = serializers.SerializerMethodField()
+    evento_valor_sp_list = serializers.CharField(read_only=True, allow_null=True)
+    evento_forma_de_pago_list = serializers.CharField(read_only=True, allow_null=True)
+    evento_total_list = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaEsclavizada
@@ -121,6 +124,7 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
             'fecha_nacimiento', 'earliest_doc_date', 'latest_doc_date', 'documented_span',
             'procedencia', 'estado_civil',
             'altura', 'cabello', 'ojos', 'marcas_corporales', 'conducta', 'salud',
+            'evento_valor_sp_list', 'evento_forma_de_pago_list', 'evento_total_list',
         ]
 
     def get_etnonimos(self, obj):

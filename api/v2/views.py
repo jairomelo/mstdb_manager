@@ -7,6 +7,7 @@ from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery
 from django.db.models.functions import ExtractYear
+from django.contrib.postgres.aggregates import StringAgg
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -406,6 +407,9 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
             ).annotate(
                 earliest_doc_date=Min('documentos__fecha_inicial'),
                 latest_doc_date=Max('documentos__fecha_inicial'),
+                evento_valor_sp_list=StringAgg('documentos__evento_valor_sp', ', ', distinct=True),
+                evento_forma_de_pago_list=StringAgg('documentos__evento_forma_de_pago', ', ', distinct=True),
+                evento_total_list=StringAgg('documentos__evento_total', ', ', distinct=True),
             )
         elif self.action in ('retrieve', 'trajectory'):
             queryset = queryset.select_related(
