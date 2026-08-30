@@ -529,7 +529,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
 
             # Create edges between all pairs in this relacion
             nat = rel.naturaleza_relacion or ''
-            rel_type = 'fam' if nat == 'fam' else ('sub' if nat == 'sub' else 'tmp')
+            rel_type = nat if nat in ('fam', 'aso', 'sub') else 'tmp'
             doc_id = rel.documento_id
             doc_titulo = rel.documento.titulo if rel.documento else ''
 
@@ -811,7 +811,7 @@ class PersonaNoEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                     }
 
             nat = rel.naturaleza_relacion or ''
-            rel_type = 'fam' if nat == 'fam' else ('sub' if nat == 'sub' else 'tmp')
+            rel_type = nat if nat in ('fam', 'aso', 'sub') else 'tmp'
             doc_id = rel.documento_id
             doc_titulo = rel.documento.titulo if rel.documento else ''
 
@@ -2146,6 +2146,8 @@ class SearchNetworkAPIView(SearchAPIView):
         nat = naturaleza_relacion or ''
         if nat == 'fam':
             return 'fam'
+        if nat == 'aso':
+            return 'aso'
         if nat == 'sub':
             return 'sub'
         return 'tmp'

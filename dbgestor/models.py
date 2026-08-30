@@ -683,6 +683,7 @@ class PersonaRelaciones(models.Model):
 
     RELACIONES = (
         ('fam', 'Familiar'),
+        ('aso', 'Asociativa'),
         ('tmp', 'Temporal'),
         ('sub', 'Subordinación'),
     )
@@ -720,6 +721,8 @@ class PersonaRelaciones(models.Model):
     def type_to_string(self):
         if self.naturaleza_relacion == 'fam':
             return 'Familiar'
+        elif self.naturaleza_relacion == 'aso':
+            return 'Asociativa'
         elif self.naturaleza_relacion == 'tmp':
             return 'Temporal'
         elif self.naturaleza_relacion == 'sub':
