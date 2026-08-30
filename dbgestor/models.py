@@ -2,6 +2,7 @@ import re
 import bleach
 from django.db import models, transaction
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
 from polymorphic.models import PolymorphicModel
 from datetime import timezone
@@ -944,6 +945,29 @@ class LeccionImagen(models.Model):
 
     def __str__(self) -> str:
         return f'Imagen de "{self.leccion.title}"'
+
+
+def validate_pdf_file(file):
+    """FileField has no built-in content validation, unlike ImageField."""
+    if not file.name.lower().endswith('.pdf'):
+        raise ValidationError('El archivo debe tener extensión .pdf.')
+    content_type = getattr(file, 'content_type', None)
+    if content_type and content_type != 'application/pdf':
+        raise ValidationError('El archivo debe ser un PDF (application/pdf).')
+
+
+class LeccionAdjunto(models.Model):
+    """PDF attachments embedded within a Leccion's body content."""
+
+    leccion_adjunto_id = models.AutoField(primary_key=True)
+
+    leccion = models.ForeignKey(Leccion, on_delete=models.CASCADE, related_name='adjuntos')
+    archivo = models.FileField(upload_to='lecciones/adjuntos/%Y/%m/', validators=[validate_pdf_file])
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f'Adjunto de "{self.leccion.title}"'
 
 
 class LeccionAcceso(models.Model):

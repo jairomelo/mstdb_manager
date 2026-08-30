@@ -44,7 +44,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
                              RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge,
-                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
+                             Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
 
 from .serializers import (
     # Reference serializers
@@ -85,7 +85,7 @@ from .serializers import (
 
     # Leccion serializers
     LeccionListSerializer, LeccionDetailSerializer, LeccionWriteSerializer,
-    LeccionImagenSerializer, LeccionNivelWriteSerializer, LeccionPalabraClaveWriteSerializer,
+    LeccionImagenSerializer, LeccionAdjuntoSerializer, LeccionNivelWriteSerializer, LeccionPalabraClaveWriteSerializer,
 )
 
 
@@ -1196,6 +1196,23 @@ class LeccionViewSet(BaseV2ViewSet):
             return Response({'error': 'imagen requerida.'}, status=status.HTTP_400_BAD_REQUEST)
         instance = LeccionImagen.objects.create(leccion=leccion, imagen=imagen)
         serializer = LeccionImagenSerializer(instance, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='adjuntos', parser_classes=[MultiPartParser, FormParser])
+    def upload_adjunto(self, request, leccion_id=None):
+        """Upload a PDF to embed in this Leccion's body; returns its URL."""
+        leccion = self.get_object()
+        if not (request.user.is_staff or self._acceso(leccion)):
+            return Response({'detail': 'No tiene permiso para editar esta lección.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        archivo = request.FILES.get('archivo')
+        if not archivo:
+            return Response({'error': 'archivo requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not archivo.name.lower().endswith('.pdf') or \
+                (archivo.content_type and archivo.content_type != 'application/pdf'):
+            return Response({'error': 'El archivo debe ser un PDF.'}, status=status.HTTP_400_BAD_REQUEST)
+        instance = LeccionAdjunto.objects.create(leccion=leccion, archivo=archivo)
+        serializer = LeccionAdjuntoSerializer(instance, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

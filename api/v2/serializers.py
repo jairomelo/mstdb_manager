@@ -7,7 +7,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaLugarRel, Lugar, PersonaRelaciones, Actividades, Persona,
                              PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion, TipoLugar,
-                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
+                             Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
 
 from django.db.models import Manager, Q
 
@@ -991,6 +991,12 @@ class LeccionImagenSerializer(serializers.ModelSerializer):
         fields = ['leccion_imagen_id', 'imagen', 'created_at']
 
 
+class LeccionAdjuntoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeccionAdjunto
+        fields = ['leccion_adjunto_id', 'archivo', 'created_at']
+
+
 class LeccionListSerializer(serializers.ModelSerializer):
     """Leccion data for list views"""
     levels = LeccionNivelReferenceSerializer(many=True, read_only=True)
@@ -1026,12 +1032,13 @@ class LeccionDetailSerializer(serializers.ModelSerializer):
     documentos = DocumentoReferenceSerializer(many=True, read_only=True)
     corporaciones = CorporacionReferenceSerializer(many=True, read_only=True)
     imagenes = LeccionImagenSerializer(many=True, read_only=True)
+    adjuntos = LeccionAdjuntoSerializer(many=True, read_only=True)
     created_by = serializers.SerializerMethodField()
 
     class Meta:
         model = Leccion
         fields = ['leccion_id', 'title', 'body', 'levels', 'keywords', 'personas',
-                  'documentos', 'corporaciones', 'imagenes', 'is_published', 'created_by',
+                  'documentos', 'corporaciones', 'imagenes', 'adjuntos', 'is_published', 'created_by',
                   'created_at', 'updated_at']
 
     def get_created_by(self, obj):
