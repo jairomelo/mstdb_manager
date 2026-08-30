@@ -3226,7 +3226,7 @@ def _merge_lugar(canonical, duplicate):
 
     # Archivo.lugar_archivo FK (if it exists)
     from dbgestor.models import Archivo
-    Archivo.objects.filter(lugar_archivo=duplicate).update(lugar_archivo=canonical)
+    Archivo.objects.filter(ubicacion_archivo=duplicate).update(ubicacion_archivo=canonical)
 
     # PersonaEsclavizada FK places
     PersonaEsclavizada.objects.filter(procedencia=duplicate).update(procedencia=canonical)
