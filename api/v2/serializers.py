@@ -7,7 +7,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaLugarRel, Lugar, PersonaRelaciones, Actividades, Persona,
                              PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion, TipoLugar,
-                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave)
+                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
 
 from django.db.models import Manager, Q
 
@@ -998,28 +998,71 @@ class LeccionListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Leccion
-        fields = ['leccion_id', 'title', 'levels', 'keywords', 'created_at', 'updated_at']
+        fields = ['leccion_id', 'title', 'levels', 'keywords', 'is_published',
+                  'created_at', 'updated_at']
+
+
+class LeccionAccesoSerializer(serializers.ModelSerializer):
+    """Read representation of a user↔lesson role grant."""
+    username = serializers.CharField(source='user.username', read_only=True)
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LeccionAcceso
+        fields = ['leccion_acceso_id', 'username', 'full_name', 'role', 'created_at']
+
+    def get_full_name(self, obj):
+        return f'{obj.user.first_name} {obj.user.last_name}'.strip()
 
 
 class LeccionDetailSerializer(serializers.ModelSerializer):
-    """Leccion data for the public detail view, including related entities"""
+    """Leccion data for the public detail view, including related entities.
+
+    Owner/collaborator/staff-only fields (accesos, permission flags) are added
+    in to_representation based on the requesting user."""
     levels = LeccionNivelReferenceSerializer(many=True, read_only=True)
     keywords = LeccionPalabraClaveReferenceSerializer(many=True, read_only=True)
     personas = PersonaReferenceSerializer(many=True, read_only=True)
     documentos = DocumentoReferenceSerializer(many=True, read_only=True)
     corporaciones = CorporacionReferenceSerializer(many=True, read_only=True)
     imagenes = LeccionImagenSerializer(many=True, read_only=True)
+    created_by = serializers.SerializerMethodField()
 
     class Meta:
         model = Leccion
         fields = ['leccion_id', 'title', 'body', 'levels', 'keywords', 'personas',
-                  'documentos', 'corporaciones', 'imagenes', 'created_at', 'updated_at']
+                  'documentos', 'corporaciones', 'imagenes', 'is_published', 'created_by',
+                  'created_at', 'updated_at']
+
+    def get_created_by(self, obj):
+        return obj.created_by.username if obj.created_by_id else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        acceso = None
+        if user and user.is_authenticated:
+            acceso = next((a for a in instance.accesos.all() if a.user_id == user.id), None)
+        can_manage = bool(user and (user.is_staff or (acceso and acceso.role == 'owner')))
+        if can_manage or (acceso and acceso.role == 'collaborator'):
+            data['accesos'] = LeccionAccesoSerializer(instance.accesos.all(), many=True).data
+        data['is_owner'] = can_manage
+        data['can_edit'] = bool(user and (user.is_staff or acceso is not None))
+        data['can_delete'] = bool(user and (user.is_staff or (acceso and acceso.role == 'owner')))
+        return data
 
 
 class LeccionWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Leccion
         fields = ['leccion_id', 'title', 'body', 'levels', 'keywords',
-                  'personas', 'documentos', 'corporaciones']
+                  'personas', 'documentos', 'corporaciones', 'is_published']
         read_only_fields = ['leccion_id']
         extra_kwargs = {'descripcion': {'required': False}}
+
+
+class LeccionAccesoWriteSerializer(serializers.Serializer):
+    """Payload for adding/updating a user↔lesson role grant."""
+    username = serializers.CharField()
+    role = serializers.ChoiceField(choices=LeccionAcceso.ROLES, default='collaborator')

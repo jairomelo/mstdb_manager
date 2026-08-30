@@ -44,7 +44,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
                              RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge,
-                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave)
+                             Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
 
 from .serializers import (
     # Reference serializers
@@ -1038,6 +1038,17 @@ class CorporacionViewSet(DocumentoLinkMixin, BaseV2ViewSet):
 
 
 # Leccion ViewSet ("Lecciones Educativas")
+class CanCreateLeccion(BasePermission):
+    """Only staff or members of the `colectores` group can create lessons."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user and user.is_authenticated
+            and (user.is_staff or user.groups.filter(name='colectores').exists())
+        )
+
+
 class LeccionViewSet(BaseV2ViewSet):
     queryset = Leccion.objects.prefetch_related(
         'levels', 'keywords', 'personas', 'documentos', 'corporaciones', 'imagenes').all()
@@ -1057,10 +1068,129 @@ class LeccionViewSet(BaseV2ViewSet):
     def get_export_filename(self):
         return "lecciones_export.csv"
 
+    def _acceso(self, leccion):
+        return LeccionAcceso.objects.filter(leccion=leccion, user=self.request.user).first()
+
+    def get_queryset(self):
+        base = Leccion.objects.prefetch_related(
+            'levels', 'keywords', 'personas', 'documentos', 'corporaciones', 'imagenes',
+            'accesos', 'accesos__user').all()
+        user = self.request.user
+        if user.is_authenticated and user.is_staff:
+            return base
+        if user.is_authenticated:
+            own_ids = LeccionAcceso.objects.filter(user=user).values('leccion_id')
+            return base.filter(Q(is_published=True) | Q(leccion_id__in=own_ids))
+        return base.filter(is_published=True)
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsAuthenticated(), CanCreateLeccion()]
+        if self.action in ('update', 'partial_update', 'destroy', 'upload_imagen'):
+            return [IsAuthenticated()]
+        return super(BaseV2ViewSet, self).get_permissions()
+
+    def perform_create(self, serializer):
+        leccion = serializer.save(created_by=self.request.user)
+        LeccionAcceso.objects.create(leccion=leccion, user=self.request.user, role='owner')
+
+    def update(self, request, *args, **kwargs):
+        leccion = self.get_object()
+        acceso = self._acceso(leccion)
+        if not (request.user.is_staff or acceso):
+            return Response({'detail': 'No tiene permiso para editar esta lección.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        is_owner = request.user.is_staff or acceso.role == 'owner'
+        if not is_owner and 'is_published' in request.data \
+                and bool(request.data['is_published']) != leccion.is_published:
+            return Response({'detail': 'Solo propietarios o staff pueden publicar la lección.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        leccion = self.get_object()
+        acceso = self._acceso(leccion)
+        if not (request.user.is_staff or (acceso and acceso.role == 'owner')):
+            return Response({'detail': 'Solo propietarios o staff pueden eliminar la lección.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['get'], url_path='accesos')
+    def accesos_list(self, request, leccion_id=None):
+        """List role grants; visible to owners, collaborators and staff."""
+        leccion = self.get_object()
+        acceso = self._acceso(leccion)
+        if not (request.user.is_staff or acceso):
+            return Response({'detail': 'No tiene permiso para ver los accesos.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        from .serializers import LeccionAccesoSerializer
+        return Response(LeccionAccesoSerializer(leccion.accesos.all(), many=True).data)
+
+    @action(detail=True, methods=['post'], url_path='accesos/agregar')
+    def accesos_add(self, request, leccion_id=None):
+        """Add a user grant (owner/staff only)."""
+        from django.contrib.auth import get_user_model
+        from .serializers import LeccionAccesoWriteSerializer
+        leccion = self.get_object()
+        acceso = self._acceso(leccion)
+        if not (request.user.is_staff or (acceso and acceso.role == 'owner')):
+            return Response({'detail': 'Solo propietarios o staff pueden gestionar accesos.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        serializer = LeccionAccesoWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target = get_user_model().objects.filter(
+            username__iexact=serializer.validated_data['username']).first()
+        if not target:
+            return Response({'username': ['Usuario no encontrado.']},
+                            status=status.HTTP_404_NOT_FOUND)
+        if LeccionAcceso.objects.filter(leccion=leccion, user=target).exists():
+            return Response({'username': ['El usuario ya tiene acceso a esta lección.']},
+                            status=status.HTTP_400_BAD_REQUEST)
+        instance = LeccionAcceso.objects.create(
+            leccion=leccion, user=target, role=serializer.validated_data['role'])
+        from .serializers import LeccionAccesoSerializer
+        return Response(LeccionAccesoSerializer(instance).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch', 'delete'],
+            url_path='accesos/(?P<acceso_id>[0-9]+)')
+    def acceso_detail(self, request, leccion_id=None, acceso_id=None):
+        """Change role or remove a grant (owner/staff only; last owner protected)."""
+        leccion = self.get_object()
+        my_acceso = self._acceso(leccion)
+        if not (request.user.is_staff or (my_acceso and my_acceso.role == 'owner')):
+            return Response({'detail': 'Solo propietarios o staff pueden gestionar accesos.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        try:
+            target = LeccionAcceso.objects.get(pk=acceso_id, leccion=leccion)
+        except LeccionAcceso.DoesNotExist:
+            return Response({'detail': 'Acceso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'DELETE':
+            if target.role == 'owner' and leccion.accesos.filter(role='owner').count() <= 1:
+                return Response({'detail': 'No se puede eliminar al último propietario.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            target.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        new_role = request.data.get('role')
+        if new_role not in dict(LeccionAcceso.ROLES):
+            return Response({'role': ['Rol inválido.']}, status=status.HTTP_400_BAD_REQUEST)
+        if target.role == 'owner' and new_role != 'owner' \
+                and leccion.accesos.filter(role='owner').count() <= 1:
+            return Response({'detail': 'No se puede degradar al último propietario.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        target.role = new_role
+        target.save(update_fields=['role'])
+        from .serializers import LeccionAccesoSerializer
+        return Response(LeccionAccesoSerializer(target).data)
+
     @action(detail=True, methods=['post'], url_path='imagenes', parser_classes=[MultiPartParser, FormParser])
     def upload_imagen(self, request, leccion_id=None):
         """Upload an image to embed in this Leccion's body; returns its URL."""
         leccion = self.get_object()
+        if not (request.user.is_staff or self._acceso(leccion)):
+            return Response({'detail': 'No tiene permiso para editar esta lección.'},
+                            status=status.HTTP_403_FORBIDDEN)
         imagen = request.FILES.get('imagen')
         if not imagen:
             return Response({'error': 'imagen requerida.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -2721,6 +2851,28 @@ def change_password(request):
     user.save()
     update_session_auth_hash(request, user)  # keep the session alive
     return Response({'detail': 'Contraseña actualizada correctamente.'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_lookup(request):
+    """Find users by username fragment for collaborator assignment.
+
+    Gated to staff/colectores; never exposes emails."""
+    user = request.user
+    if not (user.is_staff or user.groups.filter(name='colectores').exists()):
+        return Response({'detail': 'No tiene permiso para buscar usuarios.'},
+                        status=status.HTTP_403_FORBIDDEN)
+    fragment = request.query_params.get('username', '').strip()
+    if len(fragment) < 2:
+        return Response([])
+    from django.contrib.auth import get_user_model
+    users = get_user_model().objects.filter(
+        username__icontains=fragment).order_by('username')[:10]
+    return Response([
+        {'username': u.username, 'first_name': u.first_name, 'last_name': u.last_name}
+        for u in users
+    ])
 
 
 @api_view(['GET'])

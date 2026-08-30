@@ -13,7 +13,7 @@ from .models import Calidades, Actividades, Hispanizaciones, Etonimos
 from .models import SituacionLugar, TipoDocumental, TipoLugar, TiposInstitucion
 from .models import PersonaEsclavizada, PersonaNoEsclavizada, Corporacion
 from .models import PersonaRelaciones, PersonaLugarRel, RolEvento, SugerenciaMerge
-from .models import Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave
+from .models import Leccion, LeccionImagen, LeccionNivel, LeccionPalabraClave, LeccionAcceso
     
 
 class SituacionLugarAdmin(ImportExportModelAdmin):
@@ -29,9 +29,17 @@ class LeccionImagenInline(admin.TabularInline):
     readonly_fields = ('created_at',)
 
 
+class LeccionAccesoInline(admin.TabularInline):
+    model = LeccionAcceso
+    extra = 0
+    readonly_fields = ('created_at',)
+    raw_id_fields = ('user',)
+
+
 class LeccionAdmin(ImportExportModelAdmin):
-    inlines = [LeccionImagenInline]
-    list_display = ('title', 'created_at', 'updated_at')
+    inlines = [LeccionImagenInline, LeccionAccesoInline]
+    list_display = ('title', 'is_published', 'created_by', 'created_at', 'updated_at')
+    list_filter = ('is_published',)
     search_fields = ('title', 'body')
     filter_horizontal = ('levels', 'keywords', 'personas', 'documentos', 'corporaciones')
 
