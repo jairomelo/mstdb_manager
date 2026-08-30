@@ -17,12 +17,36 @@ logger = logging.getLogger("dbgestor")
 LECCION_BODY_ALLOWED_TAGS = [
     'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4',
     'ul', 'ol', 'li', 'a', 'blockquote', 'img', 'span',
+    'figure', 'figcaption', 'iframe', 'div', 'hr',
 ]
 LECCION_BODY_ALLOWED_ATTRS = {
     'a': ['href', 'title', 'rel', 'target'],
     'img': ['src', 'alt', 'title'],
     'span': ['class'],
+    'figure': ['class'],
+    'div': ['class'],
+    'iframe': ['src', 'title', 'allowfullscreen', 'frameborder', 'width', 'height', 'loading'],
 }
+
+_EMBED_TAG_RE = re.compile(r'<(iframe|img)\b[^>]*>', re.IGNORECASE)
+_SRC_ATTR_RE = re.compile(r'''\ssrc\s*=\s*["']([^"']*)["']''', re.IGNORECASE)
+
+
+def _embed_src_is_safe(url: str) -> bool:
+    """Only http(s) URLs with a host are allowed — blocks javascript:/data:/etc."""
+    match = re.match(r'^(https?)://[^/\s]+', url.strip(), re.IGNORECASE)
+    return bool(match)
+
+
+def sanitize_leccion_embed_urls(html: str) -> str:
+    """Strip unsafe src attributes from iframe/img tags after bleach cleaning."""
+    def clean_tag(match):
+        tag = match.group(0)
+        src_match = _SRC_ATTR_RE.search(tag)
+        if not src_match or _embed_src_is_safe(src_match.group(1)):
+            return tag
+        return _SRC_ATTR_RE.sub('', tag)
+    return _EMBED_TAG_RE.sub(clean_tag, html)
 
 UDC = (
     ('exp', 'Expediente'),
@@ -863,6 +887,15 @@ class Leccion(models.Model):
     body = models.TextField(
         blank=True, help_text='Sanitized HTML content, rendered as-is on the public detail page.')
 
+    is_published = models.BooleanField(
+        default=False, help_text='Indicates if the lesson is published in the API')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='lecciones_creadas',
+    )
+
     levels = models.ManyToManyField(LeccionNivel, blank=True, related_name='lecciones')
     keywords = models.ManyToManyField(LeccionPalabraClave, blank=True, related_name='lecciones')
 
@@ -872,6 +905,8 @@ class Leccion(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ['title']
@@ -890,6 +925,7 @@ class Leccion(models.Model):
                 attributes=LECCION_BODY_ALLOWED_ATTRS,
                 strip=True,
             )
+            self.body = sanitize_leccion_embed_urls(self.body)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -908,4 +944,31 @@ class LeccionImagen(models.Model):
 
     def __str__(self) -> str:
         return f'Imagen de "{self.leccion.title}"'
+
+
+class LeccionAcceso(models.Model):
+    """User↔lesson role grants: owners manage the lesson, collaborators edit content."""
+
+    ROLES = [
+        ('owner', 'Propietario/a'),
+        ('collaborator', 'Colaborador/a'),
+    ]
+
+    leccion_acceso_id = models.AutoField(primary_key=True)
+
+    leccion = models.ForeignKey(Leccion, on_delete=models.CASCADE, related_name='accesos')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='lecciones_accesos')
+    role = models.CharField(max_length=20, choices=ROLES, default='collaborator')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('leccion', 'user')
+        ordering = ['leccion', 'role', 'user']
+        verbose_name = 'Acceso a lección'
+        verbose_name_plural = 'Accesos a lección'
+
+    def __str__(self) -> str:
+        return f'{self.user} → {self.leccion} ({self.role})'
 
