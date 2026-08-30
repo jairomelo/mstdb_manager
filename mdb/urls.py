@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.views.static import serve
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,6 +28,8 @@ urlpatterns = [
     path("cataloguers/", include("cataloguers.urls")),
     # User-uploaded media (e.g. LeccionImagen). Served by Django directly since
     # the reverse proxy in front of it does not have filesystem access to MEDIA_ROOT.
-    path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
+    # Exempted from X-Frame-Options: DENY so uploaded PDFs can render inside the
+    # lesson editor's embed <iframe>.
+    path('media/<path:path>', xframe_options_exempt(serve), {'document_root': settings.MEDIA_ROOT}),
 ]
 
