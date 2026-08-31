@@ -1,4 +1,4 @@
-VERSION = (1, 3, 0)
+VERSION = (1, 3, 1)
 VERSION_STRING = '.'.join(str(x) for x in VERSION)
 VERSION_DATE = '2026-08-30'
 
