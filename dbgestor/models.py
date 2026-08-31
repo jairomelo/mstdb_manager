@@ -502,19 +502,15 @@ class Persona(PolymorphicModel):
 
         name_connectors = ["de", "del", "la", "y", "e"]
 
-        nombre_capitalizado = ""
+        palabras = name.split()
 
-        name = name.split()
+        # Process and capitalize each word
+        resultado = [
+            palabra.title() if palabra.lower() not in name_connectors else palabra.lower()
+            for palabra in palabras
+        ]
 
-        for palabra in name:
-            palabra = palabra.lower()
-            if palabra not in name_connectors:
-                palabra = palabra.title()
-                nombre_capitalizado += f" {palabra} "
-            else:
-                nombre_capitalizado += f" {palabra} "
-
-        return nombre_capitalizado
+        return " ".join(resultado)
 
     @property
     def short_id(self):
