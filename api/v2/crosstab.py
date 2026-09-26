@@ -207,6 +207,20 @@ def _apply_form_filters(qs, type_key, request):
             if lugar_ids:
                 qs = qs.distinct()
 
+        if p.get('lugar_any'):
+            # Drill-down OR filter: trajectory place OR (PE) origin place
+            lugar_ids = [
+                int(x) for x in p['lugar_any'].split(',')
+                if x.strip().isdigit()
+            ]
+            if lugar_ids:
+                lugar_q = Q()
+                for lid in lugar_ids:
+                    lugar_q |= Q(p_x_l_pere__lugar__lugar_id=lid)
+                    if type_key == 'personaesclavizada':
+                        lugar_q |= Q(procedencia__lugar_id=lid)
+                qs = qs.filter(lugar_q).distinct()
+
         for shared_key in ('fecha_documento__gte', 'fecha_documento__lte'):
             val = p.get(shared_key)
             if val:
