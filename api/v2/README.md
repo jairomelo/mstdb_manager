@@ -85,6 +85,22 @@ GET /api/v2/search/?q=term&type=all     # Global search across all entities
 GET /api/v2/csrf/                       # Get CSRF token
 ```
 
+### Person filter params (search, crosstab and network endpoints)
+
+These form-filter params are shared by `/api/v2/search/`, `/api/v2/crosstab/`,
+the search-network endpoint and the aggregated-trajectories endpoint:
+
+- `trayectoria_lugar=<id[,id…]>` — persons with a `PersonaLugarRel` at **every** listed place (AND).
+- `procedencia=<id>` — enslaved persons whose `procedencia` FK points at that place (origin only).
+- `lugar_any=<id[,id…]>` — persons related to **any** listed place by trajectory
+  (`PersonaLugarRel`) **or**, for `personaesclavizada`, by `procedencia` origin (OR).
+  Used by the Dashboard "personas-por-lugar" drill-down so a place matches both meanings.
+
+Count contract: `PlacesPeopleDistribution` counts **distinct** persons per place+year
+by trajectory document date (`p_x_l_pere__documento__fecha_inicial`). Because
+`lugar_any` also matches `procedencia` (which carries no document date), the Search
+result count for the same place+year may be slightly higher than the chart count.
+
 ## Response Structure Examples
 
 ### List Response (Lightweight)
