@@ -65,6 +65,8 @@ GET /api/v2/corporaciones/search/?q=term # Search corporations
 GET /api/v2/corporaciones/export_csv/   # Export as CSV
 ```
 
+`documento_count` on the archivo list/detail endpoints is a live annotated `Count('documento')` (single query, no N+1, no cache): creating a document and reloading the Archivos page increments the count immediately. It counts all catalogued `Documento` rows for the archive (`documento.archivo` FK).
+
 ### Relationship Endpoints
 ```
 GET /api/v2/relaciones-personas/        # List person relationships

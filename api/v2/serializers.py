@@ -66,6 +66,9 @@ class ArchivoListSerializer(serializers.ModelSerializer):
         fields = ['archivo_id', 'nombre', 'nombre_abreviado', 'archivo_idno', 'documento_count', 'created_at', 'updated_at']
 
     def get_documento_count(self, obj):
+        annotated = getattr(obj, 'documento_count', None)
+        if annotated is not None:
+            return annotated
         return obj.documento_set.count()
 
 
@@ -254,6 +257,9 @@ class ArchivoDetailSerializer(serializers.ModelSerializer):
                   'documento_count', 'created_at', 'updated_at']
 
     def get_documento_count(self, obj):
+        annotated = getattr(obj, 'documento_count', None)
+        if annotated is not None:
+            return annotated
         return obj.documento_set.count()
 
 

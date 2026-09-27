@@ -252,6 +252,11 @@ class ArchivoViewSet(BaseV2ViewSet):
     write_serializer_class = ArchivoWriteSerializer
     lookup_field = 'archivo_id'
 
+    def get_queryset(self):
+        return super().get_queryset().annotate(
+            documento_count=Count('documento', distinct=True)
+        )
+
     def get_export_filename(self):
         return "archivos_export.csv"
 
