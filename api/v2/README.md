@@ -100,6 +100,18 @@ the search-network endpoint and the aggregated-trajectories endpoint:
 - `evento_valor_sp__icontains=<texto>` — free-text match on the economic value recorded in
   `Documento.evento_valor_sp` (e.g. `200 pesos`). For persons it matches any linked document;
   for documentos it matches the document's own field.
+- `conducta_canonica=<id|texto>` — canonical conducta filter (`personaesclavizada` only).
+  Accepts a `ConductaTerm` id or a canonico/alias text (e.g. `huído`, `huido`). It matches
+  persons linked via the `conducta_terms` M2M **and** persons whose free-text `conducta`
+  contains any alias (accent-insensitive via PostgreSQL `unaccent`), so records not yet
+  linked by the backfill are still found. Wildcard aliases (`escap*`) match by prefix.
+  Backfill: `python manage.py link_conducta_terms` (dry-run by default; `--apply` links,
+  `--csv` writes a review report; review aliases/wildcards are never auto-linked).
+
+The `vocabularios/conducta-terms/` endpoint (read public, write authenticated) manages the
+canonical conducta vocabulary: `canonico` (unique, stored lowercase), `aliases` (lowercase,
+deduplicated, may end with `*` for prefix aliases) and `descripcion`. An alias may not
+collide with another term's canonico.
 
 Search results for `personaesclavizada` aggregate the economic value fields of the person's
 documents into `evento_valor_sp_list`, `evento_forma_de_pago_list` and `evento_total_list`
