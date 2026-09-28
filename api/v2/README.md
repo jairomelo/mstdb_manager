@@ -79,6 +79,21 @@ GET /api/v2/travel-trajectories/        # List persons with travel trajectories
 GET /api/v2/travel-trajectories/{id}/   # Get person's complete trajectory
 GET /api/v2/travel-trajectories/{id}/trajectory_details/  # Detailed trajectory points
 GET /api/v2/travel-trajectories/all_trajectories_summary/ # Map overview data
+GET /api/v2/travel-trajectories/aggregated/?include_timeline=1  # Route flows for the map
+GET /api/v2/travel-trajectories/route_detail/?from_lugar_id=A&to_lugar_id=B  # Personas of one route
+GET /api/v2/travel-trajectories/place_detail/?lugar_id=A&direction=in|out|all  # Personas of one place
+```
+
+The `aggregated/` endpoint accepts performance params (all optional, part of the
+600s cache key): `limit_rutas` (max routes, count-desc, default 500, max 2000),
+`min_count` (drop routes below this count, default 1) and
+`bbox=minLon,minLat,maxLon,maxLat` (keep routes touching the box). The response
+reports `truncated`, `limit_rutas` and `min_count`; only places used by the kept
+routes are returned. `place_detail` returns `{count, results, direction,
+lugar_id, incoming, outgoing}` with movement-leg totals. Overseas origin places
+whose gazetteer coordinates sat inside the Gulf of Mexico box (Lisboa, Sevilla,
+Guinea, Congo, Mozambique, Cabo Verde, Castilla, Portugal, España, Perú,
+Filipinas) were moved to their real-world positions (migration `0021`).
 ```
 
 ### Search & Utility Endpoints

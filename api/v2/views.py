@@ -2496,6 +2496,9 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         """Return sorted list of trajectory dicts for one persona."""
         rels = (persona.p_x_l_pere
                 .select_related('lugar', 'documento')
+                .only('ordinal', 'fecha_inicial_lugar',
+                      'lugar__lugar_id', 'lugar__nombre_lugar', 'lugar__lat', 'lugar__lon',
+                      'documento__fecha_inicial')
                 .order_by('ordinal'))
         rel_points = []
         for rel in rels:
@@ -2548,12 +2551,55 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         hispanizacion, edad__gte, edad__lte, fecha_inicial__gte,
         fecha_inicial__lte.
 
+        Performance params (all optional, included in the cache key):
+        - limit_rutas: max routes returned, sorted by count desc (default 500, max 2000).
+        - min_count: drop routes with count < min_count (default 1).
+        - bbox: minLon,minLat,maxLon,maxLat — keep routes touching the box.
+
         With include_timeline=1, each route additionally carries per-year
         movement counts (years), min_year/max_year and an undated count,
         plus top-level min_year/max_year/undated_count. Per-year values
         count movement legs, not unique personas.
         """
         include_timeline = request.query_params.get('include_timeline') == '1'
+
+        try:
+            limit_rutas = int(request.query_params.get('limit_rutas', 500))
+        except (ValueError, TypeError):
+            return Response({'detail': 'limit_rutas must be an integer.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        limit_rutas = max(1, min(limit_rutas, 2000))
+
+        try:
+            min_count = int(request.query_params.get('min_count', 1))
+        except (ValueError, TypeError):
+            return Response({'detail': 'min_count must be an integer.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        min_count = max(1, min_count)
+
+        bbox = None
+        raw_bbox = request.query_params.get('bbox')
+        if raw_bbox:
+            try:
+                parts = [float(x) for x in raw_bbox.split(',')]
+            except (ValueError, TypeError):
+                return Response({'detail': 'bbox must be minLon,minLat,maxLon,maxLat.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if len(parts) != 4:
+                return Response({'detail': 'bbox must be minLon,minLat,maxLon,maxLat.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            min_lon, min_lat, max_lon, max_lat = parts
+            if not (-180 <= min_lon <= 180 and -180 <= max_lon <= 180
+                    and -90 <= min_lat <= 90 and -90 <= max_lat <= 90):
+                return Response({'detail': 'bbox coordinates out of range.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if min_lon >= max_lon or min_lat >= max_lat:
+                return Response({'detail': 'bbox min must be smaller than max.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            bbox = (min_lon, min_lat, max_lon, max_lat)
+
+        def _in_bbox(lat, lon):
+            return (bbox[0] <= lon <= bbox[2]) and (bbox[1] <= lat <= bbox[3])
 
         qs = PersonaEsclavizada.objects.select_related(
             'procedencia', 'lugar_nacimiento', 'lugar_defuncion'
@@ -2652,6 +2698,11 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         for (fid, tid), info in route_map.items():
             fp = place_map[fid]
             tp = place_map[tid]
+            if bbox and not (_in_bbox(fp['lat'], fp['lon']) or _in_bbox(tp['lat'], tp['lon'])):
+                continue
+            count = len(info['persona_ids'])
+            if count < min_count:
+                continue
             route = {
                 'from_lugar_id': fid,
                 'from_nombre': fp['nombre'],
@@ -2661,7 +2712,7 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'to_nombre': tp['nombre'],
                 'to_lat': tp['lat'],
                 'to_lon': tp['lon'],
-                'count': len(info['persona_ids']),
+                'count': count,
             }
             if include_timeline:
                 years = info['years']
@@ -2671,8 +2722,18 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
                 route['undated'] = info['undated']
             routes.append(route)
 
+        routes.sort(key=lambda r: r['count'], reverse=True)
+        truncated = len(routes) > limit_rutas
+        routes = routes[:limit_rutas]
+        kept_ids = set()
+        for r in routes:
+            kept_ids.add(r['from_lugar_id'])
+            kept_ids.add(r['to_lugar_id'])
+
         places = []
         for pid, info in place_map.items():
+            if pid not in kept_ids:
+                continue
             places.append({
                 'lugar_id': info['lugar_id'],
                 'nombre': info['nombre'],
@@ -2686,8 +2747,11 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         payload = {
             'total_routes': len(routes),
             'total_places': len(places),
-            'routes': sorted(routes, key=lambda r: r['count'], reverse=True),
+            'routes': routes,
             'places': sorted(places, key=lambda p: p['persona_count'], reverse=True),
+            'truncated': truncated,
+            'limit_rutas': limit_rutas,
+            'min_count': min_count,
         }
         if include_timeline:
             payload['min_year'] = min_year
@@ -2722,6 +2786,18 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         ).prefetch_related(
             'p_x_l_pere__lugar', 'p_x_l_pere__documento',
             'etnonimos', 'calidades', 'hispanizacion'
+        )
+        # Route pre-filter at DB level: only personas that touch both places.
+        # NOTE: chained .filter() (not Q-AND in one call) — each M2M condition
+        # needs its own JOIN, otherwise a single PersonaLugarRel row would have
+        # to match both lugar ids at once and nothing ever matches.
+        # The exact consecutive-leg check still runs in Python below.
+        qs = qs.filter(
+            Q(p_x_l_pere__lugar__lugar_id=from_id) | Q(lugar_nacimiento__lugar_id=from_id)
+            | Q(lugar_defuncion__lugar_id=from_id) | Q(procedencia__lugar_id=from_id)
+        ).filter(
+            Q(p_x_l_pere__lugar__lugar_id=to_id) | Q(lugar_nacimiento__lugar_id=to_id)
+            | Q(lugar_defuncion__lugar_id=to_id) | Q(procedencia__lugar_id=to_id)
         )
         qs = self._apply_persona_filters(qs, request.query_params)
         qs = qs.filter(
@@ -2760,6 +2836,99 @@ class PersonaTravelTrajectoryViewSet(viewsets.ReadOnlyModelViewSet):
         if page is not None:
             return self.get_paginated_response(data)
         return Response({'count': len(data), 'results': data})
+
+    @action(detail=False, methods=['get'], url_path='place_detail')
+    def place_detail(self, request):
+        """
+        Return paginated personas touching one lugar (Entrantes/Salientes).
+
+        Query params: lugar_id (required), direction=in|out|all (default all).
+        Same filters as /aggregated/. Response: {count, results, direction,
+        incoming, outgoing} where incoming/outgoing are movement-leg totals.
+        """
+        raw_id = request.query_params.get('lugar_id')
+        if not raw_id:
+            return Response({'detail': 'lugar_id is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            lugar_id = int(raw_id)
+        except (ValueError, TypeError):
+            return Response({'detail': 'Invalid lugar ID.'}, status=status.HTTP_400_BAD_REQUEST)
+        direction = request.query_params.get('direction', 'all')
+        if direction not in ('in', 'out', 'all'):
+            return Response({'detail': 'direction must be in, out or all.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        qs = PersonaEsclavizada.objects.select_related(
+            'procedencia', 'lugar_nacimiento', 'lugar_defuncion'
+        ).prefetch_related(
+            'p_x_l_pere__lugar', 'p_x_l_pere__documento',
+            'etnonimos', 'calidades', 'hispanizacion'
+        )
+        qs = qs.filter(
+            Q(p_x_l_pere__lugar__lugar_id=lugar_id) | Q(lugar_nacimiento__lugar_id=lugar_id)
+            | Q(lugar_defuncion__lugar_id=lugar_id) | Q(procedencia__lugar_id=lugar_id)
+        ).distinct()
+        qs = self._apply_persona_filters(qs, request.query_params)
+        qs = qs.filter(
+            Q(p_x_l_pere__isnull=False) |
+            Q(lugar_nacimiento__isnull=False) |
+            Q(lugar_defuncion__isnull=False) |
+            Q(procedencia__isnull=False)
+        ).distinct()
+
+        incoming_ids = set()
+        outgoing_ids = set()
+        incoming_legs = 0
+        outgoing_legs = 0
+        for persona in qs.iterator(chunk_size=200):
+            points = self._build_persona_points(persona)
+            for i in range(len(points) - 1):
+                fr, to = points[i], points[i + 1]
+                if fr['lugar_id'] == to['lugar_id']:
+                    continue
+                if to['lugar_id'] == lugar_id:
+                    incoming_ids.add(persona.persona_id)
+                    incoming_legs += 1
+                if fr['lugar_id'] == lugar_id:
+                    outgoing_ids.add(persona.persona_id)
+                    outgoing_legs += 1
+
+        if direction == 'in':
+            matching_ids = sorted(incoming_ids)
+        elif direction == 'out':
+            matching_ids = sorted(outgoing_ids)
+        else:
+            matching_ids = sorted(incoming_ids | outgoing_ids)
+
+        result_qs = PersonaEsclavizada.objects.filter(
+            persona_id__in=matching_ids
+        ).prefetch_related('etnonimos', 'calidades', 'hispanizacion').order_by('nombre_normalizado')
+
+        page = self.paginate_queryset(result_qs)
+        data = []
+        for p in (page if page is not None else result_qs):
+            data.append({
+                'persona_id': p.persona_id,
+                'nombre_normalizado': p.nombre_normalizado,
+                'sexo': p.get_sexo_display() if p.sexo else None,
+                'edad': p.edad,
+                'etnonimos': [str(e) for e in p.etnonimos.all()],
+                'calidades': [str(c) for c in p.calidades.all()],
+                'hispanizacion': [str(h) for h in p.hispanizacion.all()],
+            })
+
+        payload_extra = {
+            'direction': direction,
+            'lugar_id': lugar_id,
+            'incoming': incoming_legs,
+            'outgoing': outgoing_legs,
+        }
+        if page is not None:
+            paginated = self.get_paginated_response(data)
+            paginated.data.update(payload_extra)
+            return paginated
+        return Response({'count': len(data), 'results': data, **payload_extra})
 
 
 # Utility Views
