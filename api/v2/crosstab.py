@@ -67,6 +67,13 @@ DIMENSIONS = {
         'values_field': 'hispanizacion__hispanizacion',
         'null_label': 'Sin información',
     },
+    'conducta_canonica': {
+        'label': 'Conducta (canónica)',
+        'entities': ['personaesclavizada'],
+        'is_m2m': True,
+        'values_field': 'conducta_terms__canonico',
+        'null_label': 'Sin conducta canónica',
+    },
     'procedencia': {
         'label': 'Procedencia (lugar)',
         'entities': ['personaesclavizada'],
@@ -262,10 +269,15 @@ def _apply_form_filters(qs, type_key, request):
                     qs = qs.filter(procedencia__lugar_id=int(p['procedencia']))
                 except (ValueError, TypeError):
                     pass
-            for fld in ('altura', 'cabello', 'ojos', 'marcas_corporales', 'conducta', 'salud'):
+            for fld in ('altura', 'cabello', 'ojos', 'marcas_corporales', 'salud'):
                 val = p.get(f'{fld}__icontains')
                 if val:
                     qs = qs.filter(**{f'{fld}__icontains': val})
+            if p.get('conducta__icontains'):
+                qs = qs.filter(conducta__icontains=p['conducta__icontains'])
+            if p.get('conducta_canonica'):
+                from dbgestor.models import ConductaTerm
+                qs = qs.filter(ConductaTerm.match_q(p['conducta_canonica'])).distinct()
             if p.get('evento_valor_sp__icontains'):
                 qs = qs.filter(
                     documentos__evento_valor_sp__icontains=p['evento_valor_sp__icontains']
