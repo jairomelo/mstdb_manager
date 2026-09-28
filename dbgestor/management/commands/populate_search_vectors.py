@@ -16,6 +16,7 @@ from django.contrib.postgres.search import SearchVector
 from django.db.models import Count
 
 from dbgestor.models import Lugar, Documento, Persona, Corporacion
+from dbgestor.signals import persona_search_vector_expression
 
 
 class Command(BaseCommand):
@@ -83,18 +84,17 @@ class Command(BaseCommand):
     def update_persona(self):
         """Update search_vector for all Persona records."""
         self.stdout.write('Updating Persona search vectors...')
-        
+
         count = Persona.objects.count()
-        
-        Persona.objects.update(
-            search_vector=(
-                SearchVector('nombre_normalizado', weight='A', config='spanish') +
-                SearchVector('nombres', weight='A', config='spanish') +
-                SearchVector('apellidos', weight='A', config='spanish') +
-                SearchVector('notas', weight='C', config='spanish') +
-                SearchVector('ocupacion_categoria', weight='D', config='spanish')
-            )
+
+        Persona.objects.exclude(personaesclavizada__isnull=False).update(
+            search_vector=persona_search_vector_expression()
         )
+        Persona.objects.filter(personaesclavizada__isnull=False).update(
+            search_vector=persona_search_vector_expression(include_conducta=True)
+        )
+
+        self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Persona records'))
         
         self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Persona records'))
 
