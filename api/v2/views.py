@@ -1621,6 +1621,10 @@ class SearchAPIView(APIView):
                     val = p.get(f'{fld}__icontains')
                     if val:
                         qs = qs.filter(**{f'{fld}__icontains': val})
+                if p.get('evento_valor_sp__icontains'):
+                    qs = qs.filter(
+                        documentos__evento_valor_sp__icontains=p['evento_valor_sp__icontains']
+                    ).distinct()
                 if p.get('fecha_documento__gte'):
                     val = p['fecha_documento__gte']
                     if len(val) == 4 and val.isdigit():
@@ -1635,6 +1639,8 @@ class SearchAPIView(APIView):
         elif type_key == 'documento':
             if p.get('tipo_documento__tipo_documental__icontains'):
                 qs = qs.filter(tipo_documento__tipo_documental__icontains=p['tipo_documento__tipo_documental__icontains'])
+            if p.get('evento_valor_sp__icontains'):
+                qs = qs.filter(evento_valor_sp__icontains=p['evento_valor_sp__icontains'])
             if p.get('fecha_inicial__gte'):
                 qs = qs.filter(fecha_inicial__gte=p['fecha_inicial__gte'])
             if p.get('fecha_inicial__lte'):
@@ -1978,6 +1984,9 @@ class SearchAPIView(APIView):
                 ).annotate(
                     earliest_doc_date=Min('documentos__fecha_inicial'),
                     latest_doc_date=Max('documentos__fecha_inicial'),
+                    evento_valor_sp_list=StringAgg('documentos__evento_valor_sp', ', ', distinct=True),
+                    evento_forma_de_pago_list=StringAgg('documentos__evento_forma_de_pago', ', ', distinct=True),
+                    evento_total_list=StringAgg('documentos__evento_total', ', ', distinct=True),
                 )
             if 'personanoesclavizada' in base_querysets:
                 base_querysets['personanoesclavizada'] = base_querysets['personanoesclavizada'].prefetch_related(

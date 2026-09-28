@@ -266,6 +266,10 @@ def _apply_form_filters(qs, type_key, request):
                 val = p.get(f'{fld}__icontains')
                 if val:
                     qs = qs.filter(**{f'{fld}__icontains': val})
+            if p.get('evento_valor_sp__icontains'):
+                qs = qs.filter(
+                    documentos__evento_valor_sp__icontains=p['evento_valor_sp__icontains']
+                ).distinct()
 
     return qs
 

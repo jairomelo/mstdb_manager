@@ -81,8 +81,10 @@ class DocumentoListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Documento
-        fields = ['documento_id', 'short_id', 'documento_idno', 'archivo', 'titulo', 'tipo_documento', 
-                  'fecha_inicial', 'fecha_final', 'lugar_de_produccion_id', 'created_at', 'updated_at']
+        fields = ['documento_id', 'short_id', 'documento_idno', 'archivo', 'titulo', 'tipo_documento',
+                  'fecha_inicial', 'fecha_final', 'lugar_de_produccion_id',
+                  'evento_valor_sp', 'evento_forma_de_pago', 'evento_total',
+                  'created_at', 'updated_at']
 
 
 class PersonaListSerializer(serializers.ModelSerializer):
@@ -277,7 +279,9 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
                   'tipo_udc', 'unidad_documental_compuesta', 'tipo_documento', 'tipo_documento_id',
                   'sigla_documento', 'titulo', 'descripcion', 'deteriorado', 'fecha_inicial',
                   'fecha_inicial_raw', 'fecha_final', 'fecha_final_raw', 'lugar_de_produccion',
-                  'folio_inicial', 'folio_final', 'notas', 'persona_count', 'created_at', 'updated_at']
+                  'folio_inicial', 'folio_final', 'notas', 'persona_count',
+                  'evento_valor_sp', 'evento_forma_de_pago', 'evento_total',
+                  'created_at', 'updated_at']
 
     def get_persona_count(self, obj):
         return obj.persona_set.count()
@@ -321,7 +325,8 @@ class DocumentoNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Documento
         fields = ['documento_id', 'documento_idno', 'archivo', 'titulo',
-                  'tipo_documento', 'fecha_inicial', 'fecha_final']
+                  'tipo_documento', 'fecha_inicial', 'fecha_final',
+                  'evento_valor_sp', 'evento_forma_de_pago', 'evento_total']
 
 
 class PersonaDetailSerializer(serializers.ModelSerializer):

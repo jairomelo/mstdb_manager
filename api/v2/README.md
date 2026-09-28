@@ -97,6 +97,17 @@ the search-network endpoint and the aggregated-trajectories endpoint:
 - `lugar_any=<id[,id…]>` — persons related to **any** listed place by trajectory
   (`PersonaLugarRel`) **or**, for `personaesclavizada`, by `procedencia` origin (OR).
   Used by the Dashboard "personas-por-lugar" drill-down so a place matches both meanings.
+- `evento_valor_sp__icontains=<texto>` — free-text match on the economic value recorded in
+  `Documento.evento_valor_sp` (e.g. `200 pesos`). For persons it matches any linked document;
+  for documentos it matches the document's own field.
+
+Search results for `personaesclavizada` aggregate the economic value fields of the person's
+documents into `evento_valor_sp_list`, `evento_forma_de_pago_list` and `evento_total_list`
+(comma-joined distinct values). The raw `Documento` fields (`evento_valor_sp`,
+`evento_forma_de_pago`, `evento_total`) are exposed on the documento list/detail serializers
+and on the nested `documentos` of persona detail payloads. These are free-text archive
+transcriptions — not normalized numbers — so they are display/filter/CSV only and not sortable
+or aggregatable.
 
 Count contract: `PlacesPeopleDistribution` counts **distinct** persons per place+year
 by trajectory document date (`p_x_l_pere__documento__fecha_inicial`). Because
