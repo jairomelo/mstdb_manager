@@ -10,7 +10,7 @@ from .views import (
     gender_status_distribution, PlacesPeopleDistribution,
     TipoDocumentalViewSet, CalidadesViewSet, HispanizacionesViewSet, EtnonimosViewSet,
     EstadoCivilViewSet, ActividadesViewSet, SituacionLugarViewSet, RolEventoViewSet,
-    TiposInstitucionViewSet, TipoLugarViewSet,
+    TiposInstitucionViewSet, TipoLugarViewSet, ConductaTermViewSet,
     MergeCandidatesView, MergeExecuteView, MergeSuggestView,
     LeccionViewSet, LeccionNivelViewSet, LeccionPalabraClaveViewSet,
 )
@@ -37,6 +37,7 @@ router_v2.register('vocabularios/tipos-documentales', TipoDocumentalViewSet, bas
 router_v2.register('vocabularios/calidades', CalidadesViewSet, basename='vocab_calidades')
 router_v2.register('vocabularios/hispanizaciones', HispanizacionesViewSet, basename='vocab_hispanizaciones')
 router_v2.register('vocabularios/etnonimos', EtnonimosViewSet, basename='vocab_etnonimos')
+router_v2.register('vocabularios/conducta-terms', ConductaTermViewSet, basename='vocab_conducta_terms')
 router_v2.register('vocabularios/estado-civil', EstadoCivilViewSet, basename='vocab_estado_civil')
 router_v2.register('vocabularios/actividades', ActividadesViewSet, basename='vocab_actividades')
 router_v2.register('vocabularios/situaciones-lugar', SituacionLugarViewSet, basename='vocab_situacion_lugar')

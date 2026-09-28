@@ -196,7 +196,14 @@ class EtnonimosAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             qs = qs.filter(etonimo__icontains=self.q)
         return qs
-    
+
+class ConductaTermAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        qs = ConductaTerm.objects.all().order_by('canonico')
+        if self.q:
+            qs = qs.filter(canonico__icontains=self.q)
+        return qs
+
 class EstadoCivilAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         qs = EstadoCivil.objects.all().order_by('estado_civil')

@@ -44,7 +44,8 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
                              RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge,
-                             Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
+                             Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso,
+                             ConductaTerm)
 
 from .serializers import (
     # Reference serializers
@@ -81,7 +82,7 @@ from .serializers import (
     TipoDocumentalWriteSerializer, CalidadesWriteSerializer, HispanizacionesWriteSerializer,
     EtnonimosWriteSerializer, EstadoCivilWriteSerializer, ActividadesWriteSerializer,
     SituacionLugarWriteSerializer, RolEventoWriteSerializer, TiposInstitucionWriteSerializer,
-    TipoLugarWriteSerializer,
+    TipoLugarWriteSerializer, ConductaTermSerializer, ConductaTermWriteSerializer,
 
     # Leccion serializers
     LeccionListSerializer, LeccionDetailSerializer, LeccionWriteSerializer,
@@ -1341,6 +1342,14 @@ class EtnonimosViewSet(VocabBaseViewSet):
     lookup_field = 'etonimo_id'
 
 
+class ConductaTermViewSet(VocabBaseViewSet):
+    queryset = ConductaTerm.objects.all()
+    serializer_class = ConductaTermSerializer
+    write_serializer_class = ConductaTermWriteSerializer
+    search_fields = ['canonico', 'descripcion']
+    lookup_field = 'conducta_term_id'
+
+
 class EstadoCivilViewSet(VocabBaseViewSet):
     queryset = EstadoCivil.objects.all()
     serializer_class = EstadoCivilWriteSerializer
@@ -1617,10 +1626,16 @@ class SearchAPIView(APIView):
                     qs = qs.filter(hispanizacion__hispanizacion__icontains=p['hispanizacion__hispanizacion__icontains']).distinct()
                 if p.get('procedencia'):
                     qs = qs.filter(procedencia__lugar_id=int(p['procedencia']))
-                for fld in ('altura', 'cabello', 'ojos', 'marcas_corporales', 'conducta', 'salud'):
+                for fld in ('altura', 'cabello', 'ojos', 'marcas_corporales', 'salud'):
                     val = p.get(f'{fld}__icontains')
                     if val:
                         qs = qs.filter(**{f'{fld}__icontains': val})
+                if p.get('conducta__icontains'):
+                    qs = qs.filter(conducta__icontains=p['conducta__icontains'])
+                if p.get('conducta_canonica'):
+                    # Canonical conducta vocabulary (e.g. huído): matches the M2M link
+                    # AND the free-text conducta variants (accent-insensitive)
+                    qs = qs.filter(ConductaTerm.match_q(p['conducta_canonica'])).distinct()
                 if p.get('evento_valor_sp__icontains'):
                     qs = qs.filter(
                         documentos__evento_valor_sp__icontains=p['evento_valor_sp__icontains']
@@ -1767,6 +1782,7 @@ class SearchAPIView(APIView):
         procedencia_counts = {}
         estado_civil_counts = {}
         tipo_documental_counts = {}
+        conducta_counts = {}
 
         for type_key, qs in querysets_by_type.items():
             # ── Lugares ───
@@ -1851,6 +1867,11 @@ class SearchAPIView(APIView):
                     procedencia_counts.setdefault(lid, {'id': lid, 'label': row['procedencia__nombre_lugar'], 'count': 0})
                     procedencia_counts[lid]['count'] += row['c']
 
+                for row in qs.filter(conducta_terms__isnull=False).values(
+                        'conducta_terms__canonico').annotate(c=Count('persona_id', distinct=True)):
+                    label = row['conducta_terms__canonico']
+                    conducta_counts[label] = conducta_counts.get(label, 0) + row['c']
+
         # ── Build hierarchical year tree (century → decade → year) ────
         century_labels = {16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX'}
         years_tree = {}
@@ -1875,6 +1896,9 @@ class SearchAPIView(APIView):
                 key=lambda x: -x['count']),
             'hispanizaciones': sorted(
                 [{'label': k, 'count': v} for k, v in hispanizacion_counts.items()],
+                key=lambda x: -x['count']),
+            'conductas': sorted(
+                [{'label': k, 'count': v} for k, v in conducta_counts.items()],
                 key=lambda x: -x['count']),
             'ocupaciones': sorted(
                 [{'label': k, 'count': v} for k, v in ocupacion_counts.items()],

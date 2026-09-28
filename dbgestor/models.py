@@ -1,6 +1,7 @@
 import re
 import bleach
 from django.db import models, transaction
+from django.db.models import Q
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
@@ -8,6 +9,7 @@ from polymorphic.models import PolymorphicModel
 from datetime import timezone
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.fields import ArrayField
 
 import logging
 
@@ -386,6 +388,107 @@ class Etonimos(models.Model):
         return f'{self.etonimo}'
 
 
+def strip_accents(value):
+    import unicodedata
+
+    return ''.join(
+        c for c in unicodedata.normalize('NFKD', value or '') if not unicodedata.combining(c)
+    )
+
+
+class ConductaTerm(models.Model):
+    """
+    Canonical vocabulary for conducta (e.g. 'huído') with alias variants
+    (huido, hullo, huyo, huyeron, escap*, busque). The free-text
+    PersonaEsclavizada.conducta field is kept as the archival source; this
+    vocabulary enables normalized filtering/searching on top of it.
+    """
+
+    conducta_term_id = models.AutoField(primary_key=True)
+    canonico = models.CharField(max_length=150, unique=True)
+    aliases = ArrayField(
+        models.CharField(max_length=150),
+        default=list,
+        blank=True,
+        help_text='Variantes documentadas (minúsculas). Un * final indica prefijo.',
+    )
+    descripcion = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def normalize_aliases(self):
+        cleaned = []
+        canonico = (self.canonico or '').strip().lower()
+        for alias in self.aliases or []:
+            alias = str(alias).strip().lower()
+            if alias and alias != canonico and alias not in cleaned:
+                cleaned.append(alias)
+        self.aliases = cleaned
+
+    def save(self, *args, **kwargs):
+        if self.canonico:
+            self.canonico = self.canonico.strip().lower()
+        self.normalize_aliases()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if not self.canonico:
+            return
+        canonico_acc = strip_accents(self.canonico)
+        conflict = ConductaTerm.objects.exclude(pk=self.pk).filter(
+            canonico__in=[a.rstrip('*') for a in self.aliases]
+        ).exists() or any(
+            strip_accents(a.rstrip('*')) == canonico_acc
+            for a in self.aliases
+        )
+        if conflict:
+            raise ValidationError(
+                {'aliases': 'Un alias no puede coincidir con el canónico ni con el canónico de otro término.'}
+            )
+
+    @classmethod
+    def resolve(cls, value):
+        """Resolve an id or text (canonico/alias, accent-insensitive) to a ConductaTerm."""
+        if value in (None, ''):
+            return None
+        v = str(value).strip().lower()
+        if v.isdigit():
+            return cls.objects.filter(pk=int(v)).first()
+        term = cls.objects.filter(canonico=v).first()
+        if term:
+            return term
+        v_acc = strip_accents(v)
+        for term in cls.objects.all():
+            if strip_accents(term.canonico) == v_acc:
+                return term
+            if any(strip_accents(a) == v_acc for a in term.aliases):
+                return term
+        return None
+
+    @classmethod
+    def match_q(cls, value):
+        """Q matching personas by canonical link OR free-text conducta (accent-insensitive).
+
+        Covers personas not yet linked to the vocabulary via the backfill command.
+        """
+        if value in (None, ''):
+            return Q()
+        term = cls.resolve(value)
+        if not term:
+            return Q(conducta__unaccent__icontains=str(value).strip())
+        q = Q(conducta_terms=term)
+        for word in [term.canonico, *term.aliases]:
+            q |= Q(conducta__unaccent__icontains=word.rstrip('*'))
+        return q
+
+    def __str__(self) -> str:
+        return f'{self.canonico}'
+
+    class Meta:
+        ordering = ['canonico']
+
+
 class EstadoCivil(models.Model):
     """
     Estado civil de las personas
@@ -577,6 +680,9 @@ class PersonaEsclavizada(Persona):
     ojos = models.CharField(max_length=150, null=True, blank=True)
     hispanizacion = models.ManyToManyField(Hispanizaciones)
     etnonimos = models.ManyToManyField(Etonimos)
+    conducta_terms = models.ManyToManyField(
+        ConductaTerm, blank=True, related_name='personas_esclavizadas'
+    )
 
     procedencia = models.ForeignKey(Lugar, on_delete=models.SET_NULL,
                                     null=True, blank=True, related_name='procedencia_persona_esclavizada')

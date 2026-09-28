@@ -10,7 +10,7 @@ from .models import (EstadoCivil, InstitucionRolEvento, Lugar, PersonaEsclavizad
                      Calidades, Hispanizaciones, Etonimos, Actividades,
                      PersonaLugarRel, PersonaRelaciones, PersonaRolEvento, TipoLugar,
                      SituacionLugar, TipoDocumental, RolEvento,
-                     TiposInstitucion, Corporacion)
+                     TiposInstitucion, Corporacion, ConductaTerm)
 
 from .widgets import (PersonaEsclavizadaAutocomplete, PersonaNoEsclavizadaAutocomplete, 
                       LugarEventoAutocomplete, DocumentoAutocomplete, ArchivoAutocomplete, CalidadesAutocomplete)
@@ -309,7 +309,14 @@ class PersonaEsclavizadaForm(forms.ModelForm):
     ocupacion_categoria = forms.CharField(required=False, label="Categoría ocupación")
     
     conducta = forms.CharField(required=False, label="Registros de conducta")
-    
+
+    conducta_terms = forms.ModelMultipleChoiceField(
+        queryset=ConductaTerm.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='conductaterm-autocomplete'),
+        label='Conducta (vocabulario canónico)'
+    )
+
     salud = forms.CharField(required=False, label="Salud", help_text="Anotaciones relacionadas con la salud o e estado físico de la persona.")
     
     def save(self, commit=True):

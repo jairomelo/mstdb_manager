@@ -14,7 +14,13 @@ from .models import SituacionLugar, TipoDocumental, TipoLugar, TiposInstitucion
 from .models import PersonaEsclavizada, PersonaNoEsclavizada, Corporacion
 from .models import PersonaRelaciones, PersonaLugarRel, RolEvento, SugerenciaMerge
 from .models import Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso
-    
+from .models import ConductaTerm
+
+
+class ConductaTermAdmin(ImportExportModelAdmin):
+    list_display = ('canonico', 'aliases', 'updated_at')
+    search_fields = ('canonico', 'aliases', 'descripcion')
+
 
 class SituacionLugarAdmin(ImportExportModelAdmin):
     resource_class = SituacionLugarResource
@@ -54,6 +60,7 @@ admin.site.register(Calidades, ImportExportModelAdmin)
 admin.site.register(Documento, ImportExportModelAdmin)
 admin.site.register(Actividades, ImportExportModelAdmin)
 admin.site.register(Etonimos, ImportExportModelAdmin)
+admin.site.register(ConductaTerm, ConductaTermAdmin)
 admin.site.register(Hispanizaciones, ImportExportModelAdmin)
 admin.site.register(Lugar, ImportExportModelAdmin)
 admin.site.register(PersonaEsclavizada, ImportExportModelAdmin)

@@ -7,7 +7,8 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              PersonaLugarRel, Lugar, PersonaRelaciones, Actividades, Persona,
                              PersonaRolEvento, Calidades, Hispanizaciones, Etonimos, EstadoCivil,
                              SituacionLugar, TipoDocumental, RolEvento, TiposInstitucion, TipoLugar,
-                             Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso)
+                             Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso,
+                             ConductaTerm)
 
 from django.db.models import Manager, Q
 
@@ -352,6 +353,7 @@ class PersonaEsclavizadaDetailSerializer(PersonaDetailSerializer):
     etnonimos = serializers.SerializerMethodField()
     procedencia = serializers.SerializerMethodField()
     ocupacion_ids = serializers.SerializerMethodField()
+    conducta_terms = serializers.SerializerMethodField()
     unidad_temporal_edad = serializers.CharField(source='get_unidad_temporal_edad_display', read_only=True)
 
     class Meta(PersonaDetailSerializer.Meta):
@@ -359,8 +361,11 @@ class PersonaEsclavizadaDetailSerializer(PersonaDetailSerializer):
         fields = PersonaDetailSerializer.Meta.fields + [
             'edad', 'unidad_temporal_edad', 'altura', 'cabello', 'ojos',
             'hispanizacion', 'etnonimos', 'ocupacion_ids', 'procedencia', 'procedencia_adicional',
-            'marcas_corporales', 'conducta', 'salud'
+            'marcas_corporales', 'conducta', 'conducta_terms', 'salud'
         ]
+
+    def get_conducta_terms(self, obj):
+        return [t.canonico for t in obj.conducta_terms.all()]
 
     def get_hispanizacion(self, obj):
         return self.get_attribute_or_none(obj, 'hispanizacion')
@@ -968,6 +973,54 @@ class SituacionLugarWriteSerializer(serializers.ModelSerializer):
         model = SituacionLugar
         fields = ['situacion', 'descripcion']
         extra_kwargs = {'descripcion': {'required': False}}
+
+
+class ConductaTermSerializer(serializers.ModelSerializer):
+    """Read serializer for the canonical conducta vocabulary."""
+
+    class Meta:
+        model = ConductaTerm
+        fields = ['conducta_term_id', 'canonico', 'aliases', 'descripcion', 'updated_at']
+
+
+class ConductaTermWriteSerializer(serializers.ModelSerializer):
+    canonico = serializers.CharField(max_length=150)
+    aliases = serializers.ListField(
+        child=serializers.CharField(max_length=150, allow_blank=False),
+        required=False,
+        default=list,
+    )
+
+    class Meta:
+        model = ConductaTerm
+        fields = ['canonico', 'aliases', 'descripcion']
+        extra_kwargs = {'descripcion': {'required': False, 'allow_null': True}}
+
+    def validate_canonico(self, value):
+        return value.strip().lower()
+
+    def validate_aliases(self, value):
+        return [a.strip().lower() for a in value if a and a.strip()]
+
+    def validate(self, data):
+        from dbgestor.models import strip_accents
+
+        canonico = data.get('canonico', '')
+        aliases = data.get('aliases', [])
+        canonico_acc = strip_accents(canonico)
+        for alias in aliases:
+            if strip_accents(alias.rstrip('*')) == canonico_acc:
+                raise serializers.ValidationError(
+                    {'aliases': f'El alias "{alias}" coincide con el canónico.'}
+                )
+            conflict = ConductaTerm.objects.exclude(
+                pk=self.instance.pk if self.instance else None
+            ).filter(canonico=alias.rstrip('*')).exists()
+            if conflict:
+                raise serializers.ValidationError(
+                    {'aliases': f'El alias "{alias}" ya es el canónico de otro término.'}
+                )
+        return data
 
 
 class RolEventoWriteSerializer(serializers.ModelSerializer):
