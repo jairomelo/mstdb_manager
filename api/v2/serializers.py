@@ -93,14 +93,19 @@ class PersonaListSerializer(serializers.ModelSerializer):
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
     short_id = serializers.ReadOnlyField()
     documento_count = serializers.SerializerMethodField()
+    persona_model = serializers.SerializerMethodField()
 
     class Meta:
         model = Persona
         fields = ['persona_id', 'short_id', 'persona_idno', 'nombre_normalizado', 'nombres', 'apellidos',
-                  'sexo', 'polymorphic_ctype', 'documento_count', 'created_at', 'updated_at']
+                  'sexo', 'polymorphic_ctype', 'persona_model', 'documento_count', 'created_at', 'updated_at']
 
     def get_documento_count(self, obj):
         return obj.documentos.count()
+
+    def get_persona_model(self, obj):
+        # Stable model name; content-type IDs differ between environments
+        return obj.polymorphic_ctype.model if obj.polymorphic_ctype_id else None
 
 
 class PersonaEsclavizadaListSerializer(PersonaListSerializer):
