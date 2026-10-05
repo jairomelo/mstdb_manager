@@ -21,9 +21,9 @@ class Unaccent(Func):
 def persona_search_vector_expression(include_conducta=False):
     """Search vector expression for Persona rows (search_vector lives on Persona).
 
-    conducta is a PersonaEsclavizada (MTI child) field and cannot be referenced
-    directly from an UPDATE on the parent table; it is fetched via a correlated
-    subquery and unaccented so variantes like huido/huído match the same token.
+    conducta and salud are PersonaEsclavizada (MTI child) fields and cannot be referenced
+    directly from an UPDATE on the parent table; they are fetched via correlated
+    subqueries and unaccented so variantes like huido/huído match the same token.
     """
     vec = (
         SearchVector('nombre_normalizado', weight='A', config='spanish') +
@@ -33,12 +33,15 @@ def persona_search_vector_expression(include_conducta=False):
         SearchVector('ocupacion_categoria', weight='D', config='spanish')
     )
     if include_conducta:
-        conducta = Subquery(
-            PersonaEsclavizada.objects.filter(
-                persona_id=OuterRef('persona_id')
-            ).values('conducta')[:1]
-        )
-        vec += SearchVector(Unaccent(conducta), weight='D', config='spanish')
+        def child_field(name):
+            return Subquery(
+                PersonaEsclavizada.objects.filter(
+                    persona_id=OuterRef('persona_id')
+                ).values(name)[:1]
+            )
+
+        vec += SearchVector(Unaccent(child_field('conducta')), weight='D', config='spanish')
+        vec += SearchVector(Unaccent(child_field('salud')), weight='C', config='spanish')
     return vec
 
 
