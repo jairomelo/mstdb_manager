@@ -14,7 +14,7 @@ dependencies = [
     "defusedxml==0.7.1",
     "diff-match-patch==20230430",
     "dj-database-url==2.1.0",
-    "django==5.2.16",
+    "django==5.2.17",
     "django-appconf==1.0.6",
     "django-autocomplete-light==3.9.7",
     "django-bootstrap-input-group==1.0.1",
