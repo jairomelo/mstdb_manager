@@ -312,15 +312,15 @@ wheels = [
 
 [[package]]
 name = "django-select2"
-version = "8.1.2"
+version = "8.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "django-appconf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/af/2fc371e1dea6686b588ab9cd445e55b63248a525f8c90550767a42dd77bb/django_select2-8.1.2.tar.gz", hash = "sha256:f44685ee1c39090aade01e3ebc256702f05620f3c78a3c268440ad9a66070876", size = 12898, upload-time = "2023-05-23T14:32:10.175Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/83/f70b4ae4f0b3775a161260c5804cfcaad44f1cce2a94d930324e32fa6750/django_select2-8.4.1.tar.gz", hash = "sha256:e6cdc0ae647b91b1bed610628893d10dea50a96fffba8e83af27f35dd6003572", size = 13320, upload-time = "2025-05-26T12:55:54.693Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/3a/b2c81fbe5257d0e66d9341daefe61e6905c4cec4001fd9b5c245c0abda4b/django_select2-8.1.2-py3-none-any.whl", hash = "sha256:dc09e09299988dd7cc1f31c27582976377f0e1479101be1f3bb0d1f24216477f", size = 14980, upload-time = "2023-05-23T14:32:08.684Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/4f/d0b10e456db741f3dd4298752fd588a9c45980e3c6d5424f906e7cb654a0/django_select2-8.4.1-py3-none-any.whl", hash = "sha256:1df5e6788cc032795c1be0f2e2a2ea7a5a1dd89878575217a2c23f25d7301fbf", size = 15469, upload-time = "2025-05-26T12:55:52.816Z" },
 ]
 
 [[package]]
@@ -641,7 +641,7 @@ requires-dist = [
     { name = "django-permissionedforms", specifier = "==0.1" },
     { name = "django-polymorphic", specifier = "==3.1.0" },
     { name = "django-redis", specifier = "==5.4.0" },
-    { name = "django-select2", specifier = "==8.1.2" },
+    { name = "django-select2", specifier = "==8.4.1" },
     { name = "django-ses", specifier = "==4.3.0" },
     { name = "django-simple-history", specifier = "==3.4.0" },
     { name = "django-taggit", specifier = "==4.0.0" },
