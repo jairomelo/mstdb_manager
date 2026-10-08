@@ -48,7 +48,7 @@ dependencies = [
     "odfpy==1.4.1",
     "openpyxl==3.1.2",
     "packaging==24.1",
-    "pillow==10.4.0",
+    "pillow==12.3.0",
     "pillow-heif>=0.20.0",
     "psycopg[binary]>=3.1.18",
     "pygments==2.18.0",
