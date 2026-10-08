@@ -9,7 +9,7 @@ dependencies = [
     "asgiref==3.8.1",
     "async-timeout==4.0.3",
     "boto3==1.37.5",
-    "certifi==2023.11.17",
+    "certifi==2024.7.4",
     "charset-normalizer==3.3.2",
     "defusedxml==0.7.1",
     "diff-match-patch==20230430",
