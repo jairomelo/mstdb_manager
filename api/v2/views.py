@@ -2060,11 +2060,20 @@ class SearchAPIView(APIView):
             facets = self._collect_facets(
                 {tk: qs for tk, qs in base_querysets.items() if tk in active_types})
 
-            # ── Type counts (unfiltered) ──────────────────────────
-            # In search mode, return counts for ALL entity types so the
-            # frontend can show badges like enslaved.org does.
-            count_types = list(self.TYPE_CONFIGS.keys()) if is_search else active_types
-            type_counts = {tk: base_querysets[tk].count() for tk in count_types}
+            # ── Type counts (filter-aware, all types) ─────────────
+            # Badges must reflect the current query + filters for every tab,
+            # so apply the same filter pipeline used for the active result
+            # set to each entity type. For a single-type request this makes
+            # type_counts[active_type] == count by construction.
+            type_counts = {}
+            for tk in self.TYPE_CONFIGS:
+                tk_qs = base_querysets[tk]
+                if has_filters:
+                    tk_qs = self._apply_filters(tk_qs, tk, filters)
+                tk_qs = self._apply_form_filters(tk_qs, tk, request)
+                if search_text:
+                    tk_qs = self._apply_simple_search(tk_qs, tk, search_text)
+                type_counts[tk] = tk_qs.count()
 
             # ── Apply all filters per entity type + paginate ──────
             # In unified mode we query one entity type at a time (the
@@ -2120,6 +2129,10 @@ class SearchAPIView(APIView):
                 ]
             else:
                 # ── Multiple entity types → in-memory merge ────────
+                # Note: typeCounts above are accurate per-type .count()s, but
+                # this branch caps each type at 500 merged items, so for
+                # type=all the tab badges may not equal the merged count.
+                # The UI never uses type=all (it always sends a single type).
                 all_items = []
                 for tk in active_types:
                     _, _, serializer_cls = self.TYPE_CONFIGS[tk]
