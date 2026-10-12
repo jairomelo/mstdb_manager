@@ -126,6 +126,7 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     evento_valor_sp_list = serializers.CharField(read_only=True, allow_null=True)
     evento_forma_de_pago_list = serializers.CharField(read_only=True, allow_null=True)
     evento_total_list = serializers.CharField(read_only=True, allow_null=True)
+    lugares_trayectoria = serializers.SerializerMethodField()
 
     class Meta(PersonaListSerializer.Meta):
         model = PersonaEsclavizada
@@ -137,6 +138,7 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
             'procedencia', 'estado_civil',
             'altura', 'cabello', 'ojos', 'marcas_corporales', 'conducta', 'salud',
             'evento_valor_sp_list', 'evento_forma_de_pago_list', 'evento_total_list',
+            'lugares_trayectoria',
         ]
 
     def get_etnonimos(self, obj):
@@ -174,6 +176,19 @@ class PersonaEsclavizadaListSerializer(PersonaListSerializer):
 
     def get_estado_civil(self, obj):
         return [ec.estado_civil for ec in obj.estado_civil.all()]
+
+    def get_lugares_trayectoria(self, obj):
+        # Chronological trajectory places; relies on the prefetch in the
+        # viewset (ordered by ordinal) and sorts defensively for paths that
+        # serialize without it.
+        lugares = []
+        for rel in sorted(obj.p_x_l_pere.all(), key=lambda r: r.ordinal):
+            if not rel.lugar:
+                continue
+            situacion = rel.situacion_lugar.situacion if rel.situacion_lugar else None
+            label = rel.lugar.nombre_lugar
+            lugares.append(f"{label} ({situacion})" if situacion else label)
+        return lugares
 
 
 class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):

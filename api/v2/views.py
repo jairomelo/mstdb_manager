@@ -5,8 +5,8 @@ from collections import defaultdict
 
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery
-from django.db.models.functions import ExtractYear
+from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery, Value
+from django.db.models.functions import ExtractYear, Coalesce
 from django.contrib.postgres.aggregates import StringAgg
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
@@ -151,6 +151,10 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
     permission_classes = [APIPerm]
     pagination_class = CustomPagination
 
+    # Serializer fields that serialize to a scalar list (joined with '; ') even
+    # when empty, so they don't collapse into a spurious `<field>_ids` column.
+    csv_scalar_list_fields = frozenset()
+
     def get_permissions(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy',
                            'bulk_update_ordinal', 'vincular', 'desvincular'):
@@ -204,7 +208,7 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="{self.get_export_filename()}"'
         
         if serializer.data:
-            flattened_data = [self.flatten_for_csv(row) for row in serializer.data]
+            flattened_data = [self.flatten_for_csv(row, self.csv_scalar_list_fields) for row in serializer.data]
             # Collect all unique fieldnames across every row to handle per-row key variation
             all_fields = list(dict.fromkeys(k for row in flattened_data for k in row.keys()))
             writer = csv.DictWriter(response, fieldnames=all_fields, extrasaction='ignore', restval='')
@@ -218,7 +222,7 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
         """Override in subclasses to provide meaningful filenames"""
         return f"{self.__class__.__name__.lower().replace('viewset', '')}_export.csv"
 
-    def flatten_for_csv(self, row):
+    def flatten_for_csv(self, row, scalar_list_fields=frozenset()):
         """Flatten nested objects for CSV export"""
         flattened = {}
         for key, value in row.items():
@@ -233,12 +237,14 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
                 elif 'nombre_lugar' in value:
                     flattened[f"{key}_nombre"] = value.get('nombre_lugar')
             elif isinstance(value, list):
-                # Always use _ids suffix for list-of-dicts; plain join for scalar lists
-                if not value or isinstance(value[0], dict):
+                # list-of-dicts → `_ids` suffix; scalar lists → plain join
+                if value and isinstance(value[0], dict):
                     ids = [str(item.get('id', '')) for item in value if isinstance(item, dict) and 'id' in item]
                     flattened[f"{key}_ids"] = '; '.join(ids)
-                else:
+                elif value or key in scalar_list_fields:
                     flattened[key] = '; '.join([str(v) for v in value])
+                else:
+                    flattened[f"{key}_ids"] = ''
             else:
                 flattened[key] = value
         return flattened
@@ -395,6 +401,7 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                         'created_at', 'updated_at', 'fecha_nacimiento',
                         'earliest_doc_date', 'latest_doc_date', 'persona_idno']
     ordering = ['-created_at']
+    csv_scalar_list_fields = frozenset({'lugares_trayectoria'})
 
     def get_export_filename(self):
         return "personas_esclavizadas_export.csv"
@@ -407,13 +414,25 @@ class PersonaEsclavizadaViewSet(DocumentoLinkMixin, BaseV2ViewSet):
                 'procedencia',
             ).prefetch_related(
                 'etnonimos', 'hispanizacion', 'calidades', 'estado_civil',
-                'relaciones', 'p_x_l_pere',
+                'relaciones',
+                Prefetch('p_x_l_pere',
+                         queryset=PersonaLugarRel.objects.select_related(
+                             'lugar', 'situacion_lugar'
+                         ).order_by('ordinal')),
             ).annotate(
                 earliest_doc_date=Min('documentos__fecha_inicial'),
                 latest_doc_date=Max('documentos__fecha_inicial'),
                 evento_valor_sp_list=StringAgg('documentos__evento_valor_sp', ', ', distinct=True),
                 evento_forma_de_pago_list=StringAgg('documentos__evento_forma_de_pago', ', ', distinct=True),
                 evento_total_list=StringAgg('documentos__evento_total', ', ', distinct=True),
+            )
+        elif self.action in ('search', 'export_csv'):
+            # Avoid N+1 for lugares_trayectoria (list serializer also used here)
+            queryset = queryset.prefetch_related(
+                Prefetch('p_x_l_pere',
+                         queryset=PersonaLugarRel.objects.select_related(
+                             'lugar', 'situacion_lugar'
+                         ).order_by('ordinal')),
             )
         elif self.action in ('retrieve', 'trajectory'):
             queryset = queryset.select_related(
@@ -1457,7 +1476,7 @@ class SearchAPIView(APIView):
             'calidades', 'estado_civil', 'ocupaciones',
             'has_relaciones', 'has_lugares', 'documento_list',
         },
-        'lugar': {'nombre_lugar', 'tipo__tipo_lugar', 'created_at', 'updated_at'},
+        'lugar': {'nombre_lugar', 'tipo__tipo_lugar', 'persona_count', 'created_at', 'updated_at'},
         'corporacion': {'nombre_institucion', 'created_at', 'updated_at'},
     }
 
@@ -1738,6 +1757,20 @@ class SearchAPIView(APIView):
             )),
             'documento_list': ('documento_count', lambda: Count('documentos', distinct=True)),
         },
+        'lugar': {
+            # Mirrors LugarListSerializer.get_persona_count so sort order matches
+            # the displayed values.
+            'persona_count': ('persona_count_sort', lambda: Coalesce(
+                Subquery(
+                    Persona.objects.filter(
+                        Q(p_x_l_pere__lugar=OuterRef('pk')) |
+                        Q(lugar_nacimiento=OuterRef('pk')) |
+                        Q(lugar_defuncion=OuterRef('pk')) |
+                        Q(personaesclavizada__procedencia=OuterRef('pk'))
+                    ).order_by().values(_one=Value(1))
+                     .annotate(c=Count('persona_id', distinct=True)).values('c')[:1]
+                ), 0)),
+        },
     }
 
     def _resolve_ordering(self, ordering_param, type_key):
@@ -1915,6 +1948,7 @@ class SearchAPIView(APIView):
     # ── CSV export helper ─────────────────────────────────────────────
 
     CSV_MAX_ROWS = 5000
+    csv_scalar_list_fields = frozenset({'lugares_trayectoria'})
 
     def _export_csv(self, qs, serializer_cls, type_key):
         """Stream the filtered queryset as a CSV download."""
@@ -1927,7 +1961,8 @@ class SearchAPIView(APIView):
 
         if serializer.data:
             flattened_data = [
-                BaseV2ViewSet.flatten_for_csv(None, row) for row in serializer.data
+                BaseV2ViewSet.flatten_for_csv(None, row, self.csv_scalar_list_fields)
+                for row in serializer.data
             ]
             all_fields = list(dict.fromkeys(
                 k for row in flattened_data for k in row.keys()
@@ -2004,7 +2039,11 @@ class SearchAPIView(APIView):
                     'procedencia',
                 ).prefetch_related(
                     'documentos', 'etnonimos', 'hispanizacion', 'calidades', 'estado_civil',
-                    'relaciones', 'p_x_l_pere',
+                    'relaciones',
+                    Prefetch('p_x_l_pere',
+                             queryset=PersonaLugarRel.objects.select_related(
+                                 'lugar', 'situacion_lugar'
+                             ).order_by('ordinal')),
                 ).annotate(
                     earliest_doc_date=Min('documentos__fecha_inicial'),
                     latest_doc_date=Max('documentos__fecha_inicial'),
@@ -2964,6 +3003,7 @@ def public_config(request):
     from django.conf import settings as django_settings
     return Response({
         'turnstile_site_key': django_settings.TURNSTILE_SITE_KEY,
+        'contact_email': django_settings.PUBLIC_CONTACT_EMAIL,
     })
 
 

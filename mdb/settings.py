@@ -306,6 +306,10 @@ DEFAULT_DOMAIN = 'db.trayectoriasafro.org'
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
 TURNSTILE_SITE_KEY = os.getenv('TURNSTILE_SITE_KEY', '')
 
+# Public contact address shown in the site footers/feedback section.
+# Empty string hides the link (no dead mailto:).
+PUBLIC_CONTACT_EMAIL = os.getenv('PUBLIC_CONTACT_EMAIL', '')
+
 # Carto basemap tiles (server-side only; never exposed to the browser)
 CARTO_API = os.getenv('CARTO_API', '')
 
