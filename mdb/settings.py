@@ -321,13 +321,18 @@ CSRF_COOKIE_NAME = 'csrftoken'
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
 
+# Load-test throttle bypass. Unset/empty keeps the bypass inert; when set, a
+# request presenting a matching `X-Loadtest-Token` header skips rate limiting.
+# See api/throttling.py. Clear and redeploy after the test window.
+LOADTEST_TOKEN = os.getenv('LOADTEST_TOKEN', '')
+
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': int(os.getenv('REST_FRAMEWORK_PAGE_SIZE', '20')),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+        'api.throttling.LoadtestAnonRateThrottle',
+        'api.throttling.LoadtestUserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/minute',
