@@ -51,9 +51,45 @@ class LoadtestBypassMixin:
         return super().allow_request(request, view)
 
 
-class LoadtestAnonRateThrottle(LoadtestBypassMixin, AnonRateThrottle):
+def get_client_ip(request) -> str:
+    """Best-effort real client IP behind Cloudflare → host nginx → frontend nginx.
+
+    Cloudflare overwrites ``CF-Connecting-IP`` with the true client address, so it
+    is trusted first (the deployment is Cloudflare-fronted). Fall back to the first
+    ``X-Forwarded-For`` hop, then ``X-Real-IP``, then ``REMOTE_ADDR``.
+    """
+    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
+    if cf_ip:
+        return cf_ip.strip()
+
+    xff = request.META.get('HTTP_X_FORWARDED_FOR')
+    if xff:
+        first = xff.split(',')[0].strip()
+        if first:
+            return first
+
+    real_ip = request.META.get('HTTP_X_REAL_IP')
+    if real_ip:
+        return real_ip.strip()
+
+    return request.META.get('REMOTE_ADDR', '')
+
+
+class ClientIPTrackingMixin:
+    """Key rate limits on the real client IP, not the proxy container IP.
+
+    Without this, DRF's default ident is ``REMOTE_ADDR`` (the frontend nginx
+    container), so every anonymous visitor shares one bucket and the site trips
+    its own ``anon`` limit. See ``get_client_ip`` for the resolution order.
+    """
+
+    def get_ident(self, request):
+        return get_client_ip(request)
+
+
+class LoadtestAnonRateThrottle(ClientIPTrackingMixin, LoadtestBypassMixin, AnonRateThrottle):
     pass
 
 
-class LoadtestUserRateThrottle(LoadtestBypassMixin, UserRateThrottle):
+class LoadtestUserRateThrottle(ClientIPTrackingMixin, LoadtestBypassMixin, UserRateThrottle):
     pass

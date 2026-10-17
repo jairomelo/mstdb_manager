@@ -234,14 +234,23 @@ class LugarListSerializer(serializers.ModelSerializer):
     tipo = serializers.StringRelatedField()
     short_id = serializers.ReadOnlyField()
     persona_count = serializers.SerializerMethodField()
-    persona_lugar_rel = serializers.SerializerMethodField()
+    personas_preview = serializers.SerializerMethodField()
+
+    # How many related persons to inline in the search payload. The card shows a
+    # few names and a "y N más" link; the full list lives on the lugar detail page.
+    PERSONAS_PREVIEW_LIMIT = 3
 
     class Meta:
         model = Lugar
         fields = ['lugar_id', 'short_id', 'nombre_lugar', 'otros_nombres', 'tipo', 'lat', 'lon',
-                  'persona_count', 'persona_lugar_rel']
+                  'persona_count', 'personas_preview']
 
     def get_persona_count(self, obj):
+        # Prefer the annotation added by the unified-search viewset; fall back to a
+        # query for serialization paths that don't annotate.
+        annotated = getattr(obj, 'persona_count', None)
+        if annotated is not None:
+            return annotated
         return Persona.objects.filter(
             Q(p_x_l_pere__lugar=obj) |
             Q(lugar_nacimiento=obj) |
@@ -249,12 +258,27 @@ class LugarListSerializer(serializers.ModelSerializer):
             Q(personaesclavizada__procedencia=obj)
         ).distinct().count()
 
-    def get_persona_lugar_rel(self, obj):
-        from dbgestor.models import PersonaLugarRel
-        return list(
-            PersonaLugarRel.objects.filter(lugar=obj)
-            .values_list('persona_x_lugares', flat=True)
-        )
+    def get_personas_preview(self, obj):
+        # Uses the prefetch added by the unified-search viewset; if absent, falls
+        # back to querying (so other callers still work, just less efficiently).
+        relations = obj.p_x_l_lugar.all() if hasattr(obj, 'p_x_l_lugar') else []
+        seen = set()
+        personas = []
+        for rel in relations:
+            for persona in rel.personas.all():
+                if persona.persona_id in seen:
+                    continue
+                seen.add(persona.persona_id)
+                if len(personas) < self.PERSONAS_PREVIEW_LIMIT:
+                    personas.append({
+                        'persona_id': persona.persona_id,
+                        'nombre_normalizado': persona.nombre_normalizado,
+                        'persona_model': (
+                            persona.polymorphic_ctype.model
+                            if persona.polymorphic_ctype_id else None
+                        ),
+                    })
+        return {'total': len(seen), 'personas': personas}
 
 
 class CorporacionListSerializer(serializers.ModelSerializer):

@@ -18,13 +18,48 @@ from rest_framework.permissions import BasePermission, IsAuthenticated, IsAdminU
 from rest_framework.throttling import AnonRateThrottle
 
 from .cache_utils import cache_visualization
+from ..throttling import ClientIPTrackingMixin
 
 
-class LoginRateThrottle(AnonRateThrottle):
+def lugar_persona_count_q():
+    """Annotation expression mirroring LugarListSerializer.get_persona_count.
+
+    Single source of truth for the lugar person count so the ordering annotation,
+    the search payload, and the lugares list can never diverge. Counts people who
+    reference the lugar as a trajectory place, birthplace, deathplace, or origin.
+    """
+    return Coalesce(
+        Subquery(
+            Persona.objects.filter(
+                Q(p_x_l_pere__lugar=OuterRef('pk')) |
+                Q(lugar_nacimiento=OuterRef('pk')) |
+                Q(lugar_defuncion=OuterRef('pk')) |
+                Q(personaesclavizada__procedencia=OuterRef('pk'))
+            ).order_by().values(_one=Value(1))
+             .annotate(c=Count('persona_id', distinct=True)).values('c')[:1]
+        ), 0)
+
+
+def lugar_prefetch_personas(queryset):
+    """Prefetch the related persons used by LugarListSerializer.personas_preview."""
+    return queryset.prefetch_related(
+        Prefetch(
+            'p_x_l_lugar',
+            queryset=(
+                PersonaLugarRel.objects
+                .select_related('situacion_lugar')
+                .prefetch_related('personas')
+                .order_by('ordinal')
+            ),
+        )
+    )
+
+
+class LoginRateThrottle(ClientIPTrackingMixin, AnonRateThrottle):
     scope = 'login'
 
 
-class RegisterRateThrottle(AnonRateThrottle):
+class RegisterRateThrottle(ClientIPTrackingMixin, AnonRateThrottle):
     scope = 'register'
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -227,6 +262,15 @@ class BaseV2ViewSet(viewsets.ModelViewSet):
         flattened = {}
         for key, value in row.items():
             if isinstance(value, dict):
+                # Inlined person preview (LugarListSerializer.personas_preview):
+                # export the total and the previewed names.
+                if isinstance(value.get('personas'), list):
+                    flattened[f"{key}_total"] = value.get('total', len(value['personas']))
+                    flattened[f"{key}_nombres"] = '; '.join(
+                        str(item.get('nombre_normalizado', ''))
+                        for item in value['personas'] if isinstance(item, dict)
+                    )
+                    continue
                 # For nested objects, include just the ID and name/title
                 if 'id' in value:
                     flattened[f"{key}_id"] = value.get('id')
@@ -901,6 +945,13 @@ class LugarViewSet(BaseV2ViewSet):
     ordering_fields = ['nombre_lugar', 'tipo__tipo_lugar', 'created_at', 'updated_at']
     ordering = ['nombre_lugar']
 
+    def get_queryset(self):
+        # Annotate the person count and prefetch related persons so the list
+        # serializer's persona_count/personas_preview don't each run per row.
+        return lugar_prefetch_personas(
+            super().get_queryset()
+        ).annotate(persona_count=lugar_persona_count_q())
+
     def get_export_filename(self):
         return "lugares_export.csv"
 
@@ -933,7 +984,10 @@ class LugarViewSet(BaseV2ViewSet):
                 '-search_rank',
                 '-nombre_similarity'
             ).distinct()
-            
+
+            queryset = lugar_prefetch_personas(queryset).annotate(
+                persona_count=lugar_persona_count_q())
+
             page = self.paginate_queryset(queryset)
             
             if page is not None:
@@ -1760,16 +1814,7 @@ class SearchAPIView(APIView):
         'lugar': {
             # Mirrors LugarListSerializer.get_persona_count so sort order matches
             # the displayed values.
-            'persona_count': ('persona_count_sort', lambda: Coalesce(
-                Subquery(
-                    Persona.objects.filter(
-                        Q(p_x_l_pere__lugar=OuterRef('pk')) |
-                        Q(lugar_nacimiento=OuterRef('pk')) |
-                        Q(lugar_defuncion=OuterRef('pk')) |
-                        Q(personaesclavizada__procedencia=OuterRef('pk'))
-                    ).order_by().values(_one=Value(1))
-                     .annotate(c=Count('persona_id', distinct=True)).values('c')[:1]
-                ), 0)),
+            'persona_count': ('persona_count_sort', lugar_persona_count_q),
         },
     }
 
@@ -2055,6 +2100,13 @@ class SearchAPIView(APIView):
                 base_querysets['personanoesclavizada'] = base_querysets['personanoesclavizada'].prefetch_related(
                     'documentos', 'relaciones', 'p_x_l_pere', 'ocupaciones', 'calidades', 'estado_civil',
                 )
+            if 'lugar' in base_querysets:
+                # Avoid the per-row N+1 for persona_count and the per-card XHR
+                # fan-out for related persons: annotate the count and inline a
+                # small preview in the payload.
+                base_querysets['lugar'] = lugar_prefetch_personas(
+                    base_querysets['lugar']
+                ).annotate(persona_count=lugar_persona_count_q())
 
             # ── Facets (from unfiltered base querysets) ────────────
             facets = self._collect_facets(
