@@ -1101,3 +1101,30 @@ class LeccionAcceso(models.Model):
     def __str__(self) -> str:
         return f'{self.user} → {self.leccion} ({self.role})'
 
+
+class VariableDefinition(models.Model):
+    """Public data-dictionary entry: one row per documented model field/variable.
+
+    Serves the read-only ``data-dictionary/`` API and the public Diccionario page.
+    Descriptions are authored by the team in the Django admin / cataloger UI; the
+    seed command (``seed_variable_definitions``) creates the rows (key + tipo) and
+    leaves the prose blank so it can be filled in without code changes.
+    """
+
+    variable_id = models.SlugField(max_length=150, unique=True)
+    modelo = models.CharField(max_length=80, db_index=True)
+    clave = models.CharField(max_length=120)
+    tipo = models.CharField(max_length=60, blank=True)
+    descripcion_es = models.TextField(blank=True)
+    descripcion_en = models.TextField(blank=True)
+    orden = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['modelo', 'orden', 'clave']
+        verbose_name = 'Definición de variable'
+        verbose_name_plural = 'Definiciones de variables'
+
+    def __str__(self) -> str:
+        return f'{self.modelo}.{self.clave}'
+
+

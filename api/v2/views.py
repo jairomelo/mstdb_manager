@@ -80,7 +80,7 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
                              RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge,
                              Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso,
-                             ConductaTerm)
+                             ConductaTerm, VariableDefinition)
 
 from .serializers import (
     # Reference serializers
@@ -3049,6 +3049,59 @@ class EntityCountsView(APIView):
             'lugar': Lugar.objects.count(),
             'corporacion': Corporacion.objects.count(),
         })
+
+
+class DataDictionaryView(APIView):
+    """Public read-only data dictionary: documented variables + controlled vocabularies.
+
+    Variable prose is authored in ``VariableDefinition`` (Django admin / cataloger);
+    controlled-vocabulary terms come live from the lookup tables (value + descripcion).
+    """
+    permission_classes = [APIPerm]
+
+    # (modelo, value field, label_es, label_en)
+    VOCABULARIES = [
+        ('Calidades', 'calidad', 'Calidades', 'Qualities', Calidades),
+        ('Etonimos', 'etonimo', 'Etnónimos', 'Ethnonyms', Etonimos),
+        ('Hispanizaciones', 'hispanizacion', 'Hispanización', 'Hispanicization', Hispanizaciones),
+        ('EstadoCivil', 'estado_civil', 'Estado civil', 'Marital status', EstadoCivil),
+        ('Actividades', 'actividad', 'Actividades / oficios', 'Activities / occupations', ActividadesModel),
+        ('TipoDocumental', 'tipo_documental', 'Tipos documentales', 'Document types', TipoDocumental),
+        ('SituacionLugar', 'situacion', 'Situaciones del lugar', 'Place situations', SituacionLugar),
+        ('RolEvento', 'rol_evento', 'Roles de evento', 'Event roles', RolEvento),
+        ('TiposInstitucion', 'tipo', 'Tipos de institución', 'Institution types', TiposInstitucion),
+        ('TipoLugar', 'tipo_lugar', 'Tipos de lugar', 'Place types', TipoLugar),
+        ('ConductaTerm', 'canonico', 'Términos de conducta (normalizado)', 'Conduct terms (normalized)', ConductaTerm),
+    ]
+
+    @cache_visualization('data_dictionary', ttl=3600)
+    def get(self, request):
+        order = []
+        by_model = {}
+        for definition in VariableDefinition.objects.all().order_by('modelo', 'orden', 'clave'):
+            if definition.modelo not in by_model:
+                by_model[definition.modelo] = []
+                order.append(definition.modelo)
+            by_model[definition.modelo].append({
+                'variable_id': definition.variable_id,
+                'clave': definition.clave,
+                'tipo': definition.tipo,
+                'descripcion_es': definition.descripcion_es,
+                'descripcion_en': definition.descripcion_en,
+            })
+        models_payload = [{'modelo': modelo, 'variables': by_model[modelo]} for modelo in order]
+
+        vocabularies = []
+        for modelo, value_field, label_es, label_en, model in self.VOCABULARIES:
+            terms = [
+                {'value': value, 'descripcion': descripcion or ''}
+                for value, descripcion in model.objects.all().values_list(value_field, 'descripcion')
+            ]
+            vocabularies.append({
+                'modelo': modelo, 'label_es': label_es, 'label_en': label_en, 'terms': terms,
+            })
+
+        return Response({'models': models_payload, 'vocabularies': vocabularies})
 
 
 @ensure_csrf_cookie

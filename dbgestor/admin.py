@@ -15,6 +15,7 @@ from .models import PersonaEsclavizada, PersonaNoEsclavizada, Corporacion
 from .models import PersonaRelaciones, PersonaLugarRel, RolEvento, SugerenciaMerge
 from .models import Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso
 from .models import ConductaTerm
+from .models import VariableDefinition
 
 
 class ConductaTermAdmin(ImportExportModelAdmin):
@@ -78,4 +79,14 @@ admin.site.register(SugerenciaMerge)
 admin.site.register(Leccion, LeccionAdmin)
 admin.site.register(LeccionNivel, ImportExportModelAdmin)
 admin.site.register(LeccionPalabraClave, ImportExportModelAdmin)
+
+
+class VariableDefinitionAdmin(ImportExportModelAdmin):
+    list_display = ('modelo', 'clave', 'tipo', 'orden', 'variable_id')
+    list_filter = ('modelo',)
+    search_fields = ('modelo', 'clave', 'descripcion_es', 'descripcion_en')
+    ordering = ('modelo', 'orden', 'clave')
+
+
+admin.site.register(VariableDefinition, VariableDefinitionAdmin)
 
