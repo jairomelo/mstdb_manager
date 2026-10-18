@@ -12,11 +12,13 @@ This command updates the search_vector field for all existing records in:
 """
 
 from django.core.management.base import BaseCommand
-from django.contrib.postgres.search import SearchVector
 from django.db.models import Count
 
 from dbgestor.models import Lugar, Documento, Persona, Corporacion
-from dbgestor.signals import persona_search_vector_expression, documento_search_vector_expression
+from dbgestor.signals import (
+    persona_search_vector_expression, documento_search_vector_expression,
+    lugar_search_vector_expression, corporacion_search_vector_expression,
+)
 
 
 class Command(BaseCommand):
@@ -54,13 +56,7 @@ class Command(BaseCommand):
         
         count = Lugar.objects.count()
         
-        Lugar.objects.update(
-            search_vector=(
-                SearchVector('nombre_lugar', weight='A', config='spanish') +
-                SearchVector('otros_nombres', weight='B', config='spanish') +
-                SearchVector('tipo', weight='C', config='spanish')
-            )
-        )
+        Lugar.objects.update(search_vector=lugar_search_vector_expression())
         
         self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Lugar records'))
 
@@ -99,12 +95,6 @@ class Command(BaseCommand):
         
         count = Corporacion.objects.count()
         
-        Corporacion.objects.update(
-            search_vector=(
-                SearchVector('nombre_institucion', weight='A', config='spanish') +
-                SearchVector('nombres_alternativos', weight='B', config='spanish') +
-                SearchVector('notas', weight='C', config='spanish')
-            )
-        )
+        Corporacion.objects.update(search_vector=corporacion_search_vector_expression())
         
         self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Corporacion records'))

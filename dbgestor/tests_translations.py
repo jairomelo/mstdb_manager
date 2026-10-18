@@ -155,3 +155,41 @@ class ImportTranslationsCommandTests(TestCase):
         self.assertEqual(
             get_translation(Documento.objects.get(pk=self.doc.pk), 'titulo', 'en'),
             'Bill of sale')
+
+
+class CrossLanguageSearchTests(TestCase):
+    """Phase 2: published en translations are searchable via the english config."""
+
+    def setUp(self):
+        archivo = Archivo.objects.create(nombre='Archivo XLang')
+        tipo = TipoDocumental.objects.create(tipo_documental='Carta de venta')
+        self.doc = Documento.objects.create(
+            archivo=archivo, fondo='F', unidad_documental_compuesta='U',
+            folio_inicial='1', tipo_documento=tipo,
+            titulo='Venta de una casa en Sevilla', descripcion='Escritura')
+
+    def _publish(self, field, value, lang='en'):
+        ct = ContentType.objects.get_for_model(Documento)
+        Translation.objects.create(
+            content_type=ct, object_id=self.doc.pk, field_name=field,
+            language_code=lang, value=value, status='published')
+
+    def test_english_query_hits_spanish_record(self):
+        from django.contrib.postgres.search import SearchQuery
+        self._publish('titulo', 'escaped slave sale')
+        self.assertTrue(Documento.objects.filter(
+            pk=self.doc.pk,
+            search_vector=SearchQuery('escaped', config='english')).exists())
+        self.assertTrue(Documento.objects.filter(
+            pk=self.doc.pk,
+            search_vector=SearchQuery('venta', config='spanish')).exists())
+
+    def test_draft_translation_not_searchable(self):
+        from django.contrib.postgres.search import SearchQuery
+        ct = ContentType.objects.get_for_model(Documento)
+        Translation.objects.create(
+            content_type=ct, object_id=self.doc.pk, field_name='titulo',
+            language_code='en', value='escaped slave sale', status='draft')
+        self.assertFalse(Documento.objects.filter(
+            pk=self.doc.pk,
+            search_vector=SearchQuery('escaped', config='english')).exists())

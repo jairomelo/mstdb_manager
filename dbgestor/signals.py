@@ -6,6 +6,7 @@ Skips raw saves (loaddata/fixtures) — use populate_search_vectors command inst
 """
 
 from django.contrib.postgres.search import SearchVector
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import F, Func, OuterRef, Subquery
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -21,11 +22,32 @@ class Unaccent(Func):
     arity = 1
 
 
+def published_translations_subquery(model, pk_field, weight='C'):
+    """Aggregate published Translation values for one row, as an english vector.
+
+    Correlated on the outer row via ``pk_field`` (concrete PK column). When no
+    published translation exists the subquery is NULL and contributes nothing.
+    NOTE: do not wrap the subquery in Coalesce — it breaks OuterRef resolution
+    inside UPDATE statements (FieldError: Cannot resolve keyword '').
+    """
+    from django.contrib.postgres.aggregates import StringAgg
+    ct = ContentType.objects.get_for_model(model, for_concrete_model=False)
+    agg = Translation.objects.filter(
+        content_type=ct,
+        object_id=OuterRef(pk_field),
+        status='published',
+    ).annotate(
+        text=StringAgg('value', delimiter=' ')
+    ).values('text')[:1]
+    return SearchVector(Subquery(agg), weight=weight, config='english')
+
+
 def lugar_search_vector_expression():
     return (
         SearchVector('nombre_lugar', weight='A', config='spanish') +
         SearchVector('otros_nombres', weight='B', config='spanish') +
-        SearchVector('tipo', weight='C', config='spanish')
+        SearchVector('tipo', weight='C', config='spanish') +
+        published_translations_subquery(Lugar, 'lugar_id')
     )
 
 
@@ -33,7 +55,8 @@ def corporacion_search_vector_expression():
     return (
         SearchVector('nombre_institucion', weight='A', config='spanish') +
         SearchVector('nombres_alternativos', weight='B', config='spanish') +
-        SearchVector('notas', weight='C', config='spanish')
+        SearchVector('notas', weight='C', config='spanish') +
+        published_translations_subquery(Corporacion, 'corporacion_id')
     )
 
 
@@ -54,7 +77,8 @@ def documento_search_vector_expression():
                 ).values('tipo_documental')[:1]
             ),
             weight='C', config='spanish') +
-        SearchVector('sigla_documento', weight='D', config='spanish')
+        SearchVector('sigla_documento', weight='D', config='spanish') +
+        published_translations_subquery(Documento, 'documento_id')
     )
 
 
@@ -70,7 +94,8 @@ def persona_search_vector_expression(include_conducta=False):
         SearchVector('nombres', weight='A', config='spanish') +
         SearchVector('apellidos', weight='A', config='spanish') +
         SearchVector('notas', weight='C', config='spanish') +
-        SearchVector('ocupacion_categoria', weight='D', config='spanish')
+        SearchVector('ocupacion_categoria', weight='D', config='spanish') +
+        published_translations_subquery(Persona, 'persona_id')
     )
     if include_conducta:
         def child_field(name):
@@ -107,9 +132,11 @@ def update_documento_search_vector(sender, instance, raw=False, **kwargs):
 def update_documento_vectors_on_tipo_change(sender, instance, raw=False, **kwargs):
     if raw:
         return
-    Documento.objects.filter(tipo_documento=instance).update(
-        search_vector=documento_search_vector_expression()
-    )
+    for doc_id in Documento.objects.filter(
+            tipo_documento=instance).values_list('documento_id', flat=True):
+        Documento.objects.filter(documento_id=doc_id).update(
+            search_vector=documento_search_vector_expression()
+        )
 
 
 @receiver(post_save, sender=Persona)
@@ -150,8 +177,10 @@ def refresh_search_vector(model, instance):
         qs.update(search_vector=persona_search_vector_expression(
             isinstance(instance, _models.PersonaEsclavizada)))
     elif model.__name__ == 'TipoDocumental':
-        _models.Documento.objects.filter(tipo_documento=instance).update(
-            search_vector=documento_search_vector_expression())
+        for doc_id in _models.Documento.objects.filter(
+                tipo_documento=instance).values_list('documento_id', flat=True):
+            _models.Documento.objects.filter(documento_id=doc_id).update(
+                search_vector=documento_search_vector_expression())
     else:
         raise ValueError(f'No search_vector refresh rule for {model.__name__}')
 
