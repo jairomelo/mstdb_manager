@@ -324,6 +324,7 @@ CSRF_COOKIE_NAME = 'csrftoken'
 
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Load-test throttle bypass. Unset/empty keeps the bypass inert; when set, a
 # request presenting a matching `X-Loadtest-Token` header skips rate limiting.
