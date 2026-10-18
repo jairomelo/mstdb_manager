@@ -16,6 +16,7 @@ from .models import PersonaRelaciones, PersonaLugarRel, RolEvento, SugerenciaMer
 from .models import Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso
 from .models import ConductaTerm
 from .models import VariableDefinition
+from .models import Translation, LeccionTranslation
 
 
 class ConductaTermAdmin(ImportExportModelAdmin):
@@ -89,4 +90,22 @@ class VariableDefinitionAdmin(ImportExportModelAdmin):
 
 
 admin.site.register(VariableDefinition, VariableDefinitionAdmin)
+
+
+class TranslationAdmin(ImportExportModelAdmin):
+    list_display = ('content_type', 'object_id', 'field_name', 'language_code', 'status', 'updated_at')
+    list_filter = ('language_code', 'status', 'content_type')
+    search_fields = ('field_name', 'value')
+
+
+admin.site.register(Translation, TranslationAdmin)
+
+
+class LeccionTranslationAdmin(ImportExportModelAdmin):
+    list_display = ('leccion', 'language_code', 'status', 'updated_at')
+    list_filter = ('language_code', 'status')
+    search_fields = ('title', 'body')
+
+
+admin.site.register(LeccionTranslation, LeccionTranslationAdmin)
 

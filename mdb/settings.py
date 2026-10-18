@@ -166,6 +166,11 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
 ]
 
+# Bilingual content languages: Spanish is the in-place source of truth;
+# English lives in the Translation / LeccionTranslation tables. pt/de can be
+# appended here later with zero schema change (language_code is free text).
+SUPPORTED_CONTENT_LANGUAGES = ["es", "en"]
+
 TIME_ZONE = 'UTC'
 
 USE_TZ = True

@@ -2,6 +2,8 @@ import re
 import bleach
 from django.db import models, transaction
 from django.db.models import Q
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from simple_history.models import HistoricalRecords
@@ -51,6 +53,39 @@ def sanitize_leccion_embed_urls(html: str) -> str:
         return _SRC_ATTR_RE.sub('', tag)
     return _EMBED_TAG_RE.sub(clean_tag, html)
 
+
+def sanitize_leccion_body(html: str) -> str:
+    return sanitize_leccion_embed_urls(
+        bleach.clean(
+            html,
+            tags=LECCION_BODY_ALLOWED_TAGS,
+            attributes=LECCION_BODY_ALLOWED_ATTRS,
+            strip=True,
+        )
+    )
+
+
+class TranslatableFieldsMixin:
+    """Declares which source-language (es) fields accept translations.
+
+    Single source of truth reused by Translation validation, serializers,
+    signals, admin, and the import command. Subclasses merge parent lists
+    through the MRO (e.g. PersonaEsclavizada extends Persona.notas).
+    """
+
+    translatable_fields = ()
+
+    @classmethod
+    def get_translatable_fields(cls):
+        seen = set()
+        fields = []
+        for klass in reversed(cls.__mro__):
+            for name in vars(klass).get('translatable_fields', None) or ():
+                if name not in seen:
+                    seen.add(name)
+                    fields.append(name)
+        return fields
+
 UDC = (
     ('exp', 'Expediente'),
     ('caj', 'Caja'),
@@ -98,7 +133,8 @@ PLACE_TYPE_CHOICES = (
 ###############
 
 
-class SituacionLugar(models.Model):
+class SituacionLugar(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('situacion', 'descripcion')
     situacion_id = models.AutoField(primary_key=True)
     situacion = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(null=True, blank=True)
@@ -107,7 +143,8 @@ class SituacionLugar(models.Model):
         return f'{self.situacion}'
 
 
-class TipoDocumental(models.Model):
+class TipoDocumental(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('tipo_documental', 'descripcion')
 
     tipo_documental = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
@@ -116,7 +153,8 @@ class TipoDocumental(models.Model):
         return f'{self.tipo_documental}'
 
 
-class RolEvento(models.Model):
+class RolEvento(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('rol_evento', 'descripcion')
 
     rol_evento = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
@@ -125,7 +163,8 @@ class RolEvento(models.Model):
         return f'{self.rol_evento}'
 
 
-class TipoLugar(models.Model):
+class TipoLugar(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('tipo_lugar', 'descripcion')
 
     tipo_lugar = models.CharField(max_length=70, unique=True)
     descripcion = models.TextField(null=True, blank=True)
@@ -138,7 +177,8 @@ class TipoLugar(models.Model):
 # Lugares
 ###############
 
-class Lugar(models.Model):
+class Lugar(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('nombre_lugar', 'otros_nombres')
 
     lugar_id = models.AutoField(primary_key=True)
     nombre_lugar = models.CharField(max_length=255)
@@ -226,7 +266,8 @@ class Archivo(models.Model):
         return f'[{self.nombre_abreviado}] {self.nombre}'
 
 
-class Documento(models.Model):
+class Documento(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('titulo', 'descripcion', 'notas')
 
     documento_id = models.AutoField(primary_key=True)
 
@@ -323,7 +364,8 @@ class Documento(models.Model):
 # Autoridad Personas
 #####################
 
-class Calidades(models.Model):
+class Calidades(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('calidad', 'descripcion')
     """
     This table has the only purpose to serve as basic vocabulary for Calidades in Autoridades
     and to be used in forms with Select2 autocomplete
@@ -342,7 +384,8 @@ class Calidades(models.Model):
         return f'{self.calidad}'
 
 
-class Actividades(models.Model):
+class Actividades(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('actividad', 'descripcion')
 
     actividad_id = models.AutoField(primary_key=True)
     actividad = models.CharField(max_length=150, unique=True)
@@ -352,10 +395,9 @@ class Actividades(models.Model):
         return f'{self.actividad}'
 
 
-class Hispanizaciones(models.Model):
-    """
-    This table has the only purpose to serve as basic vocabulary for Hispanizaciones for Persona Esclavizada
-    """
+class Hispanizaciones(TranslatableFieldsMixin, models.Model):
+    """Vocabulary for Hispanizaciones for Persona Esclavizada."""
+    translatable_fields = ('hispanizacion', 'descripcion')
 
     hispanizacion_id = models.AutoField(primary_key=True)
     hispanizacion = models.CharField(max_length=150, unique=True)
@@ -370,10 +412,9 @@ class Hispanizaciones(models.Model):
         return f'{self.hispanizacion}'
 
 
-class Etonimos(models.Model):
-    """
-    This table has the only purpose to serve as basic vocabulary for Etonimos for Persona Esclavizada
-    """
+class Etonimos(TranslatableFieldsMixin, models.Model):
+    """Vocabulary for Etonimos for Persona Esclavizada."""
+    translatable_fields = ('etonimo', 'descripcion')
 
     etonimo_id = models.AutoField(primary_key=True)
     etonimo = models.CharField(max_length=150, unique=True)
@@ -396,7 +437,8 @@ def strip_accents(value):
     )
 
 
-class ConductaTerm(models.Model):
+class ConductaTerm(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('canonico', 'descripcion')
     """
     Canonical vocabulary for conducta (e.g. 'huído') with alias variants
     (huido, hullo, huyo, huyeron, escap*, busque). The free-text
@@ -489,7 +531,8 @@ class ConductaTerm(models.Model):
         ordering = ['canonico']
 
 
-class EstadoCivil(models.Model):
+class EstadoCivil(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('estado_civil', 'descripcion')
     """
     Estado civil de las personas
     """
@@ -501,7 +544,8 @@ class EstadoCivil(models.Model):
         return f'{self.estado_civil}'
 
 
-class LeccionNivel(models.Model):
+class LeccionNivel(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('nivel', 'descripcion')
     """
     This table has the only purpose to serve as basic vocabulary for education levels
     applicable to a Leccion (Lecciones Educativas).
@@ -515,7 +559,8 @@ class LeccionNivel(models.Model):
         return f'{self.nivel}'
 
 
-class LeccionPalabraClave(models.Model):
+class LeccionPalabraClave(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('palabra_clave', 'descripcion')
     """
     This table has the only purpose to serve as basic vocabulary for keywords
     applicable to a Leccion (Lecciones Educativas).
@@ -538,7 +583,8 @@ class LeccionPalabraClave(models.Model):
 # the shared attributes defined here.
 ##########
 
-class Persona(PolymorphicModel):
+class Persona(TranslatableFieldsMixin, PolymorphicModel):
+    translatable_fields = ('notas',)
 
     persona_id = models.AutoField(primary_key=True)
 
@@ -663,6 +709,7 @@ class Persona(PolymorphicModel):
 
 
 class PersonaEsclavizada(Persona):
+    translatable_fields = ('marcas_corporales', 'conducta', 'salud')
     """
     This table expands Persona to specifics features regarding a Persona Esclavizada
     """
@@ -741,7 +788,8 @@ class PersonaNoEsclavizada(Persona):
         return f'{self.nombre_normalizado} ({self.persona_idno})'
 
 
-class PersonaLugarRel(models.Model):
+class PersonaLugarRel(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('notas',)
 
     persona_x_lugares = models.AutoField(primary_key=True)
 
@@ -781,7 +829,8 @@ class PersonaLugarRel(models.Model):
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()]) + f" - ({self.ordinal}){self.lugar}"
 
 
-class PersonaRelaciones(models.Model):
+class PersonaRelaciones(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('notas', 'descripcion_relacion')
 
     RELACIONES = (
         ('fam', 'Familiar'),
@@ -853,7 +902,8 @@ class PersonaRolEvento(models.Model):
         return ', '.join([persona.nombre_normalizado for persona in self.personas.all()])
 
 
-class TiposInstitucion(models.Model):
+class TiposInstitucion(TranslatableFieldsMixin, models.Model):
+    translatable_fields = ('tipo', 'descripcion')
 
     tipo_id = models.AutoField(primary_key=True)
     tipo = models.CharField(max_length=50, unique=True)
@@ -863,7 +913,8 @@ class TiposInstitucion(models.Model):
         return f'{self.tipo}'
 
 
-class Corporacion(PolymorphicModel):
+class Corporacion(TranslatableFieldsMixin, PolymorphicModel):
+    translatable_fields = ('nombres_alternativos', 'notas')
 
     corporacion_id = models.AutoField(primary_key=True)
 
@@ -1025,13 +1076,7 @@ class Leccion(models.Model):
 
     def save(self, *args, **kwargs):
         if self.body:
-            self.body = bleach.clean(
-                self.body,
-                tags=LECCION_BODY_ALLOWED_TAGS,
-                attributes=LECCION_BODY_ALLOWED_ATTRS,
-                strip=True,
-            )
-            self.body = sanitize_leccion_embed_urls(self.body)
+            self.body = sanitize_leccion_body(self.body)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -1126,5 +1171,154 @@ class VariableDefinition(models.Model):
 
     def __str__(self) -> str:
         return f'{self.modelo}.{self.clave}'
+
+
+TRANSLATABLE_MODELS = (
+    'documento', 'lugar', 'persona', 'personaesclavizada',
+    'personanoesclavizada', 'corporacion', 'personalugarrel',
+    'personarelaciones', 'situacionlugar', 'tipodocumental', 'rolevento',
+    'tipolugar', 'calidades', 'actividades', 'hispanizaciones', 'etonimos',
+    'conductaterm', 'estadocivil', 'leccionnivel', 'leccionpalabraclave',
+    'tiposinstitucion',
+)
+
+TRANSLATION_STATUS = (
+    ('draft', 'Borrador'),
+    ('published', 'Publicado'),
+)
+
+
+class Translation(models.Model):
+    """Field-level translation of an entity or vocabulary row.
+
+    Spanish lives in-place on the source columns; this table holds every
+    other language. ``status='published'`` rows feed public search/API,
+    ``draft`` rows are visible only in the workbench.
+    """
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField(db_index=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+    field_name = models.CharField(max_length=100, db_index=True)
+    language_code = models.CharField(max_length=10, db_index=True)
+    value = models.TextField()
+    status = models.CharField(max_length=10, choices=TRANSLATION_STATUS, default='draft', db_index=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='translations_edited')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['content_type', 'object_id', 'field_name', 'language_code'],
+                name='translation_unique_cell',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['content_type', 'object_id'], name='translation_target_idx'),
+            models.Index(fields=['language_code', 'status'], name='translation_lang_status_idx'),
+        ]
+
+    def clean(self):
+        super().clean()
+        model_name = (self.content_type.model if self.content_type_id else '')
+        if model_name and model_name not in TRANSLATABLE_MODELS:
+            raise ValidationError({'content_type': 'Modelo no traducible.'})
+        model_class = self.content_type.model_class() if self.content_type_id else None
+        fields = getattr(model_class, 'get_translatable_fields', lambda: ())()
+        if fields and self.field_name not in fields:
+            raise ValidationError({'field_name': 'Campo no traducible en este modelo.'})
+        self.language_code = (self.language_code or '').strip().lower()
+        if self.language_code == 'es':
+            raise ValidationError({'language_code': 'El español vive en las columnas fuente.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean(exclude=['content_type'], validate_unique=False)
+        if self.language_code:
+            self.language_code = self.language_code.strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'{self.content_type}#{self.object_id}.{self.field_name}[{self.language_code}]'
+
+
+class LeccionTranslation(models.Model):
+    """Dedicated Lección translation: Leccion already has draft/publish owners."""
+
+    leccion = models.ForeignKey(Leccion, on_delete=models.CASCADE, related_name='translations')
+    language_code = models.CharField(max_length=10, db_index=True)
+    title = models.CharField(max_length=200)
+    body = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=TRANSLATION_STATUS, default='draft', db_index=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='leccion_translations_edited')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['leccion', 'language_code'],
+                name='lecciontranslation_unique_lang',
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        self.language_code = (self.language_code or '').strip().lower()
+        if self.language_code == 'es':
+            raise ValidationError({'language_code': 'El español vive en las columnas fuente.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean(validate_unique=False)
+        if self.language_code:
+            self.language_code = self.language_code.strip().lower()
+        if self.body:
+            self.body = sanitize_leccion_body(self.body)
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'Leccion#{self.leccion_id}[{self.language_code}]'
+
+
+def get_translation(obj, field_name, lang):
+    """Published translation value with Spanish fallback.
+
+    Returns the source attribute when ``lang`` is es/empty/unsupported or no
+    published row exists. Leccion resolves through LeccionTranslation.
+    """
+    source = getattr(obj, field_name, '')
+    lang = (lang or 'es').strip().lower()
+    if lang == 'es':
+        return source
+    if isinstance(obj, Leccion):
+        row = obj.translations.filter(language_code=lang, status='published').only(
+            'title', 'body').first()
+        if row:
+            return getattr(row, field_name, None) or source
+        return source
+    ct = ContentType.objects.get_for_model(obj.__class__)
+    row = Translation.objects.filter(
+        content_type=ct, object_id=obj.pk,
+        field_name=field_name, language_code=lang,
+        status='published').only('value').first()
+    return row.value if row and row.value else source
+
+
+def resolve_translated_fields(obj, lang):
+    """Map of translatable field -> resolved value for ``lang``."""
+    fields = getattr(obj.__class__, 'get_translatable_fields', lambda: ())()
+    if isinstance(obj, Leccion):
+        fields = ('title', 'body')
+    return {name: get_translation(obj, name, lang) for name in fields}
 
 
