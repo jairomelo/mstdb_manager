@@ -1157,7 +1157,7 @@ class LeccionViewSet(BaseV2ViewSet):
     def get_permissions(self):
         if self.action == 'create':
             return [IsAuthenticated(), CanCreateLeccion()]
-        if self.action in ('update', 'partial_update', 'destroy', 'upload_imagen'):
+        if self.action in ('update', 'partial_update', 'destroy', 'upload_imagen', 'upload_adjunto'):
             return [IsAuthenticated()]
         return super(BaseV2ViewSet, self).get_permissions()
 
@@ -1265,7 +1265,11 @@ class LeccionViewSet(BaseV2ViewSet):
         imagen = request.FILES.get('imagen')
         if not imagen:
             return Response({'error': 'imagen requerida.'}, status=status.HTTP_400_BAD_REQUEST)
-        instance = LeccionImagen.objects.create(leccion=leccion, imagen=imagen)
+        try:
+            instance = LeccionImagen.objects.create(leccion=leccion, imagen=imagen)
+        except Exception:
+            return Response({'error': 'No se pudo guardar la imagen.'},
+                            status=status.HTTP_400_BAD_REQUEST)
         serializer = LeccionImagenSerializer(instance, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -1282,7 +1286,11 @@ class LeccionViewSet(BaseV2ViewSet):
         if not archivo.name.lower().endswith('.pdf') or \
                 (archivo.content_type and archivo.content_type != 'application/pdf'):
             return Response({'error': 'El archivo debe ser un PDF.'}, status=status.HTTP_400_BAD_REQUEST)
-        instance = LeccionAdjunto.objects.create(leccion=leccion, archivo=archivo)
+        try:
+            instance = LeccionAdjunto.objects.create(leccion=leccion, archivo=archivo)
+        except Exception:
+            return Response({'error': 'No se pudo guardar el archivo PDF.'},
+                            status=status.HTTP_400_BAD_REQUEST)
         serializer = LeccionAdjuntoSerializer(instance, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
