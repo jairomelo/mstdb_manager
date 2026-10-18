@@ -16,7 +16,7 @@ from django.contrib.postgres.search import SearchVector
 from django.db.models import Count
 
 from dbgestor.models import Lugar, Documento, Persona, Corporacion
-from dbgestor.signals import persona_search_vector_expression
+from dbgestor.signals import persona_search_vector_expression, documento_search_vector_expression
 
 
 class Command(BaseCommand):
@@ -71,12 +71,7 @@ class Command(BaseCommand):
         count = Documento.objects.count()
         
         Documento.objects.update(
-            search_vector=(
-                SearchVector('titulo', weight='A', config='spanish') +
-                SearchVector('descripcion', weight='B', config='spanish') +
-                SearchVector('notas', weight='C', config='spanish') +
-                SearchVector('sigla_documento', weight='D', config='spanish')
-            )
+            search_vector=documento_search_vector_expression()
         )
         
         self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Documento records'))

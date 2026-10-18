@@ -79,12 +79,15 @@ class DocumentoListSerializer(serializers.ModelSerializer):
     tipo_documento = serializers.StringRelatedField()
     short_id = serializers.ReadOnlyField()
     lugar_de_produccion_id = serializers.IntegerField(source='lugar_de_produccion.lugar_id', read_only=True)
+    personas_esclavizadas_count = serializers.IntegerField(read_only=True, required=False)
+    personas_no_esclavizadas_count = serializers.IntegerField(read_only=True, required=False)
 
     class Meta:
         model = Documento
         fields = ['documento_id', 'short_id', 'documento_idno', 'archivo', 'titulo', 'tipo_documento',
                   'fecha_inicial', 'fecha_final', 'lugar_de_produccion_id',
                   'evento_valor_sp', 'evento_forma_de_pago', 'evento_total',
+                  'personas_esclavizadas_count', 'personas_no_esclavizadas_count',
                   'created_at', 'updated_at']
 
 

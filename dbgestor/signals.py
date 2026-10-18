@@ -10,12 +10,33 @@ from django.db.models import F, Func, OuterRef, Subquery
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import Lugar, Documento, Persona, PersonaEsclavizada, Corporacion
+from .models import Lugar, Documento, Persona, PersonaEsclavizada, Corporacion, TipoDocumental
 
 
 class Unaccent(Func):
     function = 'UNACCENT'
     arity = 1
+
+
+def documento_search_vector_expression():
+    """Search vector expression for Documento rows.
+
+    tipo_documento is a FK and cannot be referenced directly from an UPDATE;
+    it is fetched via a correlated subquery, mirroring the conducta pattern.
+    """
+    return (
+        SearchVector('titulo', weight='A', config='spanish') +
+        SearchVector('descripcion', weight='B', config='spanish') +
+        SearchVector('notas', weight='C', config='spanish') +
+        SearchVector(
+            Subquery(
+                TipoDocumental.objects.filter(
+                    pk=OuterRef('tipo_documento_id')
+                ).values('tipo_documental')[:1]
+            ),
+            weight='C', config='spanish') +
+        SearchVector('sigla_documento', weight='D', config='spanish')
+    )
 
 
 def persona_search_vector_expression(include_conducta=False):
@@ -63,12 +84,16 @@ def update_documento_search_vector(sender, instance, raw=False, **kwargs):
     if raw:
         return
     Documento.objects.filter(pk=instance.pk).update(
-        search_vector=(
-            SearchVector('titulo', weight='A', config='spanish') +
-            SearchVector('descripcion', weight='B', config='spanish') +
-            SearchVector('notas', weight='C', config='spanish') +
-            SearchVector('sigla_documento', weight='D', config='spanish')
-        )
+        search_vector=documento_search_vector_expression()
+    )
+
+
+@receiver(post_save, sender=TipoDocumental)
+def update_documento_vectors_on_tipo_change(sender, instance, raw=False, **kwargs):
+    if raw:
+        return
+    Documento.objects.filter(tipo_documento=instance).update(
+        search_vector=documento_search_vector_expression()
     )
 
 

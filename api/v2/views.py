@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery, Value
+from django.db.models import Case, Count, Exists, F, OuterRef, Q, Prefetch, Min, Max, Subquery, Value, When, BooleanField, CharField
 from django.db.models.functions import ExtractYear, Coalesce
 from django.contrib.postgres.aggregates import StringAgg
 from django.contrib.auth import authenticate, login, logout
@@ -1586,16 +1586,38 @@ class SearchAPIView(APIView):
         raw = request.query_params.get(key, '')
         return [v.strip() for v in raw.split(',') if v.strip()] if raw else []
 
-    def _text_match(self, model, search_query, similarity_field, query_text, is_exact):
-        """Return annotated queryset with text-match filter applied."""
+    def _text_match(self, model, search_query, similarity_field, query_text, is_exact, expand_via_documents=False):
+        """Return annotated queryset with text-match filter applied.
+
+        When expand_via_documents is True (persona types only), persons linked
+        to FTS-matched documents are included via pk__in subqueries (never a
+        join, to preserve the Min/Max/StringAgg document annotations) and
+        annotated with is_direct / match_reason.
+        """
         qs = model.objects.annotate(
             search_rank=SearchRank(F('search_vector'), search_query),
             name_similarity=TrigramSimilarity(similarity_field, query_text),
         )
         if is_exact:
-            qs = qs.filter(search_vector=search_query)
+            direct_q = Q(search_vector=search_query)
         else:
-            qs = qs.filter(Q(search_vector=search_query) | Q(name_similarity__gt=0.3))
+            direct_q = Q(search_vector=search_query) | Q(name_similarity__gt=0.3)
+        if expand_via_documents:
+            doc_pks = Documento.objects.filter(
+                search_vector=search_query).values('pk')
+            linked_q = Q(pk__in=Persona.documentos.through.objects.filter(
+                documento_id__in=doc_pks).values('persona_id'))
+            qs = model.objects.annotate(
+                search_rank=SearchRank(F('search_vector'), search_query),
+                name_similarity=TrigramSimilarity(similarity_field, query_text),
+            ).filter(direct_q | linked_q).annotate(
+                is_direct=Case(When(direct_q, then=Value(True)),
+                               default=Value(False), output_field=BooleanField()),
+                match_reason=Case(When(direct_q, then=Value('directo')),
+                                  default=Value('documento'), output_field=CharField()),
+            ).distinct()
+        else:
+            qs = qs.filter(direct_q)
         return qs
 
     def _apply_filters(self, qs, type_key, filters):
@@ -2079,7 +2101,8 @@ class SearchAPIView(APIView):
                 base_querysets = {}
                 for tk, (model, sim_field, _) in self.TYPE_CONFIGS.items():
                     base_querysets[tk] = self._text_match(
-                        model, search_query, sim_field, clean_query, is_exact)
+                        model, search_query, sim_field, clean_query, is_exact,
+                        expand_via_documents=tk in ('personaesclavizada', 'personanoesclavizada'))
             else:
                 # ── Browse mode: all records ───────────────────────
                 base_querysets = {}
@@ -2087,6 +2110,12 @@ class SearchAPIView(APIView):
                     base_querysets[tk] = model.objects.all()
 
             # ── Prefetch for list serializer fields ──────────────
+            base_querysets['documento'] = base_querysets['documento'].annotate(
+                personas_esclavizadas_count=Count(
+                    'persona', filter=Q(persona__personaesclavizada__isnull=False), distinct=True),
+                personas_no_esclavizadas_count=Count(
+                    'persona', filter=Q(persona__personanoesclavizada__isnull=False), distinct=True),
+            )
             if 'personaesclavizada' in base_querysets:
                 base_querysets['personaesclavizada'] = base_querysets['personaesclavizada'].select_related(
                     'procedencia',
@@ -2166,6 +2195,8 @@ class SearchAPIView(APIView):
                         if annotations:
                             qs = qs.annotate(**annotations)
                         qs = qs.order_by(order_by)
+                    elif tk in ('personaesclavizada', 'personanoesclavizada'):
+                        qs = qs.order_by('-is_direct', '-search_rank', '-name_similarity')
                     else:
                         qs = qs.order_by('-search_rank', '-name_similarity')
                 else:
@@ -2184,7 +2215,9 @@ class SearchAPIView(APIView):
                 page_qs = qs[start:end]
 
                 results_data = [
-                    {'type': tk, 'source': serializer_cls(obj).data}
+                    {'type': tk, 'source': serializer_cls(obj).data,
+                     **({'match_reason': getattr(obj, 'match_reason', None)}
+                        if is_search and tk in ('personaesclavizada', 'personanoesclavizada') else {})}
                     for obj in page_qs
                 ]
             else:
@@ -2205,7 +2238,10 @@ class SearchAPIView(APIView):
                         qs = self._apply_simple_search(qs, tk, search_text)
 
                     if is_search:
-                        qs = qs.order_by('-search_rank', '-name_similarity')
+                        if tk in ('personaesclavizada', 'personanoesclavizada'):
+                            qs = qs.order_by('-is_direct', '-search_rank', '-name_similarity')
+                        else:
+                            qs = qs.order_by('-search_rank', '-name_similarity')
                     else:
                         order_by, annotations = self._resolve_ordering(ordering_param, tk)
                         if annotations:
@@ -2216,9 +2252,12 @@ class SearchAPIView(APIView):
                         score = 0
                         if is_search:
                             score = (getattr(obj, 'search_rank', 0) or 0) + (getattr(obj, 'name_similarity', 0) or 0)
+                            if getattr(obj, 'match_reason', None) == 'documento':
+                                score = 0
                         all_items.append({
                             'type': tk,
                             'score': score,
+                            'match_reason': getattr(obj, 'match_reason', None),
                             'source': serializer_cls(obj).data,
                         })
 
@@ -2231,7 +2270,8 @@ class SearchAPIView(APIView):
                 page_items = all_items[start:end]
 
                 results_data = [
-                    {'type': item['type'], 'source': item['source']}
+                    {'type': item['type'], 'source': item['source'],
+                     **({'match_reason': item['match_reason']} if item.get('match_reason') else {})}
                     for item in page_items
                 ]
 
