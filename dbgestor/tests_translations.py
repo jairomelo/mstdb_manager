@@ -157,6 +157,25 @@ class ImportTranslationsCommandTests(TestCase):
             'Bill of sale')
 
 
+class SeedVocabTranslationsTests(TestCase):
+    def test_fill_when_empty_never_overwrites(self):
+        from django.core.management import call_command
+        tipo = TipoDocumental.objects.create(tipo_documental='Carta de compra/venta')
+        call_command('seed_vocab_translations_en')
+        ct = ContentType.objects.get_for_model(TipoDocumental)
+        row = Translation.objects.get(
+            content_type=ct, object_id=tipo.pk, field_name='tipo_documental',
+            language_code='en')
+        self.assertEqual(row.status, 'draft')
+        row.status = 'published'
+        row.value = 'Team-edited value'
+        row.save()
+        call_command('seed_vocab_translations_en')
+        row.refresh_from_db()
+        self.assertEqual(row.status, 'published')
+        self.assertEqual(row.value, 'Team-edited value')
+
+
 class CrossLanguageSearchTests(TestCase):
     """Phase 2: published en translations are searchable via the english config."""
 
