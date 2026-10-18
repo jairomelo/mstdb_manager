@@ -12,6 +12,35 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
 
 from django.db.models import Manager, Q
 
+from dbgestor.models import get_translation
+
+
+class TranslatableSerializerMixin:
+    """Resolve translatable fields to ``?lang=`` with Spanish fallback.
+
+    Applied to read serializers of translatable models. No ``lang`` (or
+    ``es``/unsupported) returns source columns unchanged, so current
+    consumers see byte-identical output.
+    """
+
+    def _lang(self):
+        request = (self.context or {}).get('request')
+        lang = getattr(request, 'query_params', {}).get('lang', 'es') if request else 'es'
+        return (lang or 'es').strip().lower()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        lang = self._lang()
+        if lang == 'es':
+            return data
+        fields = getattr(instance.__class__, 'get_translatable_fields', lambda: ())()
+        if instance.__class__.__name__ == 'Leccion':
+            fields = ('title', 'body')
+        for name in fields:
+            if name in data:
+                data[name] = get_translation(instance, name, lang)
+        return data
+
 
 # Reference Serializers - Lightweight for relationships
 class ArchivoReferenceSerializer(serializers.ModelSerializer):
@@ -22,7 +51,7 @@ class ArchivoReferenceSerializer(serializers.ModelSerializer):
         fields = ['archivo_id', 'nombre', 'nombre_abreviado', 'archivo_idno']
 
 
-class DocumentoReferenceSerializer(serializers.ModelSerializer):
+class DocumentoReferenceSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Minimal Documento data for references"""
     
     class Meta:
@@ -30,7 +59,7 @@ class DocumentoReferenceSerializer(serializers.ModelSerializer):
         fields = ['documento_id', 'documento_idno', 'titulo']
 
 
-class PersonaReferenceSerializer(serializers.ModelSerializer):
+class PersonaReferenceSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Minimal Persona data for references"""
     persona_type = serializers.CharField(read_only=True)
 
@@ -39,7 +68,7 @@ class PersonaReferenceSerializer(serializers.ModelSerializer):
         fields = ['persona_id', 'persona_idno', 'nombre_normalizado', 'polymorphic_ctype', 'persona_type']
 
 
-class LugarReferenceSerializer(serializers.ModelSerializer):
+class LugarReferenceSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Minimal Lugar data for references"""
     tipo = serializers.StringRelatedField()
     
@@ -48,7 +77,7 @@ class LugarReferenceSerializer(serializers.ModelSerializer):
         fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon']
 
 
-class CorporacionReferenceSerializer(serializers.ModelSerializer):
+class CorporacionReferenceSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Minimal Corporacion data for references"""
     
     class Meta:
@@ -73,7 +102,7 @@ class ArchivoListSerializer(serializers.ModelSerializer):
         return obj.documento_set.count()
 
 
-class DocumentoListSerializer(serializers.ModelSerializer):
+class DocumentoListSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Documento data for list views"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
@@ -91,7 +120,7 @@ class DocumentoListSerializer(serializers.ModelSerializer):
                   'created_at', 'updated_at']
 
 
-class PersonaListSerializer(serializers.ModelSerializer):
+class PersonaListSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Base Persona list serializer"""
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
     short_id = serializers.ReadOnlyField()
@@ -232,7 +261,7 @@ class PersonaNoEsclavizadaListSerializer(PersonaListSerializer):
         return [ec.estado_civil for ec in obj.estado_civil.all()]
 
 
-class LugarListSerializer(serializers.ModelSerializer):
+class LugarListSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Lugar data for list views"""
     tipo = serializers.StringRelatedField()
     short_id = serializers.ReadOnlyField()
@@ -284,7 +313,7 @@ class LugarListSerializer(serializers.ModelSerializer):
         return {'total': len(seen), 'personas': personas}
 
 
-class CorporacionListSerializer(serializers.ModelSerializer):
+class CorporacionListSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Corporacion data for list views"""
     tipo_institucion = serializers.CharField(source='get_tipo_institucion', read_only=True)
     short_id = serializers.ReadOnlyField()
@@ -313,7 +342,7 @@ class ArchivoDetailSerializer(serializers.ModelSerializer):
         return obj.documento_set.count()
 
 
-class DocumentoDetailSerializer(serializers.ModelSerializer):
+class DocumentoDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Full Documento details"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
@@ -336,14 +365,14 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
 
 
 # Nested serializers for detail views (map + network visualizations)
-class LugarNestedSerializer(serializers.ModelSerializer):
+class LugarNestedSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Lugar with coordinates for map rendering"""
     class Meta:
         model = Lugar
         fields = ['lugar_id', 'nombre_lugar', 'tipo', 'lat', 'lon']
 
 
-class PersonaLugarRelNestedSerializer(serializers.ModelSerializer):
+class PersonaLugarRelNestedSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """PersonaLugarRel with nested Lugar for the detail map"""
     lugar = LugarNestedSerializer(read_only=True)
     situacion_lugar = serializers.StringRelatedField()
@@ -354,7 +383,7 @@ class PersonaLugarRelNestedSerializer(serializers.ModelSerializer):
                   'fecha_inicial_lugar']
 
 
-class PersonaRelacionesNestedSerializer(serializers.ModelSerializer):
+class PersonaRelacionesNestedSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """PersonaRelaciones with nested persona refs for network graph"""
     personas = PersonaReferenceSerializer(many=True, read_only=True)
     persona_fuente = PersonaReferenceSerializer(read_only=True)
@@ -365,7 +394,7 @@ class PersonaRelacionesNestedSerializer(serializers.ModelSerializer):
                   'descripcion_relacion']
 
 
-class DocumentoNestedSerializer(serializers.ModelSerializer):
+class DocumentoNestedSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Documento with archivo ref for the detail documents section"""
     archivo = ArchivoReferenceSerializer(read_only=True)
     tipo_documento = serializers.StringRelatedField()
@@ -377,7 +406,7 @@ class DocumentoNestedSerializer(serializers.ModelSerializer):
                   'evento_valor_sp', 'evento_forma_de_pago', 'evento_total']
 
 
-class PersonaDetailSerializer(serializers.ModelSerializer):
+class PersonaDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Base Persona detail serializer"""
     sexo = serializers.CharField(source='get_sexo_display', read_only=True)
     documentos = DocumentoNestedSerializer(many=True, read_only=True)
@@ -453,7 +482,7 @@ class PersonaNoEsclavizadaDetailSerializer(PersonaDetailSerializer):
         return []
 
 
-class LugarDetailSerializer(serializers.ModelSerializer):
+class LugarDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Full Lugar details"""
     tipo = serializers.StringRelatedField()
     tipo_id = serializers.IntegerField(source='tipo.pk', read_only=True, allow_null=True)
@@ -470,7 +499,7 @@ class LugarDetailSerializer(serializers.ModelSerializer):
         return obj.procedencia_persona_esclavizada.count()
 
 
-class LugarPersonasRelSerializer(serializers.ModelSerializer):
+class LugarPersonasRelSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """PersonaLugarRel records for a lugar's personas view."""
     personas = PersonaReferenceSerializer(many=True, read_only=True)
     documento = DocumentoReferenceSerializer(read_only=True)
@@ -482,7 +511,7 @@ class LugarPersonasRelSerializer(serializers.ModelSerializer):
                   'ordinal', 'fecha_inicial_lugar_raw', 'fecha_final_lugar_raw']
 
 
-class CorporacionEventoDocumentoSerializer(serializers.ModelSerializer):
+class CorporacionEventoDocumentoSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Documento + archivo info consumed by the corporacion detail page."""
     archivo = ArchivoReferenceSerializer(read_only=True)
 
@@ -502,7 +531,7 @@ class InstitucionRolEventoNestedSerializer(serializers.ModelSerializer):
         fields = ['id', 'rol_evento', 'documento']
 
 
-class CorporacionDetailSerializer(serializers.ModelSerializer):
+class CorporacionDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Full Corporacion details"""
     tipo_institucion_nombre = serializers.CharField(source='tipo_institucion.tipo', read_only=True)
     tipo_institucion_id = serializers.IntegerField(source='tipo_institucion.pk', read_only=True, allow_null=True)
@@ -533,7 +562,7 @@ class CorporacionDetailSerializer(serializers.ModelSerializer):
 
 
 # Relationship Serializers - For handling M2M relationships
-class PersonaRelacionesDetailSerializer(serializers.ModelSerializer):
+class PersonaRelacionesDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """PersonaRelaciones with references"""
     documento = DocumentoReferenceSerializer(read_only=True)
     persona_ids = serializers.SerializerMethodField()
@@ -548,7 +577,7 @@ class PersonaRelacionesDetailSerializer(serializers.ModelSerializer):
         return list(obj.personas.values_list('persona_id', flat=True))
 
 
-class PersonaLugarRelDetailSerializer(serializers.ModelSerializer):
+class PersonaLugarRelDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """PersonaLugarRel with references"""
     documento = DocumentoReferenceSerializer(read_only=True)
     lugar = LugarReferenceSerializer(read_only=True)
@@ -578,7 +607,7 @@ class PersonaRolEventoDetailSerializer(serializers.ModelSerializer):
 
 
 # Travel Trajectory Serializers - For map visualizations
-class TravelTrajectorySerializer(serializers.ModelSerializer):
+class TravelTrajectorySerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Lightweight travel trajectory data for map visualization"""
     persona = PersonaReferenceSerializer(read_only=True)
     lugar = LugarReferenceSerializer(read_only=True)
@@ -705,7 +734,7 @@ class PersonaTravelTrajectorySerializer(serializers.Serializer):
 
 
 # Simple utility serializers
-class ActividadesSerializer(serializers.ModelSerializer):
+class ActividadesSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     
     class Meta:
         model = Actividades
@@ -971,7 +1000,7 @@ class _VocabUpsertMixin:
         return super().update(instance, validated_data)
 
 
-class TipoDocumentalWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+class TipoDocumentalWriteSerializer(TranslatableSerializerMixin, _VocabUpsertMixin, serializers.ModelSerializer):
     vocab_field = 'tipo_documental'
 
     class Meta:
@@ -979,7 +1008,7 @@ class TipoDocumentalWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializ
         fields = ['id', 'tipo_documental']
 
 
-class CalidadesWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+class CalidadesWriteSerializer(TranslatableSerializerMixin, _VocabUpsertMixin, serializers.ModelSerializer):
     vocab_field = 'calidad'
 
     class Meta:
@@ -987,7 +1016,7 @@ class CalidadesWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
         fields = ['calidad']
 
 
-class HispanizacionesWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+class HispanizacionesWriteSerializer(TranslatableSerializerMixin, _VocabUpsertMixin, serializers.ModelSerializer):
     vocab_field = 'hispanizacion'
 
     class Meta:
@@ -995,7 +1024,7 @@ class HispanizacionesWriteSerializer(_VocabUpsertMixin, serializers.ModelSeriali
         fields = ['hispanizacion']
 
 
-class EtnonimosWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+class EtnonimosWriteSerializer(TranslatableSerializerMixin, _VocabUpsertMixin, serializers.ModelSerializer):
     vocab_field = 'etonimo'
 
     class Meta:
@@ -1003,26 +1032,26 @@ class EtnonimosWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
         fields = ['etonimo']
 
 
-class EstadoCivilWriteSerializer(serializers.ModelSerializer):
+class EstadoCivilWriteSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = EstadoCivil
         fields = ['estado_civil']
 
 
-class ActividadesWriteSerializer(serializers.ModelSerializer):
+class ActividadesWriteSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Actividades
         fields = ['actividad']
 
 
-class SituacionLugarWriteSerializer(serializers.ModelSerializer):
+class SituacionLugarWriteSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = SituacionLugar
         fields = ['situacion', 'descripcion']
         extra_kwargs = {'descripcion': {'required': False}}
 
 
-class ConductaTermSerializer(serializers.ModelSerializer):
+class ConductaTermSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Read serializer for the canonical conducta vocabulary."""
 
     class Meta:
@@ -1070,21 +1099,21 @@ class ConductaTermWriteSerializer(serializers.ModelSerializer):
         return data
 
 
-class RolEventoWriteSerializer(serializers.ModelSerializer):
+class RolEventoWriteSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = RolEvento
         fields = ['rol_evento', 'descripcion']
         extra_kwargs = {'descripcion': {'required': False}}
 
 
-class TiposInstitucionWriteSerializer(serializers.ModelSerializer):
+class TiposInstitucionWriteSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = TiposInstitucion
         fields = ['tipo', 'descripcion']
         extra_kwargs = {'descripcion': {'required': False}}
 
 
-class TipoLugarWriteSerializer(serializers.ModelSerializer):
+class TipoLugarWriteSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = TipoLugar
         fields = ['id', 'tipo_lugar', 'descripcion']
@@ -1092,7 +1121,7 @@ class TipoLugarWriteSerializer(serializers.ModelSerializer):
 
 # ── Leccion (Lecciones Educativas) Serializers ─────────────────────────────────
 
-class LeccionNivelWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+class LeccionNivelWriteSerializer(TranslatableSerializerMixin, _VocabUpsertMixin, serializers.ModelSerializer):
     vocab_field = 'nivel'
 
     class Meta:
@@ -1101,7 +1130,7 @@ class LeccionNivelWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer
         extra_kwargs = {'descripcion': {'required': False}}
 
 
-class LeccionPalabraClaveWriteSerializer(_VocabUpsertMixin, serializers.ModelSerializer):
+class LeccionPalabraClaveWriteSerializer(TranslatableSerializerMixin, _VocabUpsertMixin, serializers.ModelSerializer):
     vocab_field = 'palabra_clave'
 
     class Meta:
@@ -1134,7 +1163,7 @@ class LeccionAdjuntoSerializer(serializers.ModelSerializer):
         fields = ['leccion_adjunto_id', 'archivo', 'created_at']
 
 
-class LeccionListSerializer(serializers.ModelSerializer):
+class LeccionListSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Leccion data for list views"""
     levels = LeccionNivelReferenceSerializer(many=True, read_only=True)
     keywords = LeccionPalabraClaveReferenceSerializer(many=True, read_only=True)
@@ -1158,7 +1187,7 @@ class LeccionAccesoSerializer(serializers.ModelSerializer):
         return f'{obj.user.first_name} {obj.user.last_name}'.strip()
 
 
-class LeccionDetailSerializer(serializers.ModelSerializer):
+class LeccionDetailSerializer(TranslatableSerializerMixin, serializers.ModelSerializer):
     """Leccion data for the public detail view, including related entities.
 
     Owner/collaborator/staff-only fields (accesos, permission flags) are added
@@ -1210,3 +1239,60 @@ class LeccionAccesoWriteSerializer(serializers.Serializer):
     """Payload for adding/updating a user↔lesson role grant."""
     username = serializers.CharField()
     role = serializers.ChoiceField(choices=LeccionAcceso.ROLES, default='collaborator')
+
+
+# ── Translation workbench Serializers ─────────────────────────────────────────
+
+class TranslationSerializer(serializers.ModelSerializer):
+    """Workbench read/write for Translation rows (staff-only endpoint)."""
+
+    model = serializers.CharField(source='content_type.model', read_only=True)
+    updated_by_username = serializers.CharField(
+        source='updated_by.username', read_only=True, default=None)
+
+    class Meta:
+        from dbgestor.models import Translation as _Translation
+        model = _Translation
+        fields = ['id', 'model', 'content_type', 'object_id', 'field_name',
+                  'language_code', 'value', 'status', 'updated_by',
+                  'updated_by_username', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'model', 'updated_by', 'updated_by_username',
+                            'created_at', 'updated_at']
+
+    def validate(self, data):
+        from django.contrib.contenttypes.models import ContentType as _CT
+        ct = data.get('content_type') or getattr(self.instance, 'content_type', None)
+        field_name = data.get('field_name', getattr(self.instance, 'field_name', ''))
+        language_code = (data.get('language_code',
+                                  getattr(self.instance, 'language_code', '')) or '').strip().lower()
+        if language_code == 'es':
+            raise serializers.ValidationError(
+                {'language_code': 'El español vive en las columnas fuente.'})
+        if ct is not None and field_name:
+            model_class = ct.model_class()
+            fields = getattr(model_class, 'get_translatable_fields', lambda: ())()
+            if fields and field_name not in fields:
+                raise serializers.ValidationError(
+                    {'field_name': 'Campo no traducible en este modelo.'})
+        return data
+
+
+class LeccionTranslationSerializer(serializers.ModelSerializer):
+    """Workbench read/write for LeccionTranslation rows (staff-only endpoint)."""
+
+    updated_by_username = serializers.CharField(
+        source='updated_by.username', read_only=True, default=None)
+
+    class Meta:
+        from dbgestor.models import LeccionTranslation as _LT
+        model = _LT
+        fields = ['id', 'leccion', 'language_code', 'title', 'body', 'status',
+                  'updated_by', 'updated_by_username', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'updated_by', 'updated_by_username',
+                            'created_at', 'updated_at']
+
+    def validate_language_code(self, value):
+        value = (value or '').strip().lower()
+        if value == 'es':
+            raise serializers.ValidationError('El español vive en las columnas fuente.')
+        return value

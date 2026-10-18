@@ -80,7 +80,9 @@ from dbgestor.models import (Archivo, Documento, PersonaEsclavizada, PersonaNoEs
                              Actividades as ActividadesModel, SituacionLugar, TipoDocumental,
                              RolEvento, TiposInstitucion, TipoLugar, SugerenciaMerge,
                              Leccion, LeccionImagen, LeccionAdjunto, LeccionNivel, LeccionPalabraClave, LeccionAcceso,
-                             ConductaTerm, VariableDefinition)
+                             ConductaTerm, VariableDefinition,
+                             Translation, LeccionTranslation, TRANSLATABLE_MODELS,
+                             get_translation as resolve_translation)
 
 from .serializers import (
     # Reference serializers
@@ -3150,6 +3152,150 @@ class DataDictionaryView(APIView):
             })
 
         return Response({'models': models_payload, 'vocabularies': vocabularies})
+
+
+class TranslationWorkbenchPermission(BasePermission):
+    """Staff-only: translation drafts and publishing are cataloger work."""
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
+
+class TranslationViewSet(viewsets.ModelViewSet):
+    """Workbench CRUD for field-level Translation rows (authenticated staff).
+
+    Public ``?lang=`` serving reads only published rows through the entity
+    serializers; this endpoint exposes drafts, status transitions, and the
+    missing/draft queues that feed the Svelte workbench.
+    """
+
+    permission_classes = [TranslationWorkbenchPermission]
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['language_code', 'status', 'field_name']
+    ordering_fields = ['updated_at', 'created_at']
+    ordering = ['-updated_at']
+
+    def get_queryset(self):
+        qs = Translation.objects.select_related('content_type').all()
+        model = (self.request.query_params.get('model') or '').strip().lower()
+        if model:
+            try:
+                ct = ContentType.objects.get_by_natural_key('dbgestor', model)
+            except ContentType.DoesNotExist:
+                return qs.none()
+            qs = qs.filter(content_type=ct)
+        object_id = self.request.query_params.get('object_id')
+        if object_id:
+            qs = qs.filter(object_id=object_id)
+        return qs
+
+    def get_serializer_class(self):
+        from .serializers import TranslationSerializer
+        return TranslationSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        row = self.get_object()
+        row.status = 'published'
+        row.updated_by = request.user
+        row.save()
+        from .serializers import TranslationSerializer
+        return Response(TranslationSerializer(row).data)
+
+    @action(detail=True, methods=['post'])
+    def unpublish(self, request, pk=None):
+        row = self.get_object()
+        row.status = 'draft'
+        row.updated_by = request.user
+        row.save()
+        from .serializers import TranslationSerializer
+        return Response(TranslationSerializer(row).data)
+
+    @action(detail=False, methods=['get'], url_path='content-type')
+    def content_type_lookup(self, request):
+        """Resolve a translatable model name to its content_type id + fields."""
+        model = (request.query_params.get('model') or '').strip().lower()
+        try:
+            ct = ContentType.objects.get_by_natural_key('dbgestor', model)
+        except ContentType.DoesNotExist:
+            return Response({'detail': 'Unknown model.'}, status=status.HTTP_400_BAD_REQUEST)
+        model_class = ct.model_class()
+        fields = list(model_class.get_translatable_fields()) if model_class else []
+        return Response({'model': model, 'content_type': ct.pk, 'fields': fields})
+
+    @action(detail=False, methods=['get'])
+    def missing(self, request):
+        """Entity PKs of a translatable model lacking a row for lang+field."""
+        from .serializers import TranslationSerializer
+        model = (request.query_params.get('model') or '').strip().lower()
+        field = (request.query_params.get('field_name') or '').strip()
+        lang = (request.query_params.get('language_code') or 'en').strip().lower()
+        if not model or not field:
+            return Response(
+                {'detail': 'model and field_name are required.'},
+                status=status.HTTP_400_BAD_REQUEST)
+        try:
+            ct = ContentType.objects.get_by_natural_key('dbgestor', model)
+        except ContentType.DoesNotExist:
+            return Response({'detail': 'Unknown model.'}, status=status.HTTP_400_BAD_REQUEST)
+        model_class = ct.model_class()
+        if field not in (model_class.get_translatable_fields() if model_class else ()):
+            return Response({'detail': 'Field not translatable.'}, status=status.HTTP_400_BAD_REQUEST)
+        covered = Translation.objects.filter(
+            content_type=ct, field_name=field, language_code=lang).values('object_id')
+        pks = list(model_class._default_manager.exclude(
+            pk__in=covered).values_list('pk', flat=True)[:2000])
+        return Response({'model': model, 'field_name': field,
+                         'language_code': lang, 'missing_ids': pks, 'count': len(pks)})
+
+
+class LeccionTranslationViewSet(viewsets.ModelViewSet):
+    """Workbench CRUD for Leccion translations (authenticated staff)."""
+
+    permission_classes = [TranslationWorkbenchPermission]
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['language_code', 'status', 'leccion']
+    ordering_fields = ['updated_at', 'created_at']
+    ordering = ['-updated_at']
+
+    def get_queryset(self):
+        return LeccionTranslation.objects.select_related('leccion').all()
+
+    def get_serializer_class(self):
+        from .serializers import LeccionTranslationSerializer
+        return LeccionTranslationSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        row = self.get_object()
+        row.status = 'published'
+        row.updated_by = request.user
+        row.save()
+        from .serializers import LeccionTranslationSerializer
+        return Response(LeccionTranslationSerializer(row).data)
+
+    @action(detail=True, methods=['post'])
+    def unpublish(self, request, pk=None):
+        row = self.get_object()
+        row.status = 'draft'
+        row.updated_by = request.user
+        row.save()
+        from .serializers import LeccionTranslationSerializer
+        return Response(LeccionTranslationSerializer(row).data)
 
 
 @ensure_csrf_cookie

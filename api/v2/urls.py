@@ -13,7 +13,7 @@ from .views import (
     TiposInstitucionViewSet, TipoLugarViewSet, ConductaTermViewSet,
     MergeCandidatesView, MergeExecuteView, MergeSuggestView,
     LeccionViewSet, LeccionNivelViewSet, LeccionPalabraClaveViewSet,
-    DataDictionaryView,
+    DataDictionaryView, TranslationViewSet, LeccionTranslationViewSet,
 )
 from .crosstab import CrosstabView, CrosstabSchemaView
 from .tiles import carto_tile_proxy
@@ -47,6 +47,10 @@ router_v2.register('vocabularios/tipos-institucion', TiposInstitucionViewSet, ba
 router_v2.register('vocabularios/tipos-lugar', TipoLugarViewSet, basename='vocab_tipos_lugar')
 router_v2.register('vocabularios/niveles-leccion', LeccionNivelViewSet, basename='vocab_niveles_leccion')
 router_v2.register('vocabularios/palabras-clave-leccion', LeccionPalabraClaveViewSet, basename='vocab_palabras_clave_leccion')
+
+# Translation workbench (staff-only)
+router_v2.register('workbench/translations', TranslationViewSet, basename='workbench_translations')
+router_v2.register('workbench/leccion-translations', LeccionTranslationViewSet, basename='workbench_leccion_translations')
 
 # URL patterns for V2
 urlpatterns = [
