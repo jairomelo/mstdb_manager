@@ -142,7 +142,6 @@ class PersonaListSerializer(TranslatableSerializerMixin, serializers.ModelSerial
 
 class PersonaEsclavizadaListSerializer(PersonaListSerializer):
     """PersonaEsclavizada data for list views"""
-    unidad_temporal_edad = serializers.CharField(source='get_unidad_temporal_edad_display', read_only=True)
     etnonimos = serializers.SerializerMethodField()
     hispanizacion = serializers.SerializerMethodField()
     has_relaciones = serializers.SerializerMethodField()
@@ -430,7 +429,6 @@ class PersonaEsclavizadaDetailSerializer(PersonaDetailSerializer):
     procedencia = serializers.SerializerMethodField()
     ocupacion_ids = serializers.SerializerMethodField()
     conducta_terms = serializers.SerializerMethodField()
-    unidad_temporal_edad = serializers.CharField(source='get_unidad_temporal_edad_display', read_only=True)
 
     class Meta(PersonaDetailSerializer.Meta):
         model = PersonaEsclavizada
