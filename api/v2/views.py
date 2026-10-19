@@ -3233,7 +3233,6 @@ class TranslationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def missing(self, request):
         """Entity PKs of a translatable model lacking a row for lang+field."""
-        from .serializers import TranslationSerializer
         model = (request.query_params.get('model') or '').strip().lower()
         field = (request.query_params.get('field_name') or '').strip()
         lang = (request.query_params.get('language_code') or 'en').strip().lower()
@@ -3254,6 +3253,101 @@ class TranslationViewSet(viewsets.ModelViewSet):
             pk__in=covered).values_list('pk', flat=True)[:2000])
         return Response({'model': model, 'field_name': field,
                          'language_code': lang, 'missing_ids': pks, 'count': len(pks)})
+
+    @action(detail=False, methods=['get'])
+    def queue(self, request):
+        """Paginated translator queue: one row per entity with source + EN state.
+
+        Params: model, field_name, language_code=en, view=missing|drafts|
+        published|all, page, page_size (max 100). Each item:
+        {object_id, source, translation_id, value, status} where status is
+        'none' when no row exists yet.
+        """
+        model = (request.query_params.get('model') or '').strip().lower()
+        field = (request.query_params.get('field_name') or '').strip()
+        lang = (request.query_params.get('language_code') or 'en').strip().lower()
+        view = (request.query_params.get('view') or 'missing').strip().lower()
+        try:
+            page_size = min(max(int(request.query_params.get('page_size', 25)), 1), 100)
+        except ValueError:
+            return Response({'detail': 'Invalid page_size.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not model or not field:
+            return Response(
+                {'detail': 'model and field_name are required.'},
+                status=status.HTTP_400_BAD_REQUEST)
+        try:
+            ct = ContentType.objects.get_by_natural_key('dbgestor', model)
+        except ContentType.DoesNotExist:
+            return Response({'detail': 'Unknown model.'}, status=status.HTTP_400_BAD_REQUEST)
+        model_class = ct.model_class()
+        if model_class is None or field not in model_class.get_translatable_fields():
+            return Response({'detail': 'Field not translatable.'}, status=status.HTTP_400_BAD_REQUEST)
+        rows = {t.object_id: t for t in Translation.objects.filter(
+            content_type=ct, field_name=field, language_code=lang)}
+        if view == 'missing':
+            pks = model_class._default_manager.exclude(
+                pk__in=list(rows)).order_by('pk').values_list('pk', flat=True)
+        elif view in ('drafts', 'published'):
+            wanted = 'draft' if view == 'drafts' else 'published'
+            pks = model_class._default_manager.filter(
+                pk__in=[pk for pk, t in rows.items() if t.status == wanted]
+            ).order_by('pk').values_list('pk', flat=True)
+        elif view == 'all':
+            pks = model_class._default_manager.order_by('pk').values_list('pk', flat=True)
+        else:
+            return Response({'detail': 'Unknown view.'}, status=status.HTTP_400_BAD_REQUEST)
+        paginator = CustomPagination()
+        paginator.page_size = page_size
+        page_pks = paginator.paginate_queryset(list(pks), request)
+        sources = model_class._default_manager.filter(
+            pk__in=list(page_pks)).values('pk', field)
+        source_by_pk = {s['pk']: (s[field] or '') for s in sources}
+        items = []
+        for pk in page_pks:
+            t = rows.get(pk)
+            items.append({
+                'object_id': pk,
+                'source': source_by_pk.get(pk, ''),
+                'translation_id': t.pk if t else None,
+                'value': t.value if t else '',
+                'status': t.status if t else 'none',
+            })
+        return paginator.get_paginated_response(items)
+
+    @action(detail=False, methods=['post'])
+    def bulk_publish(self, request):
+        """Publish many translation rows at once. Body: {ids: [...]}, max 500."""
+        from dbgestor.signals import refresh_search_vector, _has_search_vector
+        ids = request.data.get('ids') or []
+        if not isinstance(ids, list) or not ids or len(ids) > 500:
+            return Response({'detail': 'Provide ids as a non-empty list (max 500).'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        batch = list(Translation.objects.filter(pk__in=ids).select_related('content_type'))
+        Translation.objects.filter(pk__in=[t.pk for t in batch]).update(
+            status='published', updated_by=request.user)
+        refreshed = set()
+        for t in batch:
+            parent_model = t.content_type.model_class()
+            if parent_model is None or parent_model.__name__ == 'TipoDocumental':
+                continue
+            if not _has_search_vector(parent_model):
+                continue
+            key = (parent_model, t.object_id)
+            if key in refreshed:
+                continue
+            refreshed.add(key)
+            parent = parent_model._default_manager.filter(pk=t.object_id).first()
+            if parent is not None:
+                refresh_search_vector(parent_model, parent)
+        if any(t.content_type.model == 'tipodocumental' for t in batch):
+            from dbgestor.models import TipoDocumental as _TD, Documento as _Doc
+            from dbgestor.signals import documento_search_vector_expression
+            for tipo_id in {t.object_id for t in batch if t.content_type.model == 'tipodocumental'}:
+                for doc_id in _Doc.objects.filter(
+                        tipo_documento_id=tipo_id).values_list('documento_id', flat=True):
+                    _Doc.objects.filter(documento_id=doc_id).update(
+                        search_vector=documento_search_vector_expression())
+        return Response({'published': len(batch)})
 
 
 class LeccionTranslationViewSet(viewsets.ModelViewSet):

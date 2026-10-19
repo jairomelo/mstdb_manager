@@ -92,3 +92,53 @@ class WorkbenchEndpointTests(APITestCase):
             'content_type': self.ct.pk, 'object_id': self.doc.pk,
             'field_name': 'fondo', 'language_code': 'en', 'value': 'Fund'}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class WorkbenchQueueTests(APITestCase):
+    def setUp(self):
+        archivo = Archivo.objects.create(nombre='Archivo Q')
+        tipo = TipoDocumental.objects.create(tipo_documental='Acta Q')
+        self.doc = Documento.objects.create(
+            archivo=archivo, fondo='F', unidad_documental_compuesta='U',
+            folio_inicial='1', tipo_documento=tipo, titulo='Acta de venta')
+        self.staff = User.objects.create_user('q_staff', password='x', is_staff=True)
+        self.ct = ContentType.objects.get_for_model(Documento)
+        self.client.force_authenticate(self.staff)
+
+    def _queue(self, **params):
+        base = {'model': 'documento', 'field_name': 'titulo'}
+        base.update(params)
+        return self.client.get('/api/v2/workbench/translations/queue/', base)
+
+    def test_missing_view_shows_source_with_none_status(self):
+        resp = self._queue(view='missing')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        item = next(i for i in resp.json()['results'] if i['object_id'] == self.doc.pk)
+        self.assertEqual(item['source'], 'Acta de venta')
+        self.assertEqual(item['status'], 'none')
+        self.assertIsNone(item['translation_id'])
+
+    def test_drafts_view_and_bulk_publish(self):
+        Translation.objects.create(
+            content_type=self.ct, object_id=self.doc.pk, field_name='titulo',
+            language_code='en', value='Bill of sale', status='draft')
+        resp = self._queue(view='drafts')
+        item = next(i for i in resp.json()['results'] if i['object_id'] == self.doc.pk)
+        self.assertEqual(item['status'], 'draft')
+        resp = self.client.post('/api/v2/workbench/translations/bulk_publish/',
+                                {'ids': [item['translation_id']]}, format='json')
+        self.assertEqual(resp.json()['published'], 1)
+        resp = self._queue(view='published')
+        item = next(i for i in resp.json()['results'] if i['object_id'] == self.doc.pk)
+        self.assertEqual(item['status'], 'published')
+        from dbgestor.models import Documento as _Doc, get_translation
+        self.assertEqual(
+            get_translation(_Doc.objects.get(pk=self.doc.pk), 'titulo', 'en'), 'Bill of sale')
+
+    def test_bulk_publish_validates_ids(self):
+        resp = self.client.post('/api/v2/workbench/translations/bulk_publish/',
+                                {'ids': []}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_queue_rejects_unknown_view(self):
+        self.assertEqual(self._queue(view='nope').status_code, status.HTTP_400_BAD_REQUEST)
