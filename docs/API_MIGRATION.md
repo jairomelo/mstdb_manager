@@ -1,14 +1,14 @@
-# API Migration Guide - V1beta Removal & V2 Introduction
+# API Migration Guide - V1/V1beta Removal & V2 Introduction
 
 ## Overview
-This document outlines the removal of the deprecated V1beta API and the introduction of the new V2 API.
+This document outlines the removal of the deprecated V1 and V1beta APIs and the introduction of the new V2 API.
 
 ## Changes Made
 
 ### ✅ **V1beta API Removal**
-- **Date**: October 2025
+- **Date**: October 2025 (source deleted March 2026)
 - **Reason**: V1beta was experimental and is not used by any current applications
-- **Impact**: No breaking changes for active applications (only V1 is in use)
+- **Impact**: No breaking changes for active applications
 
 **Removed endpoints:**
 - `/api/v1-beta/documentos/`
@@ -18,6 +18,11 @@ This document outlines the removal of the deprecated V1beta API and the introduc
 - `/api/v1-beta/lugares/`
 - `/api/v1-beta/search/`
 - `/api/v1-beta/log/`
+
+### ✅ **V1 API Removal**
+- **Date**: March 2026 (source deleted)
+- **Reason**: Superseded by V2; unused by any application
+- **Impact**: No breaking changes (no active consumers); search endpoints were obsolete after the Elasticsearch → PostgreSQL move
 
 ### ✅ **V2 API Introduction**
 - **Date**: October 2025
@@ -51,17 +56,16 @@ This document outlines the removal of the deprecated V1beta API and the introduc
 - [ ] Test map visualizations with V2 travel trajectories
 
 ### Phase 3: **Gradual Migration**
-- [ ] Migrate frontend components one by one to V2
+- [x] Migrate frontend components to V2
 - [ ] Performance testing and optimization
-- [ ] V1 deprecation planning (future)
 
 ## API Version Support
 
 | Version | Status | Usage | Migration Plan |
 |---------|---------|--------|----------------|
-| V1beta | ❌ **REMOVED** | Unused experimental | Removed October 2025 |
-| V1 | ✅ **ACTIVE** | Current applications | Maintain until migration complete |
-| V2 | ✅ **ACTIVE** | New features | Use for all new development |
+| V1beta | ❌ **REMOVED** | Unused experimental | Removed October 2025 (source deleted March 2026) |
+| V1 | ❌ **REMOVED** | Superseded by V2 | Removed March 2026 (source deleted) |
+| V2 | ✅ **ACTIVE** | All applications | Use for all development |
 
 ## For Future Collaborators
 
