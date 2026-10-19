@@ -1,11 +1,11 @@
-VERSION = (1, 3, 1)
+VERSION = (1, 5, 0)
 VERSION_STRING = '.'.join(str(x) for x in VERSION)
-VERSION_DATE = '2026-08-30'
+VERSION_DATE = '2026-10-18'
 
 # Data schema version 
-SCHEMA_VERSION = (1, 1, 0)
+SCHEMA_VERSION = (1, 5, 0)
 SCHEMA_VERSION_STRING = '.'.join(str(x) for x in SCHEMA_VERSION)
-SCHEMA_VERSION_DATE = '2026-05-16'
+SCHEMA_VERSION_DATE = '2026-10-18'
 
 def get_version():
     """Returns the code version string"""
