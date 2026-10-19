@@ -3284,8 +3284,11 @@ class TranslationViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Field not translatable.'}, status=status.HTTP_400_BAD_REQUEST)
         rows = {t.object_id: t for t in Translation.objects.filter(
             content_type=ct, field_name=field, language_code=lang)}
+        from django.db.models import Q as _Q
+        non_empty = _Q(**{f'{field}__isnull': False}) & ~_Q(**{field: ''})
         if view == 'missing':
-            pks = model_class._default_manager.exclude(
+            # Empty source fields have nothing to translate — skip them.
+            pks = model_class._default_manager.filter(non_empty).exclude(
                 pk__in=list(rows)).order_by('pk').values_list('pk', flat=True)
         elif view in ('drafts', 'published'):
             wanted = 'draft' if view == 'drafts' else 'published'
@@ -3293,7 +3296,9 @@ class TranslationViewSet(viewsets.ModelViewSet):
                 pk__in=[pk for pk, t in rows.items() if t.status == wanted]
             ).order_by('pk').values_list('pk', flat=True)
         elif view == 'all':
-            pks = model_class._default_manager.order_by('pk').values_list('pk', flat=True)
+            pks = model_class._default_manager.filter(
+                non_empty | _Q(pk__in=list(rows))
+            ).order_by('pk').values_list('pk', flat=True)
         else:
             return Response({'detail': 'Unknown view.'}, status=status.HTTP_400_BAD_REQUEST)
         paginator = CustomPagination()

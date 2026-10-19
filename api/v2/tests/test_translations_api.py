@@ -142,3 +142,15 @@ class WorkbenchQueueTests(APITestCase):
 
     def test_queue_rejects_unknown_view(self):
         self.assertEqual(self._queue(view='nope').status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_empty_source_skipped_in_missing_and_all(self):
+        empty = Documento.objects.create(
+            archivo=self.doc.archivo, fondo='F', unidad_documental_compuesta='U',
+            folio_inicial='2', tipo_documento=self.doc.tipo_documento,
+            titulo='Con notas', descripcion='X', notas='')
+        for view in ('missing', 'all'):
+            resp = self.client.get(
+                '/api/v2/workbench/translations/queue/',
+                {'model': 'documento', 'field_name': 'notas', 'view': view})
+            ids = [i['object_id'] for i in resp.json()['results']]
+            self.assertNotIn(empty.pk, ids)
