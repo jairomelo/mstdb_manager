@@ -154,3 +154,33 @@ class WorkbenchQueueTests(APITestCase):
                 {'model': 'documento', 'field_name': 'notas', 'view': view})
             ids = [i['object_id'] for i in resp.json()['results']]
             self.assertNotIn(empty.pk, ids)
+
+
+class FacetEnglishLabelTests(APITestCase):
+    def test_facets_carry_label_en_when_lang_en(self):
+        from dbgestor.models import PersonaEsclavizada, TipoDocumental
+        archivo = Archivo.objects.create(nombre='Archivo Facet')
+        tipo = TipoDocumental.objects.create(tipo_documental='Carta de libertad')
+        doc = Documento.objects.create(
+            archivo=archivo, fondo='F', unidad_documental_compuesta='U',
+            folio_inicial='1', tipo_documento=tipo, titulo='Doc con tipo',
+            is_published=True)
+        pe = PersonaEsclavizada.objects.create(
+            nombres='Pedro', sexo='m', is_published=True)
+        pe.documentos.add(doc)
+        ct = ContentType.objects.get_for_model(TipoDocumental)
+        Translation.objects.create(
+            content_type=ct, object_id=tipo.pk, field_name='tipo_documental',
+            language_code='en', value='Letter of manumission', status='published')
+        resp = self.client.get('/api/v2/search/',
+                               {'type': 'personaesclavizada', 'lang': 'en'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        facet = next((f for f in resp.json()['facets'].get('tipos_documentales', [])
+                      if f['label'] == 'Carta de libertad'), None)
+        self.assertIsNotNone(facet)
+        self.assertEqual(facet.get('label_en'), 'Letter of manumission')
+
+    def test_facets_spanish_only_by_default(self):
+        resp = self.client.get('/api/v2/search/', {'type': 'documento'})
+        for f in resp.json()['facets'].get('tipos_documentales', []):
+            self.assertNotIn('label_en', f)

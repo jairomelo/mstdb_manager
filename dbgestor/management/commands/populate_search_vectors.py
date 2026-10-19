@@ -73,20 +73,43 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Documento records'))
 
     def update_persona(self):
-        """Update search_vector for all Persona records."""
+        """Update search_vector for all Persona records.
+
+        Per-row: linked-vocab Spanish aggregates via subqueries, EN vocab text
+        computed in Python (double-nested correlation is unresolvable in
+        UPDATE). Preloads published EN translations + through links once.
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from dbgestor.models import Translation
+        from dbgestor.signals import _persona_vocab_spec
         self.stdout.write('Updating Persona search vectors...')
 
-        count = Persona.objects.count()
+        en_by_vocab = {}
+        links_by_persona = {}
+        for vocab_model, through, outer_field, vocab_fk in _persona_vocab_spec():
+            ct = ContentType.objects.get_for_model(vocab_model, for_concrete_model=False)
+            en_by_vocab[vocab_model] = dict(Translation.objects.filter(
+                content_type=ct, status='published').values_list('object_id', 'value'))
+            for pid, vpk in through.objects.values_list(outer_field, vocab_fk):
+                links_by_persona.setdefault(pid, []).append((vocab_model, vpk))
 
-        Persona.objects.exclude(personaesclavizada__isnull=False).update(
-            search_vector=persona_search_vector_expression()
-        )
-        Persona.objects.filter(personaesclavizada__isnull=False).update(
-            search_vector=persona_search_vector_expression(include_conducta=True)
-        )
+        def en_text(pid):
+            texts = []
+            for vm, vpk in links_by_persona.get(pid, []):
+                v = en_by_vocab.get(vm, {}).get(vpk)
+                if v:
+                    texts.append(v)
+            return ' '.join(texts)
 
-        self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Persona records'))
-        
+        pe_ids = set(Persona.objects.filter(
+            personaesclavizada__isnull=False).values_list('persona_id', flat=True))
+        count = 0
+        for pid in Persona.objects.values_list('persona_id', flat=True).iterator():
+            Persona.objects.filter(persona_id=pid).update(
+                search_vector=persona_search_vector_expression(
+                    pid in pe_ids, vocab_en_text=en_text(pid)))
+            count += 1
+
         self.stdout.write(self.style.SUCCESS(f'  ✓ Updated {count} Persona records'))
 
     def update_corporacion(self):

@@ -1877,7 +1877,7 @@ class SearchAPIView(APIView):
 
     # ── facets ─────────────────────────────────────────────────────────
 
-    def _collect_facets(self, querysets_by_type):
+    def _collect_facets(self, querysets_by_type, lang='es'):
         """
         Build facet buckets from the *full* (unfiltered-by-sidebar) querysets
         so the user always sees what is available.
@@ -1993,34 +1993,61 @@ class SearchAPIView(APIView):
             years_tree[century].setdefault(decade, [])
             years_tree[century][decade].append(y)
 
+        en_labels = self._facet_english_labels() if lang != 'es' else {}
+
+        def facet_items(counts):
+            items = []
+            for es_label, count in counts.items():
+                item = {'label': es_label, 'count': count}
+                en = en_labels.get(es_label)
+                if en and en != es_label:
+                    item['label_en'] = en
+                items.append(item)
+            return sorted(items, key=lambda x: -x['count'])
+
         return {
             'lugares': sorted(lugar_counts.values(), key=lambda x: -x['count']),
             'archivos': sorted(archivo_counts.values(), key=lambda x: -x['count']),
             'fechas': years_tree,
             'year_range': {'min': min(year_set), 'max': max(year_set)} if year_set else None,
-            'etnonimos': sorted(
-                [{'label': k, 'count': v} for k, v in etnonimo_counts.items()],
-                key=lambda x: -x['count']),
-            'calidades': sorted(
-                [{'label': k, 'count': v} for k, v in calidad_counts.items()],
-                key=lambda x: -x['count']),
-            'hispanizaciones': sorted(
-                [{'label': k, 'count': v} for k, v in hispanizacion_counts.items()],
-                key=lambda x: -x['count']),
-            'conductas': sorted(
-                [{'label': k, 'count': v} for k, v in conducta_counts.items()],
-                key=lambda x: -x['count']),
-            'ocupaciones': sorted(
-                [{'label': k, 'count': v} for k, v in ocupacion_counts.items()],
-                key=lambda x: -x['count']),
+            'etnonimos': facet_items(etnonimo_counts),
+            'calidades': facet_items(calidad_counts),
+            'hispanizaciones': facet_items(hispanizacion_counts),
+            'conductas': facet_items(conducta_counts),
+            'ocupaciones': facet_items(ocupacion_counts),
             'procedencias': sorted(procedencia_counts.values(), key=lambda x: -x['count']),
-            'estados_civiles': sorted(
-                [{'label': k, 'count': v} for k, v in estado_civil_counts.items()],
-                key=lambda x: -x['count']),
-            'tipos_documentales': sorted(
-                [{'label': k, 'count': v} for k, v in tipo_documental_counts.items()],
-                key=lambda x: -x['count']),
+            'estados_civiles': facet_items(estado_civil_counts),
+            'tipos_documentales': facet_items(tipo_documental_counts),
         }
+
+    def _facet_english_labels(self):
+        """Map Spanish vocab labels -> published EN for facet display.
+
+        Filters still key off the Spanish label (icontains); the frontend
+        shows label_en while submitting label, so URLs stay stable.
+        """
+        from dbgestor.models import (
+            Calidades, Actividades, EstadoCivil, Hispanizaciones, Etonimos,
+            ConductaTerm, TipoDocumental)
+        from django.contrib.contenttypes.models import ContentType as _CT
+        from dbgestor.models import Translation as _T
+        specs = [
+            (Calidades, 'calidad'), (Actividades, 'actividad'),
+            (EstadoCivil, 'estado_civil'), (Hispanizaciones, 'hispanizacion'),
+            (Etonimos, 'etonimo'), (ConductaTerm, 'canonico'),
+            (TipoDocumental, 'tipo_documental'),
+        ]
+        labels = {}
+        for vocab_model, value_field in specs:
+            ct = _CT.objects.get_for_model(vocab_model, for_concrete_model=False)
+            terms = dict(vocab_model.objects.values_list('pk', value_field))
+            en = dict(_T.objects.filter(
+                content_type=ct, status='published',
+                language_code='en').values_list('object_id', 'value'))
+            for pk, es in terms.items():
+                if pk in en and en[pk]:
+                    labels[es] = en[pk]
+        return labels
 
     # ── CSV export helper ─────────────────────────────────────────────
 
@@ -2149,7 +2176,8 @@ class SearchAPIView(APIView):
 
             # ── Facets (from unfiltered base querysets) ────────────
             facets = self._collect_facets(
-                {tk: qs for tk, qs in base_querysets.items() if tk in active_types})
+                {tk: qs for tk, qs in base_querysets.items() if tk in active_types},
+                lang=(request.query_params.get('lang', 'es') or 'es').strip().lower())
 
             # ── Type counts (filter-aware, all types) ─────────────
             # Badges must reflect the current query + filters for every tab,

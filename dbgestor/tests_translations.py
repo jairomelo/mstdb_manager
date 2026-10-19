@@ -212,3 +212,52 @@ class CrossLanguageSearchTests(TestCase):
         self.assertFalse(Documento.objects.filter(
             pk=self.doc.pk,
             search_vector=SearchQuery('escaped', config='english')).exists())
+
+
+class LinkedVocabSearchTests(TestCase):
+    """Linked vocabularies (etnonimos, calidades, ...) are FTS-searchable ES+EN."""
+
+    def setUp(self):
+        from dbgestor.models import Etonimos, Calidades
+        self.pe = PersonaEsclavizada.objects.create(nombres='Pedro', sexo='m')
+        self.et = Etonimos.objects.create(etonimo='cabo verde')
+        self.pe.etnonimos.add(self.et)
+        self.cal = Calidades.objects.create(calidad='mulato libre')
+        self.pe.calidades.add(self.cal)
+
+    def test_spanish_vocab_hits_persona(self):
+        from django.contrib.postgres.search import SearchQuery
+        from dbgestor.models import Persona
+        self.assertTrue(Persona.objects.filter(
+            pk=self.pe.pk,
+            search_vector=SearchQuery('verde', config='spanish')).exists())
+        self.assertTrue(Persona.objects.filter(
+            pk=self.pe.pk,
+            search_vector=SearchQuery('mulato', config='spanish')).exists())
+
+    def test_english_vocab_translation_hits_persona(self):
+        from django.contrib.postgres.search import SearchQuery
+        from dbgestor.models import Persona, Etonimos
+        ct = ContentType.objects.get_for_model(Etonimos)
+        Translation.objects.create(
+            content_type=ct, object_id=self.et.pk, field_name='etonimo',
+            language_code='en', value='Cape Verde', status='published')
+        self.pe.refresh_from_db()
+        self.assertTrue(Persona.objects.filter(
+            pk=self.pe.pk,
+            search_vector=SearchQuery('cape', config='english')).exists())
+
+    def test_vocab_translation_publish_refreshes_personas(self):
+        from dbgestor.models import Calidades
+        ct = ContentType.objects.get_for_model(Calidades)
+        Translation.objects.create(
+            content_type=ct, object_id=self.cal.pk, field_name='calidad',
+            language_code='en', value='free mulatto', status='draft')
+        row = Translation.objects.get(content_type=ct, object_id=self.cal.pk)
+        row.status = 'published'
+        row.save()
+        from dbgestor.models import Persona
+        from django.contrib.postgres.search import SearchQuery
+        self.assertTrue(Persona.objects.filter(
+            pk=self.pe.pk,
+            search_vector=SearchQuery('mulatto', config='english')).exists())
