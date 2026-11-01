@@ -25,11 +25,19 @@ compares decimals so export rounding never produces false mismatches.
 
     python manage.py audit_lugar_csv
     python manage.py audit_lugar_csv --csv ../temp/data/Lugar-2026-10-11.csv --json report.json
+    docker exec -i trayectorias_web python manage.py audit_lugar_csv --csv - \
+        < temp/data/Lugar-2026-10-11.csv
+
+The repo root (and therefore temp/) is not mounted into the web container, so
+running inside Docker usually needs --csv - with the file piped on stdin, or a
+docker cp into a container path.
 """
 
 import csv
+import io
 import json
 import re
+import sys
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -132,8 +140,8 @@ class Command(BaseCommand):
             type=str,
             default=None,
             help=(
-                "Path to the ground-truth CSV. Default: temp/data/"
-                "Lugar-<today>.csv at the repo root (parent of mstdb_manager)."
+                "Path to the ground-truth CSV, or '-' to read it from stdin. "
+                "Default: temp/data/Lugar-<today>.csv at the repo root."
             ),
         )
         parser.add_argument(
@@ -160,28 +168,31 @@ class Command(BaseCommand):
     def _default_csv_candidates(self):
         """Possible temp/data locations across local and Docker layouts.
 
-        Locally the repo root is the parent of mstdb_manager; inside the web
-        container /app is mstdb_manager and the repo root may be mounted at
-        /app/root (or not mounted at all — then pass --csv explicitly).
+        Locally the repo root is mstdb_manager's parent. Inside the web
+        container only mstdb_manager is mounted (as /app), so the repo root
+        resolves to / and temp/ is normally absent — use --csv - there.
         """
         from datetime import date
 
         fname = f"Lugar-{date.today().isoformat()}.csv"
-        here = Path(__file__).resolve()
-        mstdb_manager = here.parents[3]  # .../mstdb_manager
-        repo_root = mstdb_manager.parent
+        mstdb_manager = Path(__file__).resolve().parents[3]
         return [
-            repo_root / "temp" / "data" / fname,
-            mstdb_manager.parent / "root" / "temp" / "data" / fname,
-            Path("/app/root/temp/data") / fname,
+            mstdb_manager.parent / "temp" / "data" / fname,
             Path("/temp/data") / fname,
         ]
 
     def _resolve_csv(self, raw):
+        if raw == "-":
+            return "-"
         if raw:
             path = Path(raw).expanduser()
             if not path.is_file():
-                raise CommandError(f"CSV file not found: {path}")
+                raise CommandError(
+                    f"CSV file not found: {path}\n"
+                    "The file must be visible inside the container. Either pipe it "
+                    "in (--csv -), copy it in (docker cp <file> trayectorias_web:/tmp/), "
+                    "or pass a path under a mounted directory."
+                )
             return path
         for candidate in self._default_csv_candidates():
             if candidate.is_file():
@@ -189,13 +200,26 @@ class Command(BaseCommand):
         searched = "\n  ".join(str(p) for p in self._default_csv_candidates())
         raise CommandError(
             "Could not locate the default Lugar CSV. Searched:\n  "
-            f"{searched}\nPass --csv <path> explicitly."
+            f"{searched}\n"
+            "The repo root is not mounted in the container, so temp/ is not "
+            "visible there. Pipe the file instead:\n"
+            "  docker exec -i trayectorias_web python manage.py audit_lugar_csv "
+            "--csv - < temp/data/Lugar-<date>.csv\n"
+            "or copy it in with docker cp and pass --csv /tmp/<file>."
         )
 
     @staticmethod
-    def _load_csv(path):
+    def _load_csv(source):
+        """Parse the CSV from a path or from stdin when source == '-'."""
         rows, issues = [], []
-        with open(path, newline="", encoding="utf-8-sig") as f:
+        if source == "-":
+            stream = getattr(sys.stdin, "buffer", None)
+            data = stream.read() if stream is not None else sys.stdin.read()
+            text = data.decode("utf-8-sig") if isinstance(data, bytes) else data.lstrip("\ufeff")
+            f = io.StringIO(text, newline="")
+        else:
+            f = open(source, newline="", encoding="utf-8-sig")
+        with f:
             reader = csv.DictReader(f)
             if not reader.fieldnames or "lugar_id" not in reader.fieldnames:
                 raise CommandError(
@@ -233,8 +257,8 @@ class Command(BaseCommand):
         except InvalidOperation:
             raise CommandError(f"Invalid --tolerance value: {options['tolerance']}")
 
-        csv_path = self._resolve_csv(options["csv"])
-        csv_rows, csv_issues = self._load_csv(csv_path)
+        csv_source = self._resolve_csv(options["csv"])
+        csv_rows, csv_issues = self._load_csv(csv_source)
 
         duplicates = self._find_duplicate_ids(csv_rows)
 
@@ -245,7 +269,7 @@ class Command(BaseCommand):
         csv_by_id = {r["lugar_id"]: r for r in csv_rows}
 
         report = {
-            "csv_path": str(csv_path),
+            "csv_path": "<stdin>" if csv_source == "-" else str(csv_source),
             "tolerance": str(tolerance),
             "totals": {
                 "csv_rows": len(csv_rows),
