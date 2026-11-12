@@ -964,13 +964,13 @@ class Corporacion(TranslatableFieldsMixin, PolymorphicModel):
         return f'C{self.corporacion_id}'
 
     def save(self, *args, **kwargs):
-
-        if not self.pk:
-            super(Corporacion, self).save(*args, **kwargs)
-
-        self.corporacion_idno = f"mx-sv-cor-{str(self.corporacion_id).zfill(6)}"
-
         super(Corporacion, self).save(*args, **kwargs)
+
+        expected_idno = f"mx-sv-cor-{str(self.corporacion_id).zfill(6)}"
+        if self.corporacion_idno != expected_idno:
+            self.__class__.objects.filter(corporacion_id=self.corporacion_id).update(
+                corporacion_idno=expected_idno)
+            self.corporacion_idno = expected_idno
 
     def __str__(self) -> str:
         return f"{self.nombre_institucion}"
