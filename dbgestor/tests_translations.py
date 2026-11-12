@@ -160,7 +160,8 @@ class ImportTranslationsCommandTests(TestCase):
 class SeedVocabTranslationsTests(TestCase):
     def test_fill_when_empty_never_overwrites(self):
         from django.core.management import call_command
-        tipo = TipoDocumental.objects.create(tipo_documental='Carta de compra/venta')
+        tipo = TipoDocumental.objects.create(
+            id=1, tipo_documental='Carta de compra/venta')
         call_command('seed_vocab_translations_en')
         ct = ContentType.objects.get_for_model(TipoDocumental)
         row = Translation.objects.get(
