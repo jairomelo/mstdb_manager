@@ -60,7 +60,7 @@ dependencies = [
     "redis==5.0.1",
     "requests==2.33.0",
     "six==1.16.0",
-    "soupsieve==2.9",
+    "soupsieve==4.0",
     "sqlparse==0.6.0",
     "tablib==3.5.0",
     "telepath==0.3.1",
